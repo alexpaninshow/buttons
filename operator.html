@@ -20,7 +20,7 @@ button:hover{background:#66bb6a;}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-// 🔴 Правильный firebaseConfig с твоей новой базой
+// 🔴 firebaseConfig с новым URL
 const firebaseConfig = {
   apiKey: "AIzaSyCnYKEXEd207E9LXgCBupqc3kjbEbk1NTc",
   authDomain: "buttons-show.firebaseapp.com",
@@ -35,7 +35,6 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// Вопросы
 const questions = [
   { text:"Кого герой выбирает?", options:["Поцеловать","Укусить","Плюнуть"] },
   { text:"Как героиня реагирует?", options:["Улыбка","Плачет","Уходит"] }
@@ -43,20 +42,21 @@ const questions = [
 
 let current = 0;
 
-// Функция переключения вопроса
+// 🔹 создаём ключ сразу при загрузке
+db.ref('currentQuestion').set(0);
+
+// Переключение вопроса
 function nextQuestion(){
   if(current >= questions.length){
     alert("Все вопросы пройдены");
     return;
   }
-  db.ref('currentQuestion').set(current); // обновляем вопрос в Firebase
+  db.ref('currentQuestion').set(current); // обновляем вопрос
   alert("Вопрос переключен: " + questions[current].text);
   current++;
 }
 
-// Привязываем кнопку
 document.getElementById("nextBtn").onclick = nextQuestion;
-
 </script>
 </body>
 </html>
