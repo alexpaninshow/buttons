@@ -27,11 +27,11 @@ button:hover { background:#ff8787; }
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-// 🔴 Вставляем твой firebaseConfig
+// 🔴 Правильный firebaseConfig с твоей новой базой
 const firebaseConfig = {
   apiKey: "AIzaSyCnYKEXEd207E9LXgCBupqc3kjbEbk1NTc",
   authDomain: "buttons-show.firebaseapp.com",
-  databaseURL: "https://buttons-show-default-rtdb.asia-southeast1.firebasedatabase.app",
+  databaseURL: "https://buttons-panin-default-rtdb.firebaseio.com",
   projectId: "buttons-show",
   storageBucket: "buttons-show.firebasestorage.app",
   messagingSenderId: "145808897789",
@@ -93,7 +93,6 @@ function startTimer(){
   },1000);
 }
 
-// Заглушка для Google Form (можешь вставить свой код)
 function vote(text){
   console.log("Голос: " + text);
 }
