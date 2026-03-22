@@ -19,12 +19,13 @@ button:hover{background:#66bb6a;}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
+// Firebase config (ПРАВИЛЬНАЯ база)
 const firebaseConfig = {
   apiKey: "AIzaSyCnYKEXEd207E9LXgCBupqc3kjbEbk1NTc",
-  authDomain: "https://buttons-panin-default-rtdb.firebaseio.com",
+  authDomain: "buttons-show.firebaseapp.com",
   databaseURL: "https://buttons-panin-default-rtdb.firebaseio.com",
-  projectId: "buttons-panin",
-  storageBucket: "https://buttons-panin-default-rtdb.firebaseio.com",
+  projectId: "buttons-show",
+  storageBucket: "buttons-show.appspot.com",
   messagingSenderId: "145808897789",
   appId: "1:145808897789:web:900445fca031ece7e53094",
   measurementId: "G-TMGSFCVEW6"
@@ -33,27 +34,23 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+// Вопросы
 const questions = [
   { text:"Кого герой выбирает?", options:["Поцеловать","Укусить","Плюнуть"] },
   { text:"Как героиня реагирует?", options:["Улыбка","Плачет","Уходит"] }
 ];
 
-let current = -1; // начинаем с -1, чтобы первый клик дал вопрос 0
+let current = 0;
 const currentQuestionRef = db.ref('currentQuestion');
 
-currentQuestionRef.once('value').then(snapshot => {
-  if(snapshot.val() === null) current = -1;
-  else current = snapshot.val() - 1; // синхронизация с Firebase
-});
-
 function nextQuestion(){
-  current++; // увеличиваем сразу
   if(current >= questions.length){
     alert("Все вопросы пройдены");
     return;
   }
-  currentQuestionRef.set(current); // отправляем новое значение зрителям
-  alert("Вопрос переключен: " + questions[current].text);
+  currentQuestionRef.set(current); // отправляем вопрос зрителям
+  alert("Вопрос переключен: "+questions[current].text);
+  current++; // готовим следующий
 }
 
 document.getElementById("nextBtn").onclick = nextQuestion;
