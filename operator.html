@@ -19,7 +19,7 @@ button:hover{background:#66bb6a;}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-// Firebase config (ПРАВИЛЬНАЯ база)
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyCnYKEXEd207E9LXgCBupqc3kjbEbk1NTc",
   authDomain: "buttons-show.firebaseapp.com",
@@ -36,8 +36,8 @@ const db = firebase.database();
 
 // Вопросы
 const questions = [
-  { text:"Кого герой выбирает?", options:["Поцеловать","Укусить","Плюнуть"] },
-  { text:"Как героиня реагирует?", options:["Улыбка","Плачет","Уходит"] }
+  { text:"Кого поцелует герой?", options:["Девушку","Себя","Кого-то из зрителей"] },
+  { text:"Вам понравился наш спектакль?", options:["Да","Нет",""] }
 ];
 
 let current = 0;
@@ -48,9 +48,9 @@ function nextQuestion(){
     alert("Все вопросы пройдены");
     return;
   }
-  currentQuestionRef.set(current); // отправляем вопрос зрителям
+  currentQuestionRef.set(current);
   alert("Вопрос переключен: "+questions[current].text);
-  current++; // готовим следующий
+  current++;
 }
 
 document.getElementById("nextBtn").onclick = nextQuestion;
