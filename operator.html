@@ -15,12 +15,10 @@ button:hover{background:#66bb6a;}
 <h1>Оператор</h1>
 <button id="nextBtn">Следующий вопрос</button>
 
-<!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyCnYKEXEd207E9LXgCBupqc3kjbEbk1NTc",
   authDomain: "buttons-show.firebaseapp.com",
@@ -40,25 +38,22 @@ const questions = [
   { text:"Как героиня реагирует?", options:["Улыбка","Плачет","Уходит"] }
 ];
 
-let current = 0;
+let current = -1; // начинаем с -1, чтобы первый клик дал вопрос 0
 const currentQuestionRef = db.ref('currentQuestion');
 
-// Получаем текущее значение из базы при загрузке
 currentQuestionRef.once('value').then(snapshot => {
-  if(snapshot.val() === null) current = 0;
-  else current = snapshot.val();
+  if(snapshot.val() === null) current = -1;
+  else current = snapshot.val() - 1; // синхронизация с Firebase
 });
 
-// Функция переключения вопроса
 function nextQuestion(){
+  current++; // увеличиваем сразу
   if(current >= questions.length){
     alert("Все вопросы пройдены");
     return;
   }
-  const toSend = current; // отправляем зрителям текущий вопрос
-  current++; // готовим следующий вопрос для следующего клика
-  currentQuestionRef.set(toSend);
-  alert("Вопрос переключен: " + questions[toSend].text);
+  currentQuestionRef.set(current); // отправляем новое значение зрителям
+  alert("Вопрос переключен: " + questions[current].text);
 }
 
 document.getElementById("nextBtn").onclick = nextQuestion;
