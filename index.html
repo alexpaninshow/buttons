@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Голосование спектакля</title>
+
+<style>
+body {
+  font-family: 'Segoe UI', sans-serif;
+  text-align: center;
+  padding: 40px;
+  background: linear-gradient(120deg, #1f1c2c, #928dab);
+  color: white;
+}
+h1 {
+  font-size: 32px;
+  margin-bottom: 30px;
+}
+button {
+  font-size: 22px;
+  margin: 15px;
+  padding: 20px 40px;
+  border-radius: 12px;
+  border: none;
+  background: #ff6b6b;
+  color: white;
+  cursor: pointer;
+  transition: 0.3s;
+}
+button:hover {
+  background: #ff8787;
+}
+#timer {
+  font-size: 26px;
+  margin-top: 20px;
+  font-weight: bold;
+}
+#next {
+  display: none; /* Кнопка спрятана для зрителей */
+}
+</style>
+</head>
+<body>
+
+<h1 id="question">Нажмите на вариант ответа</h1>
+
+<button id="b1"></button>
+<button id="b2"></button>
+<button id="b3"></button>
+
+<div id="timer"></div>
+
+<button id="next">Следующий вопрос</button>
+
+<script>
+// 🔴 Вставь сюда свою ссылку и entry ID
+const formURL = "https://docs.google.com/forms/d/1oqHTrcpGOeQ_a-p3SgiVjQyL-bWyW6N1atpvH51y4ZU/formResponse";
+const entryID = "110183224";
+
+// Вопросы
+const questions = [
+  { text: "Кого герой выбирает?", options: ["Поцеловать", "Укусить", "Плюнуть"] },
+  { text: "Как героиня реагирует?", options: ["Улыбка", "Плачет", "Уходит"] }
+];
+
+let current = 0;
+let timer;
+
+const q = document.getElementById("question");
+const b1 = document.getElementById("b1");
+const b2 = document.getElementById("b2");
+const b3 = document.getElementById("b3");
+const t = document.getElementById("timer");
+
+function showQuestion() {
+  if (current >= questions.length) {
+    q.innerText = "Конец голосования";
+    b1.style.display = b2.style.display = b3.style.display = "none";
+    t.style.display = "none";
+    return;
+  }
+  const data = questions[current];
+  q.innerText = data.text;
+  b1.innerText = data.options[0];
+  b2.innerText = data.options[1];
+  b3.innerText = data.options[2];
+  b1.style.display = b2.style.display = b3.style.display = "inline-block";
+  t.style.display = "block";
+  startTimer();
+}
+
+function startTimer() {
+  let time = 4;
+  t.innerText = time;
+  if (navigator.vibrate) navigator.vibrate(200);
+  clearInterval(timer);
+  timer = setInterval(() => {
+    time--;
+    t.innerText = time;
+    if (time <= 0) clearInterval(timer);
+  }, 1000);
+}
+
+function vote(text) {
+  const full = "Q" + current + "_" + text;
+  const iframe = document.createElement("iframe");
+  iframe.style.display = "none";
+  iframe.src = formURL + "?entry." + entryID + "=" + encodeURIComponent(full);
+  document.body.appendChild(iframe);
+}
+
+b1.onclick = () => vote(b1.innerText);
+b2.onclick = () => vote(b2.innerText);
+b3.onclick = () => vote(b3.innerText);
+
+showQuestion(); // запускаем первый вопрос сразу
+</script>
+</body>
+</html>

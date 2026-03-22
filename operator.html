@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Оператор спектакля</title>
+
+<style>
+body {
+  font-family: 'Segoe UI', sans-serif;
+  text-align: center;
+  padding: 50px;
+  background: linear-gradient(120deg, #222, #555);
+  color: white;
+}
+button {
+  font-size: 24px;
+  padding: 25px 50px;
+  border-radius: 12px;
+  border: none;
+  background: #4caf50;
+  color: white;
+  cursor: pointer;
+  transition: 0.3s;
+}
+button:hover { background: #66bb6a; }
+</style>
+</head>
+<body>
+
+<h1>Оператор</h1>
+<button onclick="nextQuestion()">Следующий вопрос</button>
+
+<script>
+// 🔴 Эти данные должны совпадать с index.html
+const questions = [
+  { text: "Кого герой выбирает?", options: ["Поцеловать", "Укусить", "Плюнуть"] },
+  { text: "Как героиня реагирует?", options: ["Улыбка", "Плачет", "Уходит"] }
+];
+let current = 0;
+
+function nextQuestion() {
+  if (current >= questions.length) {
+    alert("Все вопросы пройдены");
+    return;
+  }
+  // Для операторской страницы можно просто показывать номер/текст вопроса
+  alert("Вопрос №" + (current + 1) + ": " + questions[current].text);
+  current++;
+}
+</script>
+</body>
+</html>
