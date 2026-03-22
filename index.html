@@ -27,7 +27,7 @@ button:hover { background:#ff8787; }
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-// 🔴 Правильный firebaseConfig с твоей новой базой
+// 🔴 firebaseConfig с новым URL
 const firebaseConfig = {
   apiKey: "AIzaSyCnYKEXEd207E9LXgCBupqc3kjbEbk1NTc",
   authDomain: "buttons-show.firebaseapp.com",
@@ -42,7 +42,6 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// Вопросы
 const questions = [
   { text:"Кого герой выбирает?", options:["Поцеловать","Укусить","Плюнуть"] },
   { text:"Как героиня реагирует?", options:["Улыбка","Плачет","Уходит"] }
@@ -57,7 +56,7 @@ const t = document.getElementById("timer");
 let current = 0;
 let timer;
 
-// Слушаем текущий вопрос в Firebase
+// Слушаем текущий вопрос
 const currentQuestionRef = db.ref('currentQuestion');
 currentQuestionRef.on('value', snapshot => {
   current = snapshot.val();
@@ -100,7 +99,6 @@ function vote(text){
 b1.onclick=()=>vote(b1.innerText);
 b2.onclick=()=>vote(b2.innerText);
 b3.onclick=()=>vote(b3.innerText);
-
 </script>
 </body>
 </html>
