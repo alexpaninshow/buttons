@@ -41,23 +41,24 @@ const questions = [
 ];
 
 let current = 0;
+const currentQuestionRef = db.ref('currentQuestion');
 
 // Получаем текущее значение из базы при загрузке
-const currentQuestionRef = db.ref('currentQuestion');
 currentQuestionRef.once('value').then(snapshot => {
   if(snapshot.val() === null) current = 0;
   else current = snapshot.val();
 });
 
-// Переключение вопроса
+// Функция переключения вопроса
 function nextQuestion(){
   if(current >= questions.length){
     alert("Все вопросы пройдены");
     return;
   }
-  currentQuestionRef.set(current); // отправляем текущий вопрос зрителям
-  alert("Вопрос переключен: " + questions[current].text);
-  current++; // готовим следующий вопрос
+  const toSend = current; // отправляем зрителям текущий вопрос
+  current++; // готовим следующий вопрос для следующего клика
+  currentQuestionRef.set(toSend);
+  alert("Вопрос переключен: " + questions[toSend].text);
 }
 
 document.getElementById("nextBtn").onclick = nextQuestion;
