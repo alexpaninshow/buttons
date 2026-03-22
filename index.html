@@ -10,7 +10,6 @@ h1 { font-size:32px; margin-bottom:30px; }
 button { font-size:22px; margin:15px; padding:20px 40px; border-radius:12px; border:none; background:#ff6b6b; color:white; cursor:pointer; transition:0.3s; }
 button:hover { background:#ff8787; }
 #timer { font-size:26px; margin-top:20px; font-weight:bold; }
-#next { display:none; }
 </style>
 </head>
 <body>
@@ -22,14 +21,13 @@ button:hover { background:#ff8787; }
 <button id="b3"></button>
 
 <div id="timer"></div>
-<button id="next">Следующий вопрос</button>
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-// 🔴 Вставляем сюда firebaseConfig из Firebase Console
+// 🔴 Вставляем твой firebaseConfig
 const firebaseConfig = {
   apiKey: "AIzaSyCnYKEXEd207E9LXgCBupqc3kjbEbk1NTc",
   authDomain: "buttons-show.firebaseapp.com",
@@ -59,7 +57,7 @@ const t = document.getElementById("timer");
 let current = 0;
 let timer;
 
-// Слушаем текущий вопрос
+// Слушаем текущий вопрос в Firebase
 const currentQuestionRef = db.ref('currentQuestion');
 currentQuestionRef.on('value', snapshot => {
   current = snapshot.val();
@@ -95,14 +93,9 @@ function startTimer(){
   },1000);
 }
 
+// Заглушка для Google Form (можешь вставить свой код)
 function vote(text){
-  const formURL="https://docs.google.com/forms/d/e/ВАШ_FORM_RESPONSE/formResponse";
-  const entryID="ВАШ_ENTRY_ID";
-  const full="Q"+current+"_"+text;
-  const iframe=document.createElement("iframe");
-  iframe.style.display="none";
-  iframe.src=formURL+"?entry."+entryID+"="+encodeURIComponent(full);
-  document.body.appendChild(iframe);
+  console.log("Голос: " + text);
 }
 
 b1.onclick=()=>vote(b1.innerText);
