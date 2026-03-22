@@ -3,31 +3,24 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Голосование спектакля</title>
+<title>Оператор</title>
 <style>
-body { font-family:'Segoe UI',sans-serif; text-align:center; padding:40px; background:linear-gradient(120deg,#1f1c2c,#928dab); color:white; }
-h1 { font-size:32px; margin-bottom:30px; }
-button { font-size:22px; margin:15px; padding:20px 40px; border-radius:12px; border:none; background:#ff6b6b; color:white; cursor:pointer; transition:0.3s; }
-button:hover { background:#ff8787; }
-#timer { font-size:26px; margin-top:20px; font-weight:bold; }
+body { font-family:'Segoe UI',sans-serif; text-align:center; padding:50px; background:linear-gradient(120deg,#222,#555); color:white; }
+button { font-size:24px; padding:25px 50px; border-radius:12px; border:none; background:#4caf50; color:white; cursor:pointer; transition:0.3s; }
+button:hover{background:#66bb6a;}
 </style>
 </head>
 <body>
 
-<h1 id="question">Ждём следующий вопрос...</h1>
-
-<button id="b1"></button>
-<button id="b2"></button>
-<button id="b3"></button>
-
-<div id="timer"></div>
+<h1>Оператор</h1>
+<button id="nextBtn">Следующий вопрос</button>
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-// 🔴 firebaseConfig с твоей базой
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyCnYKEXEd207E9LXgCBupqc3kjbEbk1NTc",
   authDomain: "buttons-show.firebaseapp.com",
@@ -47,58 +40,27 @@ const questions = [
   { text:"Как героиня реагирует?", options:["Улыбка","Плачет","Уходит"] }
 ];
 
-const q = document.getElementById("question");
-const b1 = document.getElementById("b1");
-const b2 = document.getElementById("b2");
-const b3 = document.getElementById("b3");
-const t = document.getElementById("timer");
-
 let current = 0;
-let timer;
 
-// Слушаем изменения в Firebase
+// Получаем текущее значение из базы при загрузке
 const currentQuestionRef = db.ref('currentQuestion');
-currentQuestionRef.on('value', snapshot => {
-  current = snapshot.val();
-  if(current === null || current >= questions.length){
-    q.innerText = "Конец голосования";
-    b1.style.display=b2.style.display=b3.style.display="none";
-    t.style.display="none";
-    return;
-  }
-  showQuestion();
+currentQuestionRef.once('value').then(snapshot => {
+  if(snapshot.val() === null) current = 0;
+  else current = snapshot.val();
 });
 
-function showQuestion(){
-  const data = questions[current];
-  q.innerText = data.text;
-  b1.innerText = data.options[0];
-  b2.innerText = data.options[1];
-  b3.innerText = data.options[2];
-  b1.style.display=b2.style.display=b3.style.display="inline-block";
-  t.style.display="block";
-  startTimer();
+// Переключение вопроса
+function nextQuestion(){
+  if(current >= questions.length){
+    alert("Все вопросы пройдены");
+    return;
+  }
+  currentQuestionRef.set(current); // отправляем текущий вопрос зрителям
+  alert("Вопрос переключен: " + questions[current].text);
+  current++; // готовим следующий вопрос
 }
 
-function startTimer(){
-  let time = 4;
-  t.innerText = time;
-  if(navigator.vibrate) navigator.vibrate(200);
-  clearInterval(timer);
-  timer=setInterval(()=>{
-    time--;
-    t.innerText = time;
-    if(time<=0) clearInterval(timer);
-  },1000);
-}
-
-function vote(text){
-  console.log("Голос: " + text);
-}
-
-b1.onclick=()=>vote(b1.innerText);
-b2.onclick=()=>vote(b2.innerText);
-b3.onclick=()=>vote(b3.innerText);
+document.getElementById("nextBtn").onclick = nextQuestion;
 </script>
 </body>
 </html>
