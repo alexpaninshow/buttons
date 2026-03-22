@@ -20,7 +20,7 @@ button:hover{background:#66bb6a;}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-// 🔴 firebaseConfig с твоей базой
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyCnYKEXEd207E9LXgCBupqc3kjbEbk1NTc",
   authDomain: "buttons-show.firebaseapp.com",
@@ -42,16 +42,20 @@ const questions = [
 
 let current = 0;
 
-// создаём ключ сразу при загрузке
-db.ref('currentQuestion').set(0);
+// Получаем текущее значение из базы при загрузке
+const currentQuestionRef = db.ref('currentQuestion');
+currentQuestionRef.once('value').then(snapshot => {
+  if(snapshot.val() === null) current = 0;
+  else current = snapshot.val();
+});
 
-// Функция переключения вопроса
+// Переключение вопроса
 function nextQuestion(){
   if(current >= questions.length){
     alert("Все вопросы пройдены");
     return;
   }
-  db.ref('currentQuestion').set(current); // отправляем текущий вопрос зрителям
+  currentQuestionRef.set(current); // отправляем текущий вопрос зрителям
   alert("Вопрос переключен: " + questions[current].text);
   current++; // готовим следующий вопрос
 }
