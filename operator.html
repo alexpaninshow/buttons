@@ -40,17 +40,19 @@ const questions = [
   { text:"Вам понравился наш спектакль?", options:["Да","Нет",""] }
 ];
 
-let current = 0;
 const currentQuestionRef = db.ref('currentQuestion');
 
 function nextQuestion(){
-  if(current >= questions.length){
-    alert("Все вопросы пройдены");
-    return;
-  }
-  currentQuestionRef.set(current);
-  alert("Вопрос переключен: "+questions[current].text);
-  current++;
+  currentQuestionRef.once('value').then(snapshot => {
+    let current = snapshot.val();
+    if(current === null) current = 0;
+    if(current >= questions.length) {
+      alert("Все вопросы пройдены");
+      return;
+    }
+    currentQuestionRef.set(current + 1); // увеличиваем на 1
+    alert("Вопрос переключен: " + questions[current].text);
+  });
 }
 
 document.getElementById("nextBtn").onclick = nextQuestion;
