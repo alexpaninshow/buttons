@@ -42,20 +42,18 @@ const questions = [
 
 const currentQuestionRef = db.ref('currentQuestion');
 
-function nextQuestion(){
+document.getElementById("nextBtn").onclick = () => {
   currentQuestionRef.once('value').then(snapshot => {
     let current = snapshot.val();
     if(current === null) current = 0;
-    if(current >= questions.length) {
+    if(current >= questions.length){
       alert("Все вопросы пройдены");
       return;
     }
     currentQuestionRef.set(current + 1); // увеличиваем на 1
     alert("Вопрос переключен: " + questions[current].text);
   });
-}
-
-document.getElementById("nextBtn").onclick = nextQuestion;
+};
 </script>
 </body>
 </html>
