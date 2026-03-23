@@ -56,6 +56,8 @@ const t = document.getElementById("timer");
 let timer;
 
 const currentQuestionRef = db.ref('currentQuestion');
+
+// Слушаем Firebase
 currentQuestionRef.on('value', snapshot => {
   const current = snapshot.val();
   if(current === null || current >= questions.length){
@@ -79,6 +81,7 @@ currentQuestionRef.on('value', snapshot => {
   startTimer();
 });
 
+// Таймер и вибрация
 function startTimer(){
   let time = 4;
   t.innerText = time;
@@ -91,6 +94,7 @@ function startTimer(){
   },1000);
 }
 
+// Логирование голосов (для теста)
 b1.onclick=()=>console.log("Голос: "+b1.innerText);
 b2.onclick=()=>console.log("Голос: "+b2.innerText);
 b3.onclick=()=>console.log("Голос: "+b3.innerText);
