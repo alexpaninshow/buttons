@@ -59,13 +59,14 @@ const currentQuestionRef = db.ref('currentQuestion');
 
 // Слушаем Firebase
 currentQuestionRef.on('value', snapshot => {
-  const current = snapshot.val();
+  let current = snapshot.val();
+
+  // Если null или слишком большое число — начинаем с нуля
   if(current === null || current >= questions.length){
-    q.innerText = "Конец голосования";
-    b1.style.display=b2.style.display=b3.style.display="none";
-    t.style.display="none";
-    return;
+    current = 0;
+    currentQuestionRef.set(current);
   }
+
   const data = questions[current];
   q.innerText = data.text;
   b1.innerText = data.options[0];
@@ -94,7 +95,7 @@ function startTimer(){
   },1000);
 }
 
-// Логирование голосов (для теста)
+// Логируем голос (для теста)
 b1.onclick=()=>console.log("Голос: "+b1.innerText);
 b2.onclick=()=>console.log("Голос: "+b2.innerText);
 b3.onclick=()=>console.log("Голос: "+b3.innerText);
