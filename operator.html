@@ -14,6 +14,7 @@ button.reset { background:#f44336; }
 
 <h1>Оператор</h1>
 
+<!-- Только кнопка начала игры -->
 <button id="startBtn">Начать игру</button>
 <button id="nextBtn" style="display:none;">Следующий вопрос</button>
 <button id="resetBtn" class="reset" style="display:none;">Сбросить игру</button>
@@ -46,15 +47,15 @@ const startBtn = document.getElementById("startBtn");
 const nextBtn = document.getElementById("nextBtn");
 const resetBtn = document.getElementById("resetBtn");
 
-// Начать игру
+// Нажатие "Начать игру"
 startBtn.onclick = () => {
   ref.set(0); // первый вопрос
-  startBtn.style.display = "none";
-  nextBtn.style.display = "inline-block";
-  resetBtn.style.display = "inline-block";
+  startBtn.style.display = "none"; // скрыть кнопку старта
+  nextBtn.style.display = "inline-block"; // показать следующий вопрос
+  resetBtn.style.display = "inline-block"; // показать сброс игры
 };
 
-// Следующий вопрос
+// Нажатие "Следующий вопрос"
 nextBtn.onclick = () => {
   ref.transaction(current => {
     if(current === null) return 0;
@@ -63,14 +64,14 @@ nextBtn.onclick = () => {
   });
 };
 
-// Сброс игры
+// Нажатие "Сбросить игру"
 resetBtn.onclick = () => {
   const ok = confirm("Ты уверен, что хочешь начать заново?");
   if(ok){
-    ref.set(-1);
-    startBtn.style.display = "inline-block";
-    nextBtn.style.display = "none";
-    resetBtn.style.display = "none";
+    ref.set(-1); // сброс игры
+    startBtn.style.display = "inline-block"; // показать кнопку старта
+    nextBtn.style.display = "none"; // скрыть следующий вопрос
+    resetBtn.style.display = "none"; // скрыть сброс
     alert("Игра сброшена. Ждём следующий вопрос...");
   }
 };
