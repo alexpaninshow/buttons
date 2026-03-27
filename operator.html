@@ -8,7 +8,7 @@
 body { font-family:'Segoe UI',sans-serif; text-align:center; padding:50px; background:#333; color:white; }
 button { font-size:24px; padding:25px 50px; border-radius:12px; border:none; background:#4caf50; color:white; margin:10px; cursor:pointer; }
 button.reset { background:#f44336; }
-#nextQuestionDisplay { font-size:18px; font-style:italic; margin-top:20px; }
+#nextQuestionDisplay { font-size:18px; font-style:italic; margin-top:10px; color:#ddd; }
 </style>
 </head>
 <body>
@@ -16,10 +16,9 @@ button.reset { background:#f44336; }
 <h1 id="title">Шоу господина Панина</h1>
 
 <button id="startBtn">Начать игру</button>
+<div id="nextQuestionDisplay">Next: Кого поцелует герой?</div>
 <button id="nextBtn" style="display:none;">Следующий вопрос</button>
 <button id="resetBtn" class="reset" style="display:none;">Сбросить игру</button>
-
-<div id="nextQuestionDisplay"></div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -40,7 +39,6 @@ const db = firebase.database();
 
 const questions = [
   { text:"Кого поцелует герой?", options:["Девушку","Себя","Кого-то из зрителей"] },
-  { text:"Какой жанр хотите?", options:["Комедия","Трагедия","Фарс"] },
   { text:"Вам понравился наш спектакль?", options:["Да","Нет",""] }
 ];
 
@@ -54,7 +52,6 @@ const nextQuestionDisplay = document.getElementById("nextQuestionDisplay");
 
 let current = -1;
 
-// Начать игру — запускает первый вопрос у всех
 startBtn.onclick = () => {
   current = 0;
   ref.set(current);
@@ -65,7 +62,6 @@ startBtn.onclick = () => {
   updateNextDisplay();
 };
 
-// Следующий вопрос
 nextBtn.onclick = () => {
   if(current < questions.length - 1){
     current++;
@@ -81,16 +77,14 @@ nextBtn.onclick = () => {
   }
 };
 
-// Отображение текста следующего вопроса под кнопками
 function updateNextDisplay(){
-  if(current < questions.length - 1){
+  if(current >=0 && current < questions.length - 1){
     nextQuestionDisplay.innerText = "Next: " + questions[current + 1].text;
-  } else {
+  } else if(current >= questions.length -1){
     nextQuestionDisplay.innerText = "Конец вопросов";
   }
-}
+};
 
-// Сброс игры
 resetBtn.onclick = () => {
   const ok = confirm("Ты уверен, что хочешь начать заново?");
   if(ok){
@@ -100,7 +94,7 @@ resetBtn.onclick = () => {
     nextBtn.style.display = "none";
     resetBtn.style.display = "none";
     title.innerText = "Шоу господина Панина";
-    nextQuestionDisplay.innerText = "";
+    nextQuestionDisplay.innerText = "Next: Кого поцелует герой?";
   }
 };
 </script>
