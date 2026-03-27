@@ -6,7 +6,6 @@
 
 <style>
 body { font-family:Arial; text-align:center; background:#333; color:white; padding:40px; }
-
 h1 { font-size:32px; margin-bottom:30px; }
 
 ul { list-style:none; padding:0; }
@@ -44,13 +43,19 @@ li.selected {
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
+const CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv";
+
+const FALLBACK_QUESTIONS = [
+  { text:"Тест вопрос?", options:["Да","Нет","Не знаю"] }
+];
+
 const firebaseConfig = {
   databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-let questions=[];
+let questions = [];
 let timerId=null;
 let voted=false;
 let time=0;
@@ -59,22 +64,32 @@ const title = document.getElementById("title");
 const options = document.getElementById("options");
 const timer = document.getElementById("timer");
 
-// загрузка вопросов
-fetch('https://sheet.best/api/sheets/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0')
-.then(r=>r.json())
-.then(data=>{
-  questions=data.map(r=>({
-    text:r['Вопрос'],
-    options:[r['Вариант 1'],r['Вариант 2'],r['Вариант 3']].filter(o=>o)
+function parseCSV(text){
+  const rows = text.split("\n").map(r=>r.split(","));
+  return rows.slice(1).map(r=>({
+    text:r[0],
+    options:[r[1],r[2],r[3]].filter(o=>o)
   }));
+}
+
+// загрузка
+fetch(CSV_URL)
+.then(r=>r.text())
+.then(text=>{
+  questions = parseCSV(text);
+  console.log("Google OK:", questions);
+})
+.catch(()=>{
+  console.warn("Fallback used");
+  questions = FALLBACK_QUESTIONS;
 });
 
-// слушаем текущий вопрос
+// слушаем Firebase
 db.ref('currentQuestion').on('value', snap => {
   const current = snap.val();
 
   if(timerId) clearInterval(timerId);
-  voted = false;
+  voted=false;
 
   if(current===-1 || current===null){
     title.innerText="Шоу";
@@ -83,15 +98,19 @@ db.ref('currentQuestion').on('value', snap => {
     return;
   }
 
-  title.innerText=questions[current].text;
-  options.innerHTML="";
-
-  // вибрация
-  if(navigator.vibrate){
-    navigator.vibrate([100,50,100,50,100]);
+  if(!questions.length){
+    title.innerText="Загрузка...";
+    return;
   }
 
-  questions[current].options.forEach((opt,i)=>{
+  title.innerText=questions[current]?.text || "Нет вопроса";
+  options.innerHTML="";
+
+  if(navigator.vibrate){
+    navigator.vibrate([100,50,100]);
+  }
+
+  (questions[current]?.options || []).forEach((opt,i)=>{
     const li=document.createElement('li');
     li.innerText=opt;
 
@@ -111,7 +130,6 @@ db.ref('currentQuestion').on('value', snap => {
     options.appendChild(li);
   });
 
-  // таймер
   time=5;
   timer.innerText=time;
 
