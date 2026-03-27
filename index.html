@@ -7,9 +7,7 @@
 <style>
 body { font-family:Arial; text-align:center; background:#333; color:white; padding:40px; }
 
-h1 { font-size:32px; margin-bottom:30px; }
-
-ul { list-style:none; padding:0; }
+h1 { font-size:32px; }
 
 li {
   font-size:28px;
@@ -19,16 +17,11 @@ li {
   border-radius:10px;
   border:3px solid transparent;
   transition: all 0.3s ease;
-  cursor:pointer;
-}
-
-li:hover {
-  background:#666;
 }
 
 li.selected {
-  border-color:#ffeb3b; /* жёлтая рамка */
-  background:#4caf50;    /* зелёный фон */
+  border-color:#ffeb3b;
+  background:#4caf50;
   transform: scale(1.05);
 }
 
@@ -50,6 +43,9 @@ const firebaseConfig = { databaseURL:"https://buttons-panin-default-rtdb.firebas
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+const SHEET_ID = "ТВОЙ_ID";
+const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+
 let questions=[];
 let timerId=null;
 let voted=false;
@@ -59,63 +55,68 @@ const title = document.getElementById("title");
 const options = document.getElementById("options");
 const timer = document.getElementById("timer");
 
-// Загружаем вопросы из Google Sheets
-fetch('https://sheet.best/api/sheets/ВАШ_API_URL')
-.then(r=>r.json())
-.then(data=>{
-  questions=data.map(r=>({
-    text:r['Вопрос'],
-    options:[r['Вариант 1'],r['Вариант 2'],r['Вариант 3']].filter(o=>o)
+// 🔥 Загрузка из Google Sheets
+fetch(URL)
+.then(res => res.text())
+.then(text => {
+  const json = JSON.parse(text.substring(47).slice(0, -2));
+  const rows = json.table.rows;
+
+  questions = rows.map(r => ({
+    text: r.c[0]?.v,
+    options: [r.c[1]?.v, r.c[2]?.v, r.c[3]?.v].filter(o => o)
   }));
+
+  // 👉 слушаем Firebase ТОЛЬКО после загрузки
+  db.ref('currentQuestion').on('value', snap => {
+    handleQuestion(snap.val());
+  });
 });
 
-// Слушаем изменения текущего вопроса
-db.ref('currentQuestion').on('value', snap => {
-  const current = snap.val();
+function handleQuestion(current){
 
   if(timerId) clearInterval(timerId);
-  voted = false;
+  voted=false;
 
   if(current===-1 || current===null){
-    title.innerText = "Шоу";
-    options.innerHTML = "";
-    timer.innerText = "";
+    title.innerText="Шоу";
+    options.innerHTML="";
+    timer.innerText="";
     return;
   }
 
-  // Показываем вопрос
-  title.innerText = questions[current].text;
-  options.innerHTML = "";
+  if(!questions[current]) return;
 
-  // 🔔 Серия вибраций при появлении нового вопроса
+  title.innerText=questions[current].text;
+  options.innerHTML="";
+
+  // 🔔 вибрация
   if(navigator.vibrate){
-      navigator.vibrate([100,50,100,50,100]);
+    navigator.vibrate([100,50,100,50,100]);
   }
 
   questions[current].options.forEach((opt,i)=>{
-    const li = document.createElement('li');
-    li.innerText = opt;
+    const li=document.createElement('li');
+    li.innerText=opt;
 
-    li.onclick = () => {
-      if(voted || time <= 0) return;
+    li.onclick=()=>{
+      if(voted || time<=0) return;
       if(localStorage.getItem("voted_"+current)) return;
 
-      voted = true;
-      localStorage.setItem("voted_"+current, true);
+      voted=true;
+      localStorage.setItem("voted_"+current,true);
 
       db.ref('votes/'+current+'/'+i)
-        .transaction(v => (v||0)+1);
+        .transaction(v=>(v||0)+1);
 
-      // 🔹 Анимация рамки и фон при выборе
       li.classList.add('selected');
     };
 
     options.appendChild(li);
   });
 
-  // Таймер 5 секунд
   time=5;
-  timer.innerText = time;
+  timer.innerText=time;
 
   timerId=setInterval(()=>{
     time--;
@@ -123,10 +124,10 @@ db.ref('currentQuestion').on('value', snap => {
       clearInterval(timerId);
       timer.innerText="";
     } else {
-      timer.innerText = time;
+      timer.innerText=time;
     }
   },1000);
-});
+}
 </script>
 
 </body>
