@@ -6,7 +6,6 @@
 
 <style>
 body { font-family: Arial; text-align: center; background:#222; color:white; padding:40px; }
-
 #status { font-size:26px; margin-bottom:20px; }
 
 button {
@@ -27,7 +26,6 @@ button {
 <body>
 
 <h1>Оператор</h1>
-
 <div id="status">Ожидание</div>
 
 <button id="nextBtn" class="next">Загрузка...</button>
@@ -38,6 +36,12 @@ button {
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
+const CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv";
+
+const FALLBACK_QUESTIONS = [
+  { text:"Тест вопрос?", options:["Да","Нет"] }
+];
+
 const firebaseConfig = {
   databaseURL: "https://buttons-panin-default-rtdb.firebaseio.com"
 };
@@ -51,14 +55,25 @@ const status = document.getElementById("status");
 const nextBtn = document.getElementById("nextBtn");
 const backBtn = document.getElementById("backBtn");
 
-// загрузка вопросов
-fetch('https://sheet.best/api/sheets/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0')
-.then(r=>r.json())
-.then(data=>{
-  questions = data.map(r=>({
-    text:r['Вопрос'],
-    options:[r['Вариант 1'],r['Вариант 2'],r['Вариант 3']].filter(o=>o)
+function parseCSV(text){
+  const rows = text.split("\n").map(r=>r.split(","));
+  return rows.slice(1).map(r=>({
+    text:r[0],
+    options:[r[1],r[2],r[3]].filter(o=>o)
   }));
+}
+
+// загрузка
+fetch(CSV_URL)
+.then(r=>r.text())
+.then(text=>{
+  questions = parseCSV(text);
+  console.log("Loaded:", questions);
+  updateButtons();
+})
+.catch(()=>{
+  console.warn("Fallback used");
+  questions = FALLBACK_QUESTIONS;
   updateButtons();
 });
 
@@ -70,6 +85,8 @@ function showQuestion(i){
 }
 
 nextBtn.onclick = ()=>{
+  if(!questions.length) return;
+
   if(current===-1) showQuestion(0);
   else if(current<questions.length-1) showQuestion(current+1);
 };
@@ -79,12 +96,10 @@ backBtn.onclick = ()=>{
 };
 
 document.getElementById("resetBtn").onclick = ()=>{
-  if(confirm("Ты уверен, что хочешь начать заново?")){
-    current=-1;
-    db.ref('currentQuestion').set(-1);
-    status.innerText="Ожидание";
-    updateButtons();
-  }
+  current=-1;
+  db.ref('currentQuestion').set(-1);
+  status.innerText="Ожидание";
+  updateButtons();
 };
 
 function updateButtons(){
