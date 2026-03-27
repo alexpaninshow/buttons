@@ -86,7 +86,26 @@ refQuestion.on('value', s => {
 refTimer.on('value', s=>{
   let sec = s.val();
   if(sec > 0){
-    timerDiv.style.display = "block";
+    timerDiv.innerText = "Осталось секунд: " + sec;
+  } else {
+    timerDiv.innerText = "";
+  }
+});
+</script>
+</body>
+</html>
+innerText = "Шоу господина Панина";
+    nextQuestionDisplay.innerText = "";
+    clearInterval(timerInterval);
+    timerDiv.innerText = "";
+    refTimer.set(0);
+  }
+};
+
+// Отображение таймера
+refTimer.on('value', s=>{
+  let sec = s.val();
+  if(sec > 0){
     timerDiv.innerText = "Осталось секунд: " + sec;
   } else {
     timerDiv.innerText = "";
