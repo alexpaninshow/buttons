@@ -6,6 +6,7 @@
 
 <style>
 body { font-family:Arial; text-align:center; background:#333; color:white; padding:40px; }
+
 h1 { font-size:32px; margin-bottom:30px; }
 
 ul { list-style:none; padding:0; }
@@ -43,7 +44,9 @@ li.selected {
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-const firebaseConfig = { databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com" };
+const firebaseConfig = {
+  databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"
+};
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
@@ -56,7 +59,7 @@ const title = document.getElementById("title");
 const options = document.getElementById("options");
 const timer = document.getElementById("timer");
 
-// 👉 загрузка вопросов
+// загрузка вопросов
 fetch('https://sheet.best/api/sheets/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0')
 .then(r=>r.json())
 .then(data=>{
@@ -66,12 +69,12 @@ fetch('https://sheet.best/api/sheets/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B
   }));
 });
 
-// 👉 слушаем состояние
+// слушаем текущий вопрос
 db.ref('currentQuestion').on('value', snap => {
   const current = snap.val();
 
   if(timerId) clearInterval(timerId);
-  voted=false;
+  voted = false;
 
   if(current===-1 || current===null){
     title.innerText="Шоу";
@@ -83,7 +86,7 @@ db.ref('currentQuestion').on('value', snap => {
   title.innerText=questions[current].text;
   options.innerHTML="";
 
-  // 🔔 вибрация
+  // вибрация
   if(navigator.vibrate){
     navigator.vibrate([100,50,100,50,100]);
   }
@@ -108,6 +111,7 @@ db.ref('currentQuestion').on('value', snap => {
     options.appendChild(li);
   });
 
+  // таймер
   time=5;
   timer.innerText=time;
 
