@@ -36,7 +36,8 @@ const db = firebase.database();
 
 const questions = [
   { text:"Кого поцелует герой?", options:["Девушку","Себя","Кого-то из зрителей"] },
-  { text:"Вам понравился наш спектакль?", options:["Да","Нет",""] }
+  { text:"Вам понравился наш спектакль?", options:["Да","Нет",""] },
+  { text:"Какой жанр хотите?", options:["Комедия","Трагедия","Фарс"] }
 ];
 
 const ref = db.ref('currentQuestion');
@@ -61,7 +62,7 @@ nextBtn.onclick = () => {
     if(current < questions.length - 1){
       nextBtn.innerText = "Вопрос " + (current + 2) + ": " + questions[current + 1].text;
     } else {
-      nextBtn.style.display = "none";
+      nextBtn.style.display = "none"; // конец вопросов
     }
   }
 };
