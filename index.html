@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Шоу зрителей</title>
 <style>
-body { font-family:'Segoe UI',sans-serif; text-align:center; padding:50px; background:#222; color:white; }
+body { font-family:'Segoe UI',sans-serif; text-align:center; padding:50px; background: linear-gradient(120deg,#222,#555); color:white; }
 h1 { font-size:32px; margin-bottom:20px; }
 ul { list-style:none; padding:0; }
-li { font-size:24px; margin:10px 0; }
+li { font-size:24px; margin:10px 0; background: rgba(0,0,0,0.3); padding:15px; border-radius:8px; }
 </style>
 </head>
 <body>
@@ -46,16 +46,18 @@ const ref = db.ref('currentQuestion');
 ref.on('value', (snapshot) => {
   const current = snapshot.val();
 
-  if(current === -1 || current === null){ // игра ещё не началась
+  if(current === -1 || current === null){
     displayTitle.innerText = "Шоу господина Панина";
     optionsList.innerHTML = "";
   } else if(current >= 0 && current < questions.length){
     displayTitle.innerText = questions[current].text;
     optionsList.innerHTML = "";
     questions[current].options.forEach(opt => {
-      const li = document.createElement('li');
-      li.innerText = opt;
-      optionsList.appendChild(li);
+      if(opt){
+        const li = document.createElement('li');
+        li.innerText = opt;
+        optionsList.appendChild(li);
+      }
     });
   } else {
     displayTitle.innerText = "Голосование окончено!";
