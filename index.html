@@ -6,8 +6,9 @@
 
 <style>
 body { font-family:Arial; text-align:center; background:#333; color:white; padding:40px; }
+h1 { font-size:32px; margin-bottom:30px; }
 
-h1 { font-size:32px; }
+ul { list-style:none; padding:0; }
 
 li {
   font-size:28px;
@@ -17,7 +18,10 @@ li {
   border-radius:10px;
   border:3px solid transparent;
   transition: all 0.3s ease;
+  cursor:pointer;
 }
+
+li:hover { background:#666; }
 
 li.selected {
   border-color:#ffeb3b;
@@ -43,9 +47,6 @@ const firebaseConfig = { databaseURL:"https://buttons-panin-default-rtdb.firebas
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-const SHEET_ID = "ТВОЙ_ID";
-const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
-
 let questions=[];
 let timerId=null;
 let voted=false;
@@ -55,25 +56,19 @@ const title = document.getElementById("title");
 const options = document.getElementById("options");
 const timer = document.getElementById("timer");
 
-// 🔥 Загрузка из Google Sheets
-fetch(URL)
-.then(res => res.text())
-.then(text => {
-  const json = JSON.parse(text.substring(47).slice(0, -2));
-  const rows = json.table.rows;
-
-  questions = rows.map(r => ({
-    text: r.c[0]?.v,
-    options: [r.c[1]?.v, r.c[2]?.v, r.c[3]?.v].filter(o => o)
+// 👉 загрузка вопросов
+fetch('https://sheet.best/api/sheets/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0')
+.then(r=>r.json())
+.then(data=>{
+  questions=data.map(r=>({
+    text:r['Вопрос'],
+    options:[r['Вариант 1'],r['Вариант 2'],r['Вариант 3']].filter(o=>o)
   }));
-
-  // 👉 слушаем Firebase ТОЛЬКО после загрузки
-  db.ref('currentQuestion').on('value', snap => {
-    handleQuestion(snap.val());
-  });
 });
 
-function handleQuestion(current){
+// 👉 слушаем состояние
+db.ref('currentQuestion').on('value', snap => {
+  const current = snap.val();
 
   if(timerId) clearInterval(timerId);
   voted=false;
@@ -84,8 +79,6 @@ function handleQuestion(current){
     timer.innerText="";
     return;
   }
-
-  if(!questions[current]) return;
 
   title.innerText=questions[current].text;
   options.innerHTML="";
@@ -127,7 +120,7 @@ function handleQuestion(current){
       timer.innerText=time;
     }
   },1000);
-}
+});
 </script>
 
 </body>
