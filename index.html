@@ -2,68 +2,132 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Шоу зрителей</title>
+<title>Шоу</title>
+
 <style>
-body { font-family:'Segoe UI',sans-serif; text-align:center; padding:50px; background: linear-gradient(120deg,#222,#555); color:white; }
-h1 { font-size:32px; margin-bottom:20px; }
+body { font-family:Arial; text-align:center; background:#333; color:white; padding:40px; }
+
+h1 { font-size:32px; margin-bottom:30px; }
+
 ul { list-style:none; padding:0; }
-li { font-size:24px; margin:10px 0; background: rgba(0,0,0,0.3); padding:15px; border-radius:8px; }
+
+li {
+  font-size:28px;
+  padding:20px;
+  margin:15px;
+  background:#555;
+  border-radius:10px;
+  border:3px solid transparent;
+  transition: all 0.3s ease;
+  cursor:pointer;
+}
+
+li:hover {
+  background:#666;
+}
+
+li.selected {
+  border-color:#ffeb3b; /* жёлтая рамка */
+  background:#4caf50;    /* зелёный фон */
+  transform: scale(1.05);
+}
+
+#timer { font-size:30px; margin-top:20px; }
 </style>
 </head>
+
 <body>
 
-<h1 id="displayTitle">Шоу господина Панина</h1>
-<ul id="optionsList"></ul>
+<h1 id="title">Шоу</h1>
+<ul id="options"></ul>
+<div id="timer"></div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyCnYKEXEd207E9LXgCBupqc3kjbEbk1NTc",
-  authDomain: "buttons-show.firebaseapp.com",
-  databaseURL: "https://buttons-panin-default-rtdb.firebaseio.com",
-  projectId: "buttons-show",
-  storageBucket: "buttons-show.appspot.com",
-  messagingSenderId: "145808897789",
-  appId: "1:145808897789:web:900445fca031ece7e53094"
-};
-
+const firebaseConfig = { databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com" };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-const questions = [
-  { text:"Кого поцелует герой?", options:["Девушку","Себя","Кого-то из зрителей"] },
-  { text:"Вам понравился наш спектакль?", options:["Да","Нет"] },
-  { text:"Какой жанр хотите?", options:["Комедия","Трагедия","Фарс"] }
-];
+let questions=[];
+let timerId=null;
+let voted=false;
+let time=0;
 
-const displayTitle = document.getElementById("displayTitle");
-const optionsList = document.getElementById("optionsList");
-const ref = db.ref('currentQuestion');
+const title = document.getElementById("title");
+const options = document.getElementById("options");
+const timer = document.getElementById("timer");
 
-ref.on('value', (snapshot) => {
-  const current = snapshot.val();
+// Загружаем вопросы из Google Sheets
+fetch('https://sheet.best/api/sheets/ВАШ_API_URL')
+.then(r=>r.json())
+.then(data=>{
+  questions=data.map(r=>({
+    text:r['Вопрос'],
+    options:[r['Вариант 1'],r['Вариант 2'],r['Вариант 3']].filter(o=>o)
+  }));
+});
 
-  if(current === -1 || current === null){
-    displayTitle.innerText = "Шоу господина Панина";
-    optionsList.innerHTML = "";
-  } else if(current >= 0 && current < questions.length){
-    displayTitle.innerText = questions[current].text;
-    optionsList.innerHTML = "";
-    questions[current].options.forEach(opt => {
-      if(opt){
-        const li = document.createElement('li');
-        li.innerText = opt;
-        optionsList.appendChild(li);
-      }
-    });
-  } else {
-    displayTitle.innerText = "Голосование окончено!";
-    optionsList.innerHTML = "";
+// Слушаем изменения текущего вопроса
+db.ref('currentQuestion').on('value', snap => {
+  const current = snap.val();
+
+  if(timerId) clearInterval(timerId);
+  voted = false;
+
+  if(current===-1 || current===null){
+    title.innerText = "Шоу";
+    options.innerHTML = "";
+    timer.innerText = "";
+    return;
   }
+
+  // Показываем вопрос
+  title.innerText = questions[current].text;
+  options.innerHTML = "";
+
+  // 🔔 Серия вибраций при появлении нового вопроса
+  if(navigator.vibrate){
+      navigator.vibrate([100,50,100,50,100]);
+  }
+
+  questions[current].options.forEach((opt,i)=>{
+    const li = document.createElement('li');
+    li.innerText = opt;
+
+    li.onclick = () => {
+      if(voted || time <= 0) return;
+      if(localStorage.getItem("voted_"+current)) return;
+
+      voted = true;
+      localStorage.setItem("voted_"+current, true);
+
+      db.ref('votes/'+current+'/'+i)
+        .transaction(v => (v||0)+1);
+
+      // 🔹 Анимация рамки и фон при выборе
+      li.classList.add('selected');
+    };
+
+    options.appendChild(li);
+  });
+
+  // Таймер 5 секунд
+  time=5;
+  timer.innerText = time;
+
+  timerId=setInterval(()=>{
+    time--;
+    if(time<=0){
+      clearInterval(timerId);
+      timer.innerText="";
+    } else {
+      timer.innerText = time;
+    }
+  },1000);
 });
 </script>
+
 </body>
 </html>
