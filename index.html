@@ -26,7 +26,6 @@ button:hover { background:#ff8787; }
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyCnYKEXEd207E9LXgCBupqc3kjbEbk1NTc",
   authDomain: "buttons-show.firebaseapp.com",
@@ -34,8 +33,7 @@ const firebaseConfig = {
   projectId: "buttons-show",
   storageBucket: "buttons-show.appspot.com",
   messagingSenderId: "145808897789",
-  appId: "1:145808897789:web:900445fca031ece7e53094",
-  measurementId: "G-TMGSFCVEW6"
+  appId: "1:145808897789:web:900445fca031ece7e53094"
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -57,32 +55,45 @@ let timer;
 
 const currentQuestionRef = db.ref('currentQuestion');
 
-// Слушаем Firebase
 currentQuestionRef.on('value', snapshot => {
   let current = snapshot.val();
 
-  // Если null или слишком большое число — начинаем с нуля
-  if(current === null || current >= questions.length){
-    current = 0;
-    currentQuestionRef.set(current);
+  // Ждём
+  if(current === null || current === -1){
+    q.innerText = "Ждём следующий вопрос...";
+    b1.style.display=b2.style.display=b3.style.display="none";
+    t.style.display="none";
+    return;
   }
 
+  // Конец
+  if(current >= questions.length){
+    q.innerText = "Конец голосования";
+    b1.style.display=b2.style.display=b3.style.display="none";
+    t.style.display="none";
+    return;
+  }
+
+  // Показываем вопрос
   const data = questions[current];
   q.innerText = data.text;
+
   b1.innerText = data.options[0];
   b2.innerText = data.options[1];
-  if(data.options[2]) { 
-    b3.innerText = data.options[2]; 
-    b3.style.display="inline-block"; 
-  } else { 
-    b3.style.display="none"; 
+
+  if(data.options[2]){
+    b3.innerText = data.options[2];
+    b3.style.display="inline-block";
+  } else {
+    b3.style.display="none";
   }
+
   b1.style.display=b2.style.display="inline-block";
   t.style.display="block";
+
   startTimer();
 });
 
-// Таймер и вибрация
 function startTimer(){
   let time = 4;
   t.innerText = time;
@@ -95,7 +106,7 @@ function startTimer(){
   },1000);
 }
 
-// Логируем голос (для теста)
+// пока просто логируем
 b1.onclick=()=>console.log("Голос: "+b1.innerText);
 b2.onclick=()=>console.log("Голос: "+b2.innerText);
 b3.onclick=()=>console.log("Голос: "+b3.innerText);
