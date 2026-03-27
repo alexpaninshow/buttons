@@ -51,16 +51,18 @@ const resetBtn = document.getElementById("resetBtn");
 
 let current = -1;
 
-// Функция для обновления кнопки Next
-function updateNextButton() {
+// обновляем кнопку Next и видимость кнопки Назад
+function updateButtons() {
   if(current === -1){
     nextBtn.innerText = "Начать игру. Вопрос 1: " + questions[0].text;
+    backBtn.style.display = "none";
   } else if(current < questions.length - 1){
     nextBtn.innerText = "Вопрос " + (current + 2) + ": " + questions[current + 1].text;
+    backBtn.style.display = current > 0 ? "inline-block" : "none";
   } else {
     nextBtn.style.display = "none";
+    backBtn.style.display = current > 0 ? "inline-block" : "none";
   }
-  backBtn.style.display = current > 0 ? "inline-block" : "none";
 }
 
 nextBtn.onclick = () => {
@@ -70,12 +72,12 @@ nextBtn.onclick = () => {
     title.innerText = questions[current].text;
     nextBtn.style.fontStyle = "italic";
     resetBtn.style.display = "inline-block";
-    updateNextButton();
+    updateButtons();
   } else if(current < questions.length - 1){
     current++;
     ref.set(current);
     title.innerText = questions[current].text;
-    updateNextButton();
+    updateButtons();
   }
 };
 
@@ -85,7 +87,7 @@ backBtn.onclick = () => {
     ref.set(current);
     title.innerText = questions[current].text;
     nextBtn.style.display = "inline-block";
-    updateNextButton();
+    updateButtons();
   }
 };
 
@@ -96,12 +98,11 @@ resetBtn.onclick = () => {
     current = -1;
     title.innerText = "Шоу господина Панина";
     nextBtn.style.display = "inline-block";
-    nextBtn.innerText = "Начать игру. Вопрос 1: Кого поцелует герой?";
     backBtn.style.display = "none";
     resetBtn.style.display = "none";
+    nextBtn.innerText = "Начать игру. Вопрос 1: Кого поцелует герой?";
   }
 };
-
 </script>
 </body>
 </html>
