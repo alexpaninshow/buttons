@@ -3,21 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Голосование зрителей</title>
+<title>Оператор</title>
 <style>
-body { font-family:'Segoe UI',sans-serif; text-align:center; padding:40px; background:linear-gradient(120deg,#1f1c2c,#928dab); color:white; }
-h1 { font-size:32px; margin-bottom:30px; }
-button { font-size:22px; margin:15px; padding:20px 40px; border-radius:12px; border:none; background:#ff6b6b; color:white; display:none; }
-#timer { font-size:22px; margin-top:20px; color:#ffeb3b; }
+body { font-family:'Segoe UI',sans-serif; text-align:center; padding:50px; background:#333; color:white; }
+button { font-size:24px; padding:25px 50px; border-radius:12px; border:none; background:#4caf50; color:white; margin:10px; cursor:pointer; }
+button.reset { background:#f44336; }
+#nextQuestionDisplay { font-size:18px; font-style:italic; margin-top:20px; }
 </style>
 </head>
 <body>
 
-<h1 id="question">Шоу господина Панина</h1>
-<button id="b1"></button>
-<button id="b2"></button>
-<button id="b3"></button>
-<div id="timer"></div>
+<h1 id="title">Шоу господина Панина</h1>
+
+<button id="startBtn">Начать игру</button>
+<button id="nextBtn" style="display:none;">Следующий вопрос</button>
+<button id="resetBtn" class="reset" style="display:none;">Сбросить игру</button>
+
+<div id="nextQuestionDisplay"></div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -42,75 +44,65 @@ const questions = [
   { text:"Вам понравился наш спектакль?", options:["Да","Нет",""] }
 ];
 
-const q = document.getElementById("question");
-const b1 = document.getElementById("b1");
-const b2 = document.getElementById("b2");
-const b3 = document.getElementById("b3");
-const timerDiv = document.getElementById("timer");
+const ref = db.ref('currentQuestion');
 
-const refQuestion = db.ref('currentQuestion');
-const refTimer = db.ref('timerSeconds');
+const title = document.getElementById("title");
+const startBtn = document.getElementById("startBtn");
+const nextBtn = document.getElementById("nextBtn");
+const resetBtn = document.getElementById("resetBtn");
+const nextQuestionDisplay = document.getElementById("nextQuestionDisplay");
 
-refQuestion.on('value', s => {
-  const current = s.val();
+let current = -1;
 
-  if(current === -1 || current === null){
-    q.innerText = "Шоу господина Панина";
-    b1.style.display=b2.style.display=b3.style.display="none";
-    return;
-  }
+// Начать игру — запускает первый вопрос у всех
+startBtn.onclick = () => {
+  current = 0;
+  ref.set(current);
+  startBtn.style.display = "none";
+  nextBtn.style.display = "inline-block";
+  resetBtn.style.display = "inline-block";
+  title.innerText = questions[0].text;
+  updateNextDisplay();
+};
 
-  if(current >= questions.length){
-    q.innerText = "Конец голосования";
-    b1.style.display=b2.style.display=b3.style.display="none";
-    return;
-  }
-
-  const data = questions[current];
-  q.innerText = data.text;
-
-  b1.innerText = data.options[0];
-  b2.innerText = data.options[1];
-
-  if(data.options[2]){
-    b3.innerText = data.options[2];
-    b3.style.display="inline-block";
+// Следующий вопрос
+nextBtn.onclick = () => {
+  if(current < questions.length - 1){
+    current++;
+    ref.set(current);
+    title.innerText = questions[current].text;
+    updateNextDisplay();
   } else {
-    b3.style.display="none";
-  }
-
-  b1.style.display=b2.style.display="inline-block";
-});
-
-// Таймер для зрителей
-refTimer.on('value', s=>{
-  let sec = s.val();
-  if(sec > 0){
-    timerDiv.innerText = "Осталось секунд: " + sec;
-  } else {
-    timerDiv.innerText = "";
-  }
-});
-</script>
-</body>
-</html>
-innerText = "Шоу господина Панина";
+    current = questions.length;
+    ref.set(current);
+    nextBtn.style.display = "none";
+    title.innerText = "Конец вопросов";
     nextQuestionDisplay.innerText = "";
-    clearInterval(timerInterval);
-    timerDiv.innerText = "";
-    refTimer.set(0);
   }
 };
 
-// Отображение таймера
-refTimer.on('value', s=>{
-  let sec = s.val();
-  if(sec > 0){
-    timerDiv.innerText = "Осталось секунд: " + sec;
+// Отображение текста следующего вопроса под кнопками
+function updateNextDisplay(){
+  if(current < questions.length - 1){
+    nextQuestionDisplay.innerText = "Next: " + questions[current + 1].text;
   } else {
-    timerDiv.innerText = "";
+    nextQuestionDisplay.innerText = "Конец вопросов";
   }
-});
+}
+
+// Сброс игры
+resetBtn.onclick = () => {
+  const ok = confirm("Ты уверен, что хочешь начать заново?");
+  if(ok){
+    ref.set(-1);
+    current = -1;
+    startBtn.style.display = "inline-block";
+    nextBtn.style.display = "none";
+    resetBtn.style.display = "none";
+    title.innerText = "Шоу господина Панина";
+    nextQuestionDisplay.innerText = "";
+  }
+};
 </script>
 </body>
 </html>
