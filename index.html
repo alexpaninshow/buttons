@@ -8,15 +8,16 @@
 body { font-family:'Segoe UI',sans-serif; text-align:center; padding:40px; background:linear-gradient(120deg,#1f1c2c,#928dab); color:white; }
 h1 { font-size:32px; margin-bottom:30px; }
 button { font-size:22px; margin:15px; padding:20px 40px; border-radius:12px; border:none; background:#ff6b6b; color:white; display:none; }
+#timer { font-size:22px; margin-top:20px; color:#ffeb3b; }
 </style>
 </head>
 <body>
 
 <h1 id="question">Шоу господина Панина</h1>
-
 <button id="b1"></button>
 <button id="b2"></button>
 <button id="b3"></button>
+<div id="timer"></div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -45,10 +46,12 @@ const q = document.getElementById("question");
 const b1 = document.getElementById("b1");
 const b2 = document.getElementById("b2");
 const b3 = document.getElementById("b3");
+const timerDiv = document.getElementById("timer");
 
-const ref = db.ref('currentQuestion');
+const refQuestion = db.ref('currentQuestion');
+const refTimer = db.ref('timerSeconds');
 
-ref.on('value', s => {
+refQuestion.on('value', s => {
   const current = s.val();
 
   if(current === -1 || current === null){
@@ -77,6 +80,16 @@ ref.on('value', s => {
   }
 
   b1.style.display=b2.style.display="inline-block";
+});
+
+// Таймер для зрителей
+refTimer.on('value', s=>{
+  let sec = s.val();
+  if(sec > 0){
+    timerDiv.innerText = "Осталось секунд: " + sec;
+  } else {
+    timerDiv.innerText = "";
+  }
 });
 </script>
 </body>
