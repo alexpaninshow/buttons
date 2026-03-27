@@ -8,6 +8,7 @@
 body { font-family:'Segoe UI',sans-serif; text-align:center; padding:50px; background:#333; color:white; }
 button { font-size:24px; padding:25px 50px; border-radius:12px; border:none; background:#4caf50; color:white; margin:10px; cursor:pointer; font-style:italic; }
 button.reset { background:#f44336; font-style:normal; }
+button.back { background:#ff9800; font-style:normal; }
 </style>
 </head>
 <body>
@@ -15,6 +16,7 @@ button.reset { background:#f44336; font-style:normal; }
 <h1 id="title">Шоу господина Панина</h1>
 
 <button id="nextBtn">Начать игру. Вопрос 1: Кого поцелует герой?</button>
+<button id="backBtn" class="back" style="display:none;">Назад</button>
 <button id="resetBtn" class="reset" style="display:none;">Сбросить игру</button>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -44,26 +46,46 @@ const ref = db.ref('currentQuestion');
 
 const title = document.getElementById("title");
 const nextBtn = document.getElementById("nextBtn");
+const backBtn = document.getElementById("backBtn");
 const resetBtn = document.getElementById("resetBtn");
 
 let current = -1;
+
+// Функция для обновления кнопки Next
+function updateNextButton() {
+  if(current === -1){
+    nextBtn.innerText = "Начать игру. Вопрос 1: " + questions[0].text;
+  } else if(current < questions.length - 1){
+    nextBtn.innerText = "Вопрос " + (current + 2) + ": " + questions[current + 1].text;
+  } else {
+    nextBtn.style.display = "none";
+  }
+  backBtn.style.display = current > 0 ? "inline-block" : "none";
+}
 
 nextBtn.onclick = () => {
   if(current === -1){ // старт игры
     current = 0;
     ref.set(current);
     title.innerText = questions[current].text;
-    nextBtn.innerText = "Вопрос 2: " + questions[1].text;
+    nextBtn.style.fontStyle = "italic";
     resetBtn.style.display = "inline-block";
+    updateNextButton();
   } else if(current < questions.length - 1){
     current++;
     ref.set(current);
     title.innerText = questions[current].text;
-    if(current < questions.length - 1){
-      nextBtn.innerText = "Вопрос " + (current + 2) + ": " + questions[current + 1].text;
-    } else {
-      nextBtn.style.display = "none"; // конец вопросов
-    }
+    updateNextButton();
+  }
+};
+
+backBtn.onclick = () => {
+  if(current > 0){
+    current--;
+    ref.set(current);
+    title.innerText = questions[current].text;
+    nextBtn.style.display = "inline-block";
+    updateNextButton();
   }
 };
 
@@ -75,9 +97,11 @@ resetBtn.onclick = () => {
     title.innerText = "Шоу господина Панина";
     nextBtn.style.display = "inline-block";
     nextBtn.innerText = "Начать игру. Вопрос 1: Кого поцелует герой?";
+    backBtn.style.display = "none";
     resetBtn.style.display = "none";
   }
 };
+
 </script>
 </body>
 </html>
