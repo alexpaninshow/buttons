@@ -38,6 +38,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+// Вопросы в нужном порядке
 const questions = [
   { text:"Кого поцелует герой?", options:["Девушку","Себя","Кого-то из зрителей"] },
   { text:"Вам понравился наш спектакль?", options:["Да","Нет",""] }
@@ -50,13 +51,11 @@ const b3 = document.getElementById("b3");
 const t = document.getElementById("timer");
 
 let timer;
-
 const ref = db.ref('currentQuestion');
 
 ref.on('value', s => {
   const current = s.val();
 
-  // старт
   if(current === -1 || current === null){
     q.innerText = "Ждём следующий вопрос...";
     b1.style.display=b2.style.display=b3.style.display="none";
@@ -64,7 +63,6 @@ ref.on('value', s => {
     return;
   }
 
-  // конец
   if(current >= questions.length){
     q.innerText = "Конец голосования";
     b1.style.display=b2.style.display=b3.style.display="none";
