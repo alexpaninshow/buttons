@@ -3,21 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Оператор</title>
+<title>Шоу зрителей</title>
 <style>
-body { font-family:'Segoe UI',sans-serif; text-align:center; padding:50px; background:#333; color:white; }
-button { font-size:24px; padding:25px 50px; border-radius:12px; border:none; background:#4caf50; color:white; margin:10px; cursor:pointer; font-style:italic; }
-button.reset { background:#f44336; font-style:normal; }
-button.back { background:#ff9800; font-style:normal; }
+body { font-family:'Segoe UI',sans-serif; text-align:center; padding:50px; background:#222; color:white; }
+h1 { font-size:32px; margin-bottom:20px; }
+ul { list-style:none; padding:0; }
+li { font-size:24px; margin:10px 0; }
 </style>
 </head>
 <body>
 
-<h1 id="title">Шоу господина Панина</h1>
-
-<button id="nextBtn">Начать игру. Вопрос 1: Кого поцелует герой?</button>
-<button id="backBtn" class="back" style="display:none;">Назад</button>
-<button id="resetBtn" class="reset" style="display:none;">Сбросить игру</button>
+<h1 id="displayTitle">Шоу господина Панина</h1>
+<ul id="optionsList"></ul>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -38,70 +35,33 @@ const db = firebase.database();
 
 const questions = [
   { text:"Кого поцелует герой?", options:["Девушку","Себя","Кого-то из зрителей"] },
-  { text:"Вам понравился наш спектакль?", options:["Да","Нет",""] },
+  { text:"Вам понравился наш спектакль?", options:["Да","Нет"] },
   { text:"Какой жанр хотите?", options:["Комедия","Трагедия","Фарс"] }
 ];
 
+const displayTitle = document.getElementById("displayTitle");
+const optionsList = document.getElementById("optionsList");
 const ref = db.ref('currentQuestion');
 
-const title = document.getElementById("title");
-const nextBtn = document.getElementById("nextBtn");
-const backBtn = document.getElementById("backBtn");
-const resetBtn = document.getElementById("resetBtn");
+ref.on('value', (snapshot) => {
+  const current = snapshot.val();
 
-let current = -1;
-
-// Функция для обновления кнопки Next
-function updateNextButton() {
-  if(current === -1){
-    nextBtn.innerText = "Начать игру. Вопрос 1: " + questions[0].text;
-  } else if(current < questions.length - 1){
-    nextBtn.innerText = "Вопрос " + (current + 2) + ": " + questions[current + 1].text;
+  if(current === -1 || current === null){ // игра ещё не началась
+    displayTitle.innerText = "Шоу господина Панина";
+    optionsList.innerHTML = "";
+  } else if(current >= 0 && current < questions.length){
+    displayTitle.innerText = questions[current].text;
+    optionsList.innerHTML = "";
+    questions[current].options.forEach(opt => {
+      const li = document.createElement('li');
+      li.innerText = opt;
+      optionsList.appendChild(li);
+    });
   } else {
-    nextBtn.style.display = "none";
+    displayTitle.innerText = "Голосование окончено!";
+    optionsList.innerHTML = "";
   }
-  backBtn.style.display = current > 0 ? "inline-block" : "none";
-}
-
-nextBtn.onclick = () => {
-  if(current === -1){ // старт игры
-    current = 0;
-    ref.set(current);
-    title.innerText = questions[current].text;
-    nextBtn.style.fontStyle = "italic";
-    resetBtn.style.display = "inline-block";
-    updateNextButton();
-  } else if(current < questions.length - 1){
-    current++;
-    ref.set(current);
-    title.innerText = questions[current].text;
-    updateNextButton();
-  }
-};
-
-backBtn.onclick = () => {
-  if(current > 0){
-    current--;
-    ref.set(current);
-    title.innerText = questions[current].text;
-    nextBtn.style.display = "inline-block";
-    updateNextButton();
-  }
-};
-
-resetBtn.onclick = () => {
-  const ok = confirm("Ты уверен, что хочешь начать заново?");
-  if(ok){
-    ref.set(-1);
-    current = -1;
-    title.innerText = "Шоу господина Панина";
-    nextBtn.style.display = "inline-block";
-    nextBtn.innerText = "Начать игру. Вопрос 1: Кого поцелует герой?";
-    backBtn.style.display = "none";
-    resetBtn.style.display = "none";
-  }
-};
-
+});
 </script>
 </body>
 </html>
