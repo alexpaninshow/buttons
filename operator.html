@@ -38,7 +38,9 @@ button {
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-const firebaseConfig = { databaseURL: "https://buttons-panin-default-rtdb.firebaseio.com" };
+const firebaseConfig = {
+  databaseURL: "https://buttons-panin-default-rtdb.firebaseio.com"
+};
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
@@ -49,7 +51,7 @@ const status = document.getElementById("status");
 const nextBtn = document.getElementById("nextBtn");
 const backBtn = document.getElementById("backBtn");
 
-// 👉 загрузка вопросов
+// загрузка вопросов
 fetch('https://sheet.best/api/sheets/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0')
 .then(r=>r.json())
 .then(data=>{
