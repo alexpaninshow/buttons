@@ -14,7 +14,6 @@ button.reset { background:#f44336; }
 
 <h1>Оператор</h1>
 
-<!-- Только кнопка начала игры -->
 <button id="startBtn">Начать игру</button>
 <button id="nextBtn" style="display:none;">Следующий вопрос</button>
 <button id="resetBtn" class="reset" style="display:none;">Сбросить игру</button>
@@ -47,24 +46,23 @@ const startBtn = document.getElementById("startBtn");
 const nextBtn = document.getElementById("nextBtn");
 const resetBtn = document.getElementById("resetBtn");
 
-// Нажатие "Начать игру"
+// Начать игру — просто включаем кнопки, но первый вопрос пока не отправляем
 startBtn.onclick = () => {
-  ref.set(0); // первый вопрос
-  startBtn.style.display = "none"; // скрыть кнопку старта
-  nextBtn.style.display = "inline-block"; // показать следующий вопрос
-  resetBtn.style.display = "inline-block"; // показать сброс игры
+  startBtn.style.display = "none";
+  nextBtn.style.display = "inline-block";
+  resetBtn.style.display = "inline-block";
 };
 
-// Нажатие "Следующий вопрос"
+// Следующий вопрос
 nextBtn.onclick = () => {
   ref.transaction(current => {
-    if(current === null) return 0;
+    if(current === null || current === -1) return 0; // первый вопрос
     if(current >= questions.length - 1) return questions.length; // конец голосования
     return current + 1;
   });
 };
 
-// Нажатие "Сбросить игру"
+// Сброс игры
 resetBtn.onclick = () => {
   const ok = confirm("Ты уверен, что хочешь начать заново?");
   if(ok){
