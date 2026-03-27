@@ -5,9 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Оператор</title>
 <style>
-body { font-family:'Segoe UI',sans-serif; text-align:center; padding:50px; background:linear-gradient(120deg,#222,#555); color:white; }
-button { font-size:24px; padding:25px 50px; border-radius:12px; border:none; background:#4caf50; color:white; cursor:pointer; transition:0.3s; }
-button:hover{background:#66bb6a;}
+body { font-family:'Segoe UI',sans-serif; text-align:center; padding:50px; background:#333; color:white; }
+button { font-size:24px; padding:25px 50px; border-radius:12px; border:none; background:#4caf50; color:white; }
 </style>
 </head>
 <body>
@@ -37,25 +36,21 @@ const questions = [
   { text:"Вам понравился наш спектакль?", options:["Да","Нет",""] }
 ];
 
-const currentQuestionRef = db.ref('currentQuestion');
+const ref = db.ref('currentQuestion');
 
 document.getElementById("nextBtn").onclick = () => {
-  currentQuestionRef.once('value').then(snapshot => {
-    let current = snapshot.val();
+  ref.transaction(current => {
+    if(current === null) return 0; // первый вопрос
 
-    if(current === null) current = -1;
-
-    // СТОП
-    if(current >= questions.length - 1){
-      alert("Это был последний вопрос");
-      return;
+    if(current >= questions.length){
+      return; // стоп, ничего не меняем
     }
 
-    const next = current + 1;
+    if(current >= questions.length - 1){
+      return questions.length; // переводим в "конец"
+    }
 
-    currentQuestionRef.set(next);
-
-    alert("Вопрос: " + questions[next].text);
+    return current + 1;
   });
 };
 </script>
