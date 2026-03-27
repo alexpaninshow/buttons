@@ -15,7 +15,7 @@ button.reset { background:#f44336; }
 <h1>Оператор</h1>
 
 <button id="startBtn">Начать игру</button>
-<button id="nextBtn" style="display:none;">Следующий вопрос</button>
+<button id="nextBtn" style="display:none;"></button>
 <button id="resetBtn" class="reset" style="display:none;">Сбросить игру</button>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -46,28 +46,46 @@ const startBtn = document.getElementById("startBtn");
 const nextBtn = document.getElementById("nextBtn");
 const resetBtn = document.getElementById("resetBtn");
 
+let current = -1;
+
 // Начать игру — сразу первый вопрос
 startBtn.onclick = () => {
-  ref.set(0); // первый вопрос
+  current = 0;
+  ref.set(current);
   startBtn.style.display = "none";
   nextBtn.style.display = "inline-block";
   resetBtn.style.display = "inline-block";
+  updateNextButton();
 };
 
 // Следующий вопрос
 nextBtn.onclick = () => {
-  ref.transaction(current => {
-    if(current === null) return 0;
-    if(current >= questions.length - 1) return questions.length; // конец голосования
-    return current + 1;
-  });
+  if(current < questions.length - 1){
+    current++;
+    ref.set(current);
+    updateNextButton();
+  } else {
+    current = questions.length;
+    ref.set(current);
+    nextBtn.style.display = "none";
+  }
 };
+
+// Обновление текста кнопки на следующий вопрос
+function updateNextButton(){
+  if(current < questions.length - 1){
+    nextBtn.innerText = "Next: " + questions[current + 1].text;
+  } else {
+    nextBtn.innerText = "Конец вопросов";
+  }
+}
 
 // Сброс игры
 resetBtn.onclick = () => {
   const ok = confirm("Ты уверен, что хочешь начать заново?");
   if(ok){
     ref.set(-1); // сброс игры
+    current = -1;
     startBtn.style.display = "inline-block";
     nextBtn.style.display = "none";
     resetBtn.style.display = "none";
