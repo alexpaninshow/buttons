@@ -12,7 +12,7 @@ button.reset { background:#f44336; }
 </head>
 <body>
 
-<h1>Оператор</h1>
+<h1 id="title">Шоу господина Панина</h1>
 
 <button id="startBtn">Начать игру</button>
 <button id="nextBtn" style="display:none;"></button>
@@ -43,19 +43,21 @@ const questions = [
 
 const ref = db.ref('currentQuestion');
 
+const title = document.getElementById("title");
 const startBtn = document.getElementById("startBtn");
 const nextBtn = document.getElementById("nextBtn");
 const resetBtn = document.getElementById("resetBtn");
 
 let current = -1;
 
-// Начать игру — сразу первый вопрос
+// Начать игру — запускает первый вопрос у всех
 startBtn.onclick = () => {
   current = 0;
   ref.set(current);
   startBtn.style.display = "none";
   nextBtn.style.display = "inline-block";
   resetBtn.style.display = "inline-block";
+  title.innerText = questions[0].text;
   updateNextButton();
 };
 
@@ -64,11 +66,13 @@ nextBtn.onclick = () => {
   if(current < questions.length - 1){
     current++;
     ref.set(current);
+    title.innerText = questions[current].text;
     updateNextButton();
   } else {
     current = questions.length;
     ref.set(current);
     nextBtn.style.display = "none";
+    title.innerText = "Конец вопросов";
   }
 };
 
@@ -85,12 +89,12 @@ function updateNextButton(){
 resetBtn.onclick = () => {
   const ok = confirm("Ты уверен, что хочешь начать заново?");
   if(ok){
-    ref.set(-1); // сброс игры
+    ref.set(-1);
     current = -1;
     startBtn.style.display = "inline-block";
     nextBtn.style.display = "none";
     resetBtn.style.display = "none";
-    alert("Игра сброшена. Ждём следующий вопрос...");
+    title.innerText = "Шоу господина Панина";
   }
 };
 </script>
