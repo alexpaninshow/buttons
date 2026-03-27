@@ -13,8 +13,10 @@ button.reset { background:#f44336; }
 <body>
 
 <h1>Оператор</h1>
-<button id="nextBtn">Следующий вопрос</button>
-<button id="resetBtn" class="reset">Сбросить игру</button>
+
+<button id="startBtn">Начать игру</button>
+<button id="nextBtn" style="display:none;">Следующий вопрос</button>
+<button id="resetBtn" class="reset" style="display:none;">Сбросить игру</button>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -40,8 +42,20 @@ const questions = [
 
 const ref = db.ref('currentQuestion');
 
+const startBtn = document.getElementById("startBtn");
+const nextBtn = document.getElementById("nextBtn");
+const resetBtn = document.getElementById("resetBtn");
+
+// Начать игру
+startBtn.onclick = () => {
+  ref.set(0); // первый вопрос
+  startBtn.style.display = "none";
+  nextBtn.style.display = "inline-block";
+  resetBtn.style.display = "inline-block";
+};
+
 // Следующий вопрос
-document.getElementById("nextBtn").onclick = () => {
+nextBtn.onclick = () => {
   ref.transaction(current => {
     if(current === null) return 0;
     if(current >= questions.length - 1) return questions.length; // конец голосования
@@ -49,11 +63,14 @@ document.getElementById("nextBtn").onclick = () => {
   });
 };
 
-// Сброс спектакля
-document.getElementById("resetBtn").onclick = () => {
+// Сброс игры
+resetBtn.onclick = () => {
   const ok = confirm("Ты уверен, что хочешь начать заново?");
   if(ok){
     ref.set(-1);
+    startBtn.style.display = "inline-block";
+    nextBtn.style.display = "none";
+    resetBtn.style.display = "none";
     alert("Игра сброшена. Ждём следующий вопрос...");
   }
 };
