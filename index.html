@@ -13,7 +13,7 @@ button { font-size:22px; margin:15px; padding:20px 40px; border-radius:12px; bor
 </head>
 <body>
 
-<h1 id="question">Ждём следующий вопрос...</h1>
+<h1 id="question">Шоу господина Панина</h1>
 
 <button id="b1"></button>
 <button id="b2"></button>
@@ -38,7 +38,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// Вопросы в нужном порядке
+// Вопросы в правильном порядке
 const questions = [
   { text:"Кого поцелует герой?", options:["Девушку","Себя","Кого-то из зрителей"] },
   { text:"Вам понравился наш спектакль?", options:["Да","Нет",""] }
@@ -57,7 +57,7 @@ ref.on('value', s => {
   const current = s.val();
 
   if(current === -1 || current === null){
-    q.innerText = "Ждём следующий вопрос...";
+    q.innerText = "Шоу господина Панина";
     b1.style.display=b2.style.display=b3.style.display="none";
     t.style.display="none";
     return;
