@@ -86,6 +86,7 @@ refQuestion.on('value', s => {
 refTimer.on('value', s=>{
   let sec = s.val();
   if(sec > 0){
+    timerDiv.style.display = "block";
     timerDiv.innerText = "Осталось секунд: " + sec;
   } else {
     timerDiv.innerText = "";
