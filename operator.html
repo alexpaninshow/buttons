@@ -2,110 +2,120 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Оператор</title>
+
 <style>
-body { font-family:'Segoe UI',sans-serif; text-align:center; padding:50px; background:#333; color:white; }
-button { font-size:24px; padding:25px 50px; border-radius:12px; border:none; margin:10px; cursor:pointer; }
-button.next { background:#4caf50; font-style:italic; color:white; }
-button.back { background:#ff9800; font-style:normal; color:white; }
-button.reset { background:#f44336; font-style:normal; color:white; }
+body { font-family: Arial; text-align: center; background:#222; color:white; padding:40px; }
+
+#status { font-size:26px; margin-bottom:10px; }
+#winner { font-size:28px; color:#4caf50; margin-bottom:20px; }
+#results { margin-top:20px; }
+
+button {
+  font-size:20px;
+  padding:15px 25px;
+  margin:10px;
+  border-radius:10px;
+  border:none;
+  cursor:pointer;
+}
+
+.next { background:#4caf50; color:white; font-style:italic; }
+.back { background:orange; color:white; }
+.reset { background:red; color:white; }
 </style>
 </head>
+
 <body>
 
-<h1 id="title">Шоу господина Панина</h1>
+<h1>Оператор</h1>
 
-<button id="nextBtn" class="next">Начать игру</button>
+<div id="status">Ожидание</div>
+<div id="winner"></div>
+<div id="results"></div>
+
+<button id="nextBtn" class="next">Загрузка...</button>
 <button id="backBtn" class="back" style="display:none;">Назад</button>
-<button id="resetBtn" class="reset" style="display:none;">Сбросить игру</button>
+<button id="resetBtn" class="reset">Сбросить игру</button>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyCnYKEXEd207E9LXgCBupqc3kjbEbk1NTc",
-  authDomain: "buttons-show.firebaseapp.com",
-  databaseURL: "https://buttons-panin-default-rtdb.firebaseio.com",
-  projectId: "buttons-show",
-  storageBucket: "buttons-show.appspot.com",
-  messagingSenderId: "145808897789",
-  appId: "1:145808897789:web:900445fca031ece7e53094"
-};
-
+const firebaseConfig = { databaseURL: "https://buttons-panin-default-rtdb.firebaseio.com" };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-const questions = [
-  { text:"Кого поцелует герой?", options:["Девушку","Себя","Кого-то из зрителей"] },
-  { text:"Вам понравился наш спектакль?", options:["Да","Нет"] },
-  { text:"Какой жанр хотите?", options:["Комедия","Трагедия","Фарс"] }
-];
+let questions = [];
+let current = -1;
+let timerId = null;
 
-const ref = db.ref('currentQuestion');
-
-const title = document.getElementById("title");
+const status = document.getElementById("status");
+const winnerDiv = document.getElementById("winner");
+const resultsDiv = document.getElementById("results");
 const nextBtn = document.getElementById("nextBtn");
 const backBtn = document.getElementById("backBtn");
-const resetBtn = document.getElementById("resetBtn");
 
-let current = -1;
+fetch('https://sheet.best/api/sheets/ВАШ_API_URL')
+.then(r=>r.json())
+.then(data=>{
+  questions = data.map(r=>({
+    text:r['Вопрос'],
+    options:[r['Вариант 1'],r['Вариант 2'],r['Вариант 3']].filter(o=>o)
+  }));
+  updateButtons();
+});
 
-function updateButtons() {
-  if(current === -1){
-    nextBtn.innerText = "Начать игру. Вопрос 1: " + questions[0].text;
-    backBtn.style.display = "none";
-    resetBtn.style.display = "none";
-  } else if(current < questions.length - 1){
-    nextBtn.innerText = "Вопрос " + (current + 2) + ": " + questions[current + 1].text;
-    backBtn.style.display = current > 0 ? "inline-block" : "none";
-    resetBtn.style.display = "inline-block";
-  } else {
-    nextBtn.style.display = "none";
-    backBtn.style.display = current > 0 ? "inline-block" : "none";
-    resetBtn.style.display = "inline-block";
-  }
+function showQuestion(i){
+  if(timerId) clearTimeout(timerId);
+
+  db.ref('votes/'+i).set(null);
+
+  current = i;
+  db.ref('currentQuestion').set(i);
+
+  winnerDiv.innerText = "";
+  resultsDiv.innerHTML = "";
+  status.innerText = "Сейчас: " + questions[i].text;
+
+  updateButtons();
 }
 
-nextBtn.onclick = () => {
-  if(current === -1){
-    current = 0;
-    ref.set(current);
-    title.innerText = questions[current].text;
-    updateButtons();
-  } else if(current < questions.length - 1){
-    current++;
-    ref.set(current);
-    title.innerText = questions[current].text;
-    updateButtons();
-  }
+nextBtn.onclick = ()=>{
+  if(current===-1) showQuestion(0);
+  else if(current<questions.length-1) showQuestion(current+1);
 };
 
-backBtn.onclick = () => {
-  if(current > 0){
-    current--;
-    ref.set(current);
-    title.innerText = questions[current].text;
-    nextBtn.style.display = "inline-block";
+backBtn.onclick = ()=>{
+  if(current>0) showQuestion(current-1);
+};
+
+document.getElementById("resetBtn").onclick = ()=>{
+  if(confirm("Ты уверен, что хочешь начать заново?")){
+    current=-1;
+    db.ref('currentQuestion').set(-1);
+    winnerDiv.innerText="";
+    resultsDiv.innerHTML="";
+    status.innerText="Ожидание";
     updateButtons();
   }
 };
 
-resetBtn.onclick = () => {
-  const ok = confirm("Ты уверен, что хочешь начать заново?");
-  if(ok){
-    ref.set(-1);
-    current = -1;
-    title.innerText = "Шоу господина Панина";
-    nextBtn.style.display = "inline-block";
-    nextBtn.innerText = "Начать игру. Вопрос 1: " + questions[0].text;
-    backBtn.style.display = "none";
-    resetBtn.style.display = "none";
-  }
-};
+function updateButtons(){
+  if(!questions.length) return;
 
-updateButtons();
+  if(current===-1){
+    nextBtn.innerText="Начать игру. Вопрос 1: "+questions[0].text;
+    backBtn.style.display="none";
+  } else {
+    nextBtn.style.display = current<questions.length-1 ? "inline-block":"none";
+    if(current<questions.length-1){
+      nextBtn.innerText="Вопрос "+(current+2)+": "+questions[current+1].text;
+    }
+    backBtn.style.display = current>0?"inline-block":"none";
+  }
+}
 </script>
+
 </body>
 </html>
