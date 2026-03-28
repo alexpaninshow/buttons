@@ -21,6 +21,7 @@ body {
 h1 { font-size:5vw; margin:0; }
 #status { font-size:4vw; margin-top:10px; }
 #timer { font-size:6vw; margin-top:10px; }
+#result { font-size:5vw; margin-top:10px; }
 
 #buttons {
   flex:1;
@@ -42,55 +43,37 @@ button {
 .back { background:orange; flex:0.8; }
 .reset { background:red; flex:0.7; }
 
-/* 🔥 модалка */
+/* модалка */
 #confirmModal {
   position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
+  top:0; left:0;
+  width:100%; height:100%;
   background:rgba(0,0,0,0.85);
   display:none;
   align-items:center;
   justify-content:center;
-  z-index:100;
 }
 
 #confirmBox {
   background:#222;
   padding:30px;
   border-radius:20px;
-  text-align:center;
   width:80%;
   max-width:400px;
 }
 
-#confirmBox p {
-  font-size:22px;
-  margin-bottom:20px;
-}
-
-.modalBtn {
-  width:100%;
-  padding:18px;
-  border:none;
-  border-radius:15px;
-  margin:10px 0;
-}
-
-/* 🔥 главная кнопка */
 .noMain {
   background:white;
   color:black;
-  font-size:22px;
   font-weight:900;
+  padding:15px;
+  margin:10px 0;
 }
 
-/* 🔥 вторичная */
 .yesSub {
   background:#666;
   color:#ddd;
-  font-size:18px;
+  padding:12px;
 }
 </style>
 </head>
@@ -101,6 +84,7 @@ button {
   <h1>Оператор</h1>
   <div id="status">Загрузка...</div>
   <div id="timer">⏳ -</div>
+  <div id="result"></div>
 </div>
 
 <div id="buttons">
@@ -109,18 +93,11 @@ button {
   <button id="resetBtn" class="reset">Полный сброс</button>
 </div>
 
-<!-- 🔥 модалка -->
 <div id="confirmModal">
   <div id="confirmBox">
-    <p>Вы уверены, что хотите полностью сбросить игру?</p>
-
-    <button id="noBtn" class="modalBtn noMain">
-      Нет, вернуться в игру
-    </button>
-
-    <button id="yesBtn" class="modalBtn yesSub">
-      Да
-    </button>
+    <p>Вы уверены?</p>
+    <button id="noBtn" class="noMain">Нет, вернуться в игру</button>
+    <button id="yesBtn" class="yesSub">Да</button>
   </div>
 </div>
 
@@ -128,176 +105,82 @@ button {
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-const CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv&gid=0";
+const CSV_URL="https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv&gid=0";
 
 firebase.initializeApp({
   databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"
 });
 
-const db = firebase.database();
+const db=firebase.database();
 
-let questions = [];
-let current = -1;
-let prevQuestion = -1;
-let timerInterval = null;
+let questions=[];
+let current=-1;
+let prev=-1;
 
-const status = document.getElementById("status");
-const timerEl = document.getElementById("timer");
-const nextBtn = document.getElementById("nextBtn");
-const backBtn = document.getElementById("backBtn");
+const status=document.getElementById("status");
+const timer=document.getElementById("timer");
+const result=document.getElementById("result");
 
-const modal = document.getElementById("confirmModal");
-const yesBtn = document.getElementById("yesBtn");
-const noBtn = document.getElementById("noBtn");
-
-/* CSV */
-fetch(CSV_URL)
-.then(r=>r.text())
-.then(text=>{
-  const rows=text.trim().split('\n').map(r=>r.split(','));
-
-  questions = rows.slice(1).map(c=>({
-    text:(c[0]||"").trim(),
-    options:c.slice(1).filter(Boolean)
-  }));
-
-  updateButtons();
+fetch(CSV_URL).then(r=>r.text()).then(t=>{
+  questions=t.split('\n').slice(1).map(r=>{
+    let c=r.split(',');
+    return {text:c[0],options:c.slice(1)};
+  });
 });
 
-/* Firebase */
-db.ref('currentQuestion').on('value', snap => {
+db.ref('currentQuestion').on('value',snap=>{
+  current=snap.val();
 
-  const val = snap.val();
-  const newVal = (val === null) ? -1 : Number(val);
+  if(current>=0) prev=current;
 
-  if(newVal >= 0){
-    prevQuestion = newVal;
+  if(current===-999){
+    status.innerText="Смотрите на сцену";
+    showResult();
+  } else if(current>=0){
+    status.innerText=questions[current]?.text||"";
+    result.innerText="";
+  } else {
+    status.innerText="Ожидание";
   }
-
-  current = newVal;
-
-  clearInterval(timerInterval);
-
-  if(current === -999){
-    status.innerText = "Смотрите на сцену";
-    timerEl.innerText = "⏳ -";
-  }
-  else if(current >= 0 && questions[current]){
-    status.innerText = "Сейчас: " + (current+1) + ". " + questions[current].text;
-    startTimer();
-  }
-  else{
-    status.innerText = "Ожидание";
-    timerEl.innerText = "⏳ -";
-  }
-
-  updateButtons();
 });
 
-/* таймер */
-function startTimer(){
-  let t = 5;
-  timerEl.innerText = "⏳ " + t;
+function showResult(){
+  db.ref('votes/'+prev).once('value',snap=>{
+    let v=snap.val()||{};
+    let max=-1,iMax=-1;
 
-  timerInterval = setInterval(()=>{
-    t--;
-    timerEl.innerText = "⏳ " + t;
+    questions[prev].options.forEach((o,i)=>{
+      let val=v[i]||0;
+      if(val>max){max=val;iMax=i;}
+    });
 
-    if(t <= 0){
-      clearInterval(timerInterval);
-      db.ref('currentQuestion').set(-999);
-    }
-  },1000);
+    if(iMax>=0){
+      result.innerText="Победил: "+questions[prev].options[iMax]+" ("+max+")";
+    } else result.innerText="Нет голосов";
+  });
 }
 
-/* управление */
-nextBtn.onclick = ()=>{
-
-  if(current === -1){
-    db.ref('currentQuestion').set(0);
-    return;
-  }
-
-  if(current === -999){
-    if(prevQuestion < questions.length - 1){
-      db.ref('currentQuestion').set(prevQuestion + 1);
-    }
-    return;
-  }
-
-  if(current < questions.length - 1){
-    db.ref('currentQuestion').set(current + 1);
-  }
+document.getElementById("nextBtn").onclick=()=>{
+  if(current<questions.length-1) db.ref('currentQuestion').set(current+1);
 };
 
-backBtn.onclick = ()=>{
-
-  if(current === -999){
-    db.ref('currentQuestion').set(prevQuestion);
-    return;
-  }
-
-  if(current > 0){
-    db.ref('currentQuestion').set(current - 1);
-  }
+document.getElementById("backBtn").onclick=()=>{
+  if(current>0) db.ref('currentQuestion').set(current-1);
 };
 
-/* 🔥 открыть модалку */
-document.getElementById("resetBtn").onclick = ()=>{
-  modal.style.display = "flex";
+document.getElementById("resetBtn").onclick=()=>{
+  document.getElementById("confirmModal").style.display="flex";
 };
 
-/* нет */
-noBtn.onclick = ()=>{
-  modal.style.display = "none";
+document.getElementById("noBtn").onclick=()=>{
+  confirmModal.style.display="none";
 };
 
-/* да */
-yesBtn.onclick = ()=>{
+document.getElementById("yesBtn").onclick=()=>{
   db.ref('votes').remove();
   db.ref('currentQuestion').set(-1);
-  prevQuestion = -1;
-  modal.style.display = "none";
+  confirmModal.style.display="none";
 };
-
-/* подписи */
-function updateButtons(){
-
-  if(!questions.length) return;
-
-  if(current === -1){
-    nextBtn.innerText = "Начать: 1. " + questions[0].text;
-    backBtn.style.display = "none";
-    return;
-  }
-
-  if(current === -999){
-
-    if(prevQuestion < questions.length - 1){
-      nextBtn.innerText = "Далее: " + (prevQuestion+2) + ". " + questions[prevQuestion+1].text;
-    } else {
-      nextBtn.innerText = "Конец";
-    }
-
-    backBtn.style.display = "block";
-    backBtn.innerText = "Назад: " + (prevQuestion+1) + ". " + questions[prevQuestion].text;
-
-    return;
-  }
-
-  if(current < questions.length - 1){
-    nextBtn.innerText = "Далее: " + (current+2) + ". " + questions[current+1].text;
-  } else {
-    nextBtn.innerText = "Конец";
-  }
-
-  if(current > 0){
-    backBtn.style.display = "block";
-    backBtn.innerText = "Назад: " + current + ". " + questions[current-1].text;
-  } else {
-    backBtn.style.display = "none";
-  }
-}
 </script>
 
 </body>
