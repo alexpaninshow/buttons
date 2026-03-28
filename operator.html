@@ -7,7 +7,8 @@
 <style>
 body{margin:0;display:flex;background:#111;color:#fff;font-family:Arial}
 
-#left{flex:1;text-align:center;padding:20px}
+#left{flex:1;padding:20px;text-align:center}
+
 #status{font-size:22px;margin-bottom:10px}
 #timer{font-size:28px}
 
@@ -17,9 +18,9 @@ button{margin:5px;padding:12px;font-size:16px;border:none;border-radius:10px;col
 .reset{background:red}
 
 #viewer{width:300px;background:#000;padding:10px}
-#vBar{height:8px;background:lime;width:100%}
 .vOpt{background:#333;margin:4px;padding:6px;border-radius:6px}
 .sel{background:#4caf50}
+#vBar{height:8px;background:lime;width:100%}
 </style>
 </head>
 
@@ -50,7 +51,9 @@ firebase.initializeApp({databaseURL:"https://buttons-panin-default-rtdb.firebase
 var db=firebase.database();
 
 var questions=[],current=-1;
+var users={},activeUser=null;
 
+/* CSV */
 fetch("https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv&gid=0")
 .then(r=>r.text())
 .then(t=>{
@@ -64,19 +67,39 @@ fetch("https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx
   updateButtons();
 });
 
-/* СИНХРОНИЗАЦИЯ */
+/* USERS */
+db.ref("users").on("value",function(s){
+  users=s.val()||{};
+  pickUser();
+});
+
+function pickUser(){
+  var now=Date.now();
+  var alive=[];
+  for(var id in users){
+    if(now-users[id].t<5000) alive.push(id);
+  }
+
+  if(!alive.length){activeUser=null;return;}
+
+  if(!activeUser || !users[activeUser] || (now-users[activeUser].t>5000)){
+    activeUser=alive[Math.floor(Math.random()*alive.length)];
+  }
+}
+
+/* SYNC */
 db.ref("currentQuestion").on("value",function(s){
 
   var d=s.val(); if(!d) return;
   current=d.index;
 
   updateStatus(d);
-  updateViewer(d);
   updateButtons();
+  updateViewer(d);
   showResult();
 });
 
-/* СТАТУС */
+/* STATUS */
 function updateStatus(d){
   if(current>=0 && questions[current]){
     status.innerText=(current+1)+". "+questions[current].text;
@@ -88,7 +111,7 @@ function updateStatus(d){
   }
 }
 
-/* ТАЙМЕР */
+/* TIMER */
 function startTimer(st){
   clearInterval(window.ti);
   function t(){
@@ -100,7 +123,7 @@ function startTimer(st){
   window.ti=setInterval(t,200);
 }
 
-/* КНОПКИ */
+/* BUTTONS */
 nextBtn.onclick=function(){
   if(current<0) setQ(0);
   else if(current<questions.length-1) setQ(current+1);
@@ -114,8 +137,9 @@ function setQ(i){
   db.ref("currentQuestion").set({index:i,startTime:Date.now()});
 }
 
-/* ПОДПИСИ */
+/* LABELS */
 function updateButtons(){
+
   if(!questions.length) return;
 
   backBtn.style.display = current>0 ? "inline-block":"none";
@@ -131,7 +155,7 @@ function updateButtons(){
   }
 }
 
-/* РЕЗУЛЬТАТ */
+/* RESULT */
 function showResult(){
   if(current<0) return;
 
@@ -142,16 +166,13 @@ function showResult(){
     var max=0,idx=-1,tie=false;
 
     for(var k in v){
-      if(v[k]>max){
-        max=v[k]; idx=k; tie=false;
-      } else if(v[k]===max){
-        tie=true;
-      }
+      if(v[k]>max){max=v[k];idx=k;tie=false;}
+      else if(v[k]===max){tie=true;}
     }
 
-    if(max===0 || tie){
+    if(max===0||tie){
       result.innerText="Ничья";
-    } else {
+    }else{
       result.innerText="Победитель: "+questions[current].options[idx];
     }
   });
@@ -160,20 +181,39 @@ function showResult(){
 /* VIEWER */
 function updateViewer(d){
 
-  if(current<0 || !questions[current]){
+  if(!activeUser || !users[activeUser]){
+    vTitle.innerText="Нет зрителей";
+    vOpts.innerHTML="";
+    return;
+  }
+
+  var u=users[activeUser];
+
+  if(u.q===-1){
     vTitle.innerText="Скоро начнём!";
     vOpts.innerHTML="";
     return;
   }
 
-  vTitle.innerText=questions[current].text;
+  if(u.q===-999){
+    vTitle.innerText="Смотрите на сцену!";
+    vOpts.innerHTML="";
+    return;
+  }
+
+  if(!questions[u.q]) return;
+
+  vTitle.innerText=questions[u.q].text;
   vOpts.innerHTML="";
 
-  for(var i=0;i<questions[current].options.length;i++){
-    var div=document.createElement("div");
-    div.className="vOpt";
-    div.innerText=questions[current].options[i];
-    vOpts.appendChild(div);
+  for(var i=0;i<questions[u.q].options.length;i++){
+    var d2=document.createElement("div");
+    d2.className="vOpt";
+    d2.innerText=questions[u.q].options[i];
+
+    if(u.selected===i) d2.classList.add("sel");
+
+    vOpts.appendChild(d2);
   }
 
   var total=5000;
@@ -187,6 +227,7 @@ function updateViewer(d){
   vBar.style.width=(remain/total*100)+"%";
   vBar.offsetHeight;
   vBar.style.transition="width "+remain+"ms linear";
+
   setTimeout(()=>vBar.style.width="0%",50);
 }
 </script>
