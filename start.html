@@ -31,7 +31,6 @@ body {
   transition:0.3s;
 }
 
-/* 🔒 заблокированная кнопка */
 #startBtn.disabled {
   background:#555;
   color:#aaa;
@@ -70,19 +69,16 @@ let csvReady = false;
 let firebaseReady = false;
 let isChecking = false;
 
-/* 🔒 блок */
 function lockBtn(){
   btn.classList.add("disabled");
   btn.disabled = true;
 }
 
-/* 🔓 разблок */
 function unlockBtn(){
   btn.classList.remove("disabled");
   btn.disabled = false;
 }
 
-/* CSV */
 function checkCSV(){
   return fetch(CSV_URL)
     .then(r=>r.text())
@@ -90,14 +86,12 @@ function checkCSV(){
     .catch(()=>false);
 }
 
-/* Firebase */
 function checkFirebase(){
   return new Promise(res=>{
     db.ref('ping').set(Date.now(), e=>res(!e));
   });
 }
 
-/* проверка */
 async function checkSystem(){
 
   if(isChecking) return;
@@ -119,24 +113,18 @@ async function checkSystem(){
   else if(!csvReady){
     status.className="error";
     status.innerText="Нет связи с таблицей";
-    lockBtn();
   } 
   else {
     status.className="error";
     status.innerText="Firebase не отвечает";
-    lockBtn();
   }
 
   isChecking = false;
 }
 
-/* запуск */
 checkSystem();
-
-/* раз в минуту */
 setInterval(checkSystem, 60000);
 
-/* кнопка */
 btn.onclick = async () => {
 
   if(btn.disabled) return;
@@ -156,7 +144,9 @@ btn.onclick = async () => {
   btn.innerText = "Запуск...";
 
   db.ref('votes').remove();
-  db.ref('currentQuestion').set(-1);
+
+  // 🔥 ВОТ ГЛАВНОЕ ИЗМЕНЕНИЕ
+  db.ref('currentQuestion').set(-999);
 
   setTimeout(()=>{
     window.location.href="operator.html";
