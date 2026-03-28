@@ -15,14 +15,37 @@ body { margin:0; display:flex; font-family:Arial; background:#111; color:white; 
 
 #buttons { flex:1; display:flex; flex-direction:column; padding:10px; }
 
-button { margin:6px 0; font-size:18px; padding:10px; border-radius:15px; border:none; }
+button {
+  margin:6px 0;
+  font-size:18px;
+  padding:12px;
+  border-radius:15px;
+  border:none;
+  color:white;
+}
+
 .next{background:#4caf50;}
 .back{background:orange;}
 .reset{background:red;}
 
-#viewer { width:280px; background:#000; padding:10px; }
-#vTitle { font-size:16px; }
-#vBar { height:8px; background:lime; width:100%; margin:8px 0; }
+#viewer {
+  width:300px;
+  background:#000;
+  padding:10px;
+  border-left:3px solid #333;
+}
+
+#vTitle { font-size:16px; margin-bottom:10px; }
+#vTimerWrap { height:8px; background:#222; border-radius:10px; overflow:hidden; }
+#vBar { height:100%; width:100%; background:lime; }
+
+.vOpt {
+  background:#333;
+  margin:4px 0;
+  padding:6px;
+  border-radius:8px;
+  font-size:14px;
+}
 </style>
 </head>
 
@@ -42,40 +65,86 @@ button { margin:6px 0; font-size:18px; padding:10px; border-radius:15px; border:
 </div>
 
 <div id="viewer">
-<div id="vTitle">...</div>
-<div id="vBar"></div>
+<div id="vTitle">Подключение...</div>
+<div id="vTimerWrap"><div id="vBar"></div></div>
+<div id="vOpts"></div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-firebase.initializeApp({databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"});
-var db=firebase.database();
+firebase.initializeApp({
+  databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"
+});
+
+var db = firebase.database();
 
 var questions=[];
 var current=-1;
 
+var users = {};
+var activeUser = null;
+
+/* CSV */
 fetch("https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv&gid=0")
 .then(r=>r.text())
 .then(t=>{
   var rows=t.trim().split('\n');
+
   for(var i=1;i<rows.length;i++){
     var c=rows[i].split(',');
     var q={text:c[0],options:[]};
     for(var j=1;j<c.length;j++) if(c[j]) q.options.push(c[j]);
     questions.push(q);
   }
+
   updateButtons();
 });
 
-/* sync */
+/* USERS */
+db.ref("users").on("value",function(snap){
+  users = snap.val() || {};
+  pickRandomUser();
+});
+
+/* выбираем случайного */
+function pickRandomUser(){
+
+  var now = Date.now();
+  var arr = [];
+
+  for(var id in users){
+    if(now - users[id].t < 10000){
+      arr.push(id);
+    }
+  }
+
+  if(arr.length){
+    activeUser = arr[Math.floor(Math.random()*arr.length)];
+  }
+}
+
+/* CURRENT */
 db.ref("currentQuestion").on("value",function(snap){
-  var d=snap.val(); if(!d) return;
-  current=d.index;
+
+  var d = snap.val();
+  if(!d) return;
+
+  current = d.index;
+
+  updateOperator(d);
+  updateViewer(d);
+  updateButtons();
+});
+
+/* оператор */
+function updateOperator(d){
 
   if(current>=0 && questions[current]){
-    document.getElementById("status").innerText=(current+1)+". "+questions[current].text;
+    document.getElementById("status").innerText =
+      (current+1)+". "+questions[current].text;
+
     startTimer(d.startTime);
   }
   else if(current===-999){
@@ -84,20 +153,72 @@ db.ref("currentQuestion").on("value",function(snap){
   else{
     document.getElementById("status").innerText="Старт";
   }
-
-  updateButtons();
-});
+}
 
 /* таймер */
 function startTimer(st){
   clearInterval(window.ti);
+
   function tick(){
     var t=5-Math.floor((Date.now()-st)/1000);
     if(t<0)t=0;
     document.getElementById("timer").innerText="⏳ "+t;
   }
+
   tick();
   window.ti=setInterval(tick,300);
+}
+
+/* viewer */
+function updateViewer(d){
+
+  var vTitle = document.getElementById("vTitle");
+  var vBar = document.getElementById("vBar");
+  var vOpts = document.getElementById("vOpts");
+
+  if(current===-1){
+    vTitle.innerText="Скоро начнём!";
+    vOpts.innerHTML="";
+    return;
+  }
+
+  if(current===-999){
+    vTitle.innerText="Смотрите на сцену!";
+    vOpts.innerHTML="";
+    return;
+  }
+
+  if(!questions[current]) return;
+
+  vTitle.innerText = questions[current].text;
+
+  vOpts.innerHTML="";
+
+  for(var i=0;i<questions[current].options.length;i++){
+    var d=document.createElement("div");
+    d.className="vOpt";
+    d.innerText=questions[current].options[i];
+    vOpts.appendChild(d);
+  }
+
+  /* таймер */
+  var total=5000;
+  var passed=Date.now()-d.startTime;
+  if(passed<0)passed=0;
+  if(passed>total)passed=total;
+
+  var remain=total-passed;
+
+  vBar.style.transition="none";
+  vBar.style.width=(remain/total*100)+"%";
+
+  vBar.offsetHeight;
+
+  vBar.style.transition="width "+remain+"ms linear";
+
+  setTimeout(function(){
+    vBar.style.width="0%";
+  },50);
 }
 
 /* кнопки */
@@ -116,6 +237,7 @@ function setQ(i){
 
 /* подписи */
 function updateButtons(){
+
   if(!questions.length) return;
 
   var next=document.getElementById("nextBtn");
@@ -137,10 +259,11 @@ function updateButtons(){
 
 /* сброс */
 document.getElementById("resetBtn").onclick=function(){
-  if(!confirm("Вы уверены?")) return;
+  if(!confirm("Вы уверены, что хотите полностью сбросить игру?")) return;
   db.ref("votes").remove();
   setQ(-1);
 };
 </script>
+
 </body>
 </html>
