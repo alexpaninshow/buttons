@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Старт спектакля</title>
+<title>Старт</title>
 
 <style>
 html, body {
@@ -53,22 +53,15 @@ btn.onclick = function(){
   btn.innerText = "Запуск...";
   btn.disabled = true;
 
-  // 🔥 ФОРС-ОБНОВЛЕНИЕ ВСЕХ ЗРИТЕЛЕЙ
-  db.ref('currentQuestion').set(-1);
+  // сброс
+  db.ref('votes').remove();
 
-  setTimeout(function(){
-
-    // очистка голосов
-    db.ref('votes').remove();
-
-    // показать "Смотрите на сцену"
-    db.ref('currentQuestion').set(-999);
-
-  }, 100);
+  // ВАЖНО: только одно состояние
+  db.ref('currentQuestion').set(-999);
 
   setTimeout(function(){
     window.location.href = "operator.html";
-  }, 300);
+  }, 200);
 };
 </script>
 
