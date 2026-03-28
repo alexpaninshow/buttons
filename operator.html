@@ -6,7 +6,9 @@
 
 <style>
 body { font-family: Arial; text-align: center; background:#222; color:white; padding:40px; }
-#status { font-size:26px; margin-bottom:20px; }
+
+#status { font-size:26px; margin-bottom:10px; }
+#timer { font-size:24px; margin-bottom:20px; color:#ffeb3b; }
 
 button {
   font-size:20px;
@@ -26,7 +28,9 @@ button {
 <body>
 
 <h1>Оператор</h1>
+
 <div id="status">Сейчас: Ожидание</div>
+<div id="timer"></div>
 
 <button id="nextBtn" class="next">Загрузка...</button>
 <button id="backBtn" class="back" style="display:none;">Назад</button>
@@ -47,11 +51,15 @@ const db = firebase.database();
 let questions = [];
 let current = -1;
 let lastQuestionIndex = -1;
+
 let autoTimer = null;
+let visualTimer = null;
+let time = 0;
 
 const status = document.getElementById("status");
 const nextBtn = document.getElementById("nextBtn");
 const backBtn = document.getElementById("backBtn");
+const timerDiv = document.getElementById("timer");
 
 function parseCSV(text){
   const rows = text.replace(/\r/g,'').split('\n').filter(r=>r.trim());
@@ -74,6 +82,23 @@ fetch(CSV_URL)
   updateButtons();
 });
 
+function startVisualTimer(){
+  if(visualTimer) clearInterval(visualTimer);
+
+  time = 5;
+  timerDiv.innerText = "Таймер: " + time;
+
+  visualTimer = setInterval(()=>{
+    time--;
+    if(time <= 0){
+      clearInterval(visualTimer);
+      timerDiv.innerText = "";
+    } else {
+      timerDiv.innerText = "Таймер: " + time;
+    }
+  },1000);
+}
+
 function showQuestion(i){
   if(autoTimer) clearTimeout(autoTimer);
 
@@ -85,11 +110,15 @@ function showQuestion(i){
   status.innerText = "Сейчас: " + questions[i].text;
   updateButtons();
 
+  startVisualTimer(); // 🔥 таймер оператору
+
   autoTimer = setTimeout(()=>{
     current = -1;
     db.ref('currentQuestion').set(-1);
 
     status.innerText = "Сейчас: Ожидание";
+    timerDiv.innerText = ""; // убираем таймер
+
     updateButtons();
   }, 5000);
 }
@@ -110,6 +139,7 @@ backBtn.onclick = ()=>{
 
 document.getElementById("resetBtn").onclick = ()=>{
   if(autoTimer) clearTimeout(autoTimer);
+  if(visualTimer) clearInterval(visualTimer);
 
   current=-1;
   lastQuestionIndex=-1;
@@ -117,6 +147,8 @@ document.getElementById("resetBtn").onclick = ()=>{
   db.ref('currentQuestion').set(-1);
 
   status.innerText="Сейчас: Ожидание";
+  timerDiv.innerText="";
+
   updateButtons();
 };
 
@@ -132,7 +164,7 @@ function updateButtons(){
     nextBtn.style.display="none";
   }
 
-  // 🔥 теперь всегда есть со 2-го вопроса
+  // 🔥 ВСЕГДА после первого вопроса
   backBtn.style.display = (lastQuestionIndex > 0) ? "inline-block" : "none";
 }
 </script>
