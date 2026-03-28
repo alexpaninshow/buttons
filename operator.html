@@ -31,17 +31,21 @@ h1 { font-size:5vw; margin:0; }
 }
 
 button {
-  margin:8px 0;
-  font-size:5vw;
+  margin:6px 0;
+  font-size:4.5vw;
   font-weight:bold;
   border-radius:20px;
-  border:none;
+  border:4px solid transparent;
   color:white;
 }
 
-.next { background:#4caf50; flex:1.5; }
-.back { background:orange; flex:0.8; }
-.reset { background:red; flex:0.7; }
+.next { background:#4caf50; flex:1.6; }
+.back { background:orange; flex:0.7; margin-top:15px; }
+.reset { background:red; flex:0.6; }
+
+button:active {
+  border:4px solid white;
+}
 
 /* модалка */
 #confirmModal {
@@ -95,7 +99,7 @@ button {
 
 <div id="confirmModal">
   <div id="confirmBox">
-    <p>Вы уверены?</p>
+    <p>Вы уверены, что хотите полностью сбросить игру?</p>
     <button id="noBtn" class="noMain">Нет, вернуться в игру</button>
     <button id="yesBtn" class="yesSub">Да</button>
   </div>
@@ -105,82 +109,204 @@ button {
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-const CSV_URL="https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv&gid=0";
+const CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv&gid=0";
 
 firebase.initializeApp({
   databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"
 });
 
-const db=firebase.database();
+const db = firebase.database();
 
-let questions=[];
-let current=-1;
-let prev=-1;
+let questions = [];
+let current = -1;
+let prevQuestion = -1;
+let timerInterval = null;
 
-const status=document.getElementById("status");
-const timer=document.getElementById("timer");
-const result=document.getElementById("result");
+const status = document.getElementById("status");
+const timerEl = document.getElementById("timer");
+const resultEl = document.getElementById("result");
+const nextBtn = document.getElementById("nextBtn");
+const backBtn = document.getElementById("backBtn");
 
-fetch(CSV_URL).then(r=>r.text()).then(t=>{
-  questions=t.split('\n').slice(1).map(r=>{
-    let c=r.split(',');
-    return {text:c[0],options:c.slice(1)};
-  });
+/* загрузка CSV */
+fetch(CSV_URL)
+.then(r=>r.text())
+.then(text=>{
+  const rows=text.trim().split('\n').map(r=>r.split(','));
+
+  questions = rows.slice(1).map(c=>({
+    text:(c[0]||"").trim(),
+    options:c.slice(1).map(x=>x.trim()).filter(Boolean)
+  }));
+
+  updateButtons();
 });
 
-db.ref('currentQuestion').on('value',snap=>{
-  current=snap.val();
+/* Firebase */
+db.ref('currentQuestion').on('value', snap => {
 
-  if(current>=0) prev=current;
+  const val = snap.val();
+  current = (val === null) ? -1 : Number(val);
 
-  if(current===-999){
-    status.innerText="Смотрите на сцену";
-    showResult();
-  } else if(current>=0){
-    status.innerText=questions[current]?.text||"";
-    result.innerText="";
-  } else {
-    status.innerText="Ожидание";
+  if(current >= 0){
+    prevQuestion = current;
   }
+
+  clearInterval(timerInterval);
+
+  if(current === -999){
+    status.innerText = "Смотрите на сцену";
+    timerEl.innerText = "⏳ -";
+    showResult();
+  }
+  else if(current >= 0 && questions[current]){
+    status.innerText = "Сейчас: " + (current+1) + ". " + questions[current].text;
+    resultEl.innerText = "";
+    startTimer();
+  }
+  else{
+    status.innerText = "Ожидание";
+    timerEl.innerText = "⏳ -";
+    resultEl.innerText = "";
+  }
+
+  updateButtons();
 });
 
-function showResult(){
-  db.ref('votes/'+prev).once('value',snap=>{
-    let v=snap.val()||{};
-    let max=-1,iMax=-1;
+/* таймер */
+function startTimer(){
+  let t=5;
+  timerEl.innerText="⏳ "+t;
 
-    questions[prev].options.forEach((o,i)=>{
-      let val=v[i]||0;
-      if(val>max){max=val;iMax=i;}
+  timerInterval=setInterval(()=>{
+    t--;
+    timerEl.innerText="⏳ "+t;
+
+    if(t<=0){
+      clearInterval(timerInterval);
+      db.ref('currentQuestion').set(-999);
+    }
+  },1000);
+}
+
+/* результат */
+function showResult(){
+
+  if(prevQuestion < 0 || !questions[prevQuestion]) return;
+
+  db.ref('votes/'+prevQuestion).once('value', snap => {
+
+    const votes = snap.val() || {};
+    const opts = questions[prevQuestion].options;
+
+    let max = -1;
+    let winnerIndex = -1;
+
+    opts.forEach((opt, i) => {
+      const v = votes[i] || 0;
+      if(v > max){
+        max = v;
+        winnerIndex = i;
+      }
     });
 
-    if(iMax>=0){
-      result.innerText="Победил: "+questions[prev].options[iMax]+" ("+max+")";
-    } else result.innerText="Нет голосов";
+    if(winnerIndex !== -1){
+      resultEl.innerText = "Победил: " + opts[winnerIndex] + " (" + max + ")";
+    } else {
+      resultEl.innerText = "Нет голосов";
+    }
+
   });
 }
 
-document.getElementById("nextBtn").onclick=()=>{
-  if(current<questions.length-1) db.ref('currentQuestion').set(current+1);
+/* кнопки */
+nextBtn.onclick = ()=>{
+
+  if(current === -1){
+    db.ref('currentQuestion').set(0);
+    return;
+  }
+
+  if(current === -999){
+    if(prevQuestion < questions.length - 1){
+      db.ref('currentQuestion').set(prevQuestion + 1);
+    }
+    return;
+  }
+
+  if(current < questions.length - 1){
+    db.ref('currentQuestion').set(current + 1);
+  }
 };
 
-document.getElementById("backBtn").onclick=()=>{
-  if(current>0) db.ref('currentQuestion').set(current-1);
+backBtn.onclick = ()=>{
+
+  if(current === -999){
+    db.ref('currentQuestion').set(prevQuestion);
+    return;
+  }
+
+  if(current > 0){
+    db.ref('currentQuestion').set(current - 1);
+  }
 };
 
-document.getElementById("resetBtn").onclick=()=>{
-  document.getElementById("confirmModal").style.display="flex";
+/* модалка */
+const modal = document.getElementById("confirmModal");
+
+document.getElementById("resetBtn").onclick = ()=>{
+  modal.style.display="flex";
 };
 
-document.getElementById("noBtn").onclick=()=>{
-  confirmModal.style.display="none";
+document.getElementById("noBtn").onclick = ()=>{
+  modal.style.display="none";
 };
 
-document.getElementById("yesBtn").onclick=()=>{
+document.getElementById("yesBtn").onclick = ()=>{
   db.ref('votes').remove();
   db.ref('currentQuestion').set(-1);
-  confirmModal.style.display="none";
+  prevQuestion = -1;
+  modal.style.display="none";
 };
+
+/* подписи кнопок */
+function updateButtons(){
+
+  if(!questions.length) return;
+
+  if(current === -1){
+    nextBtn.innerText = "Начать: 1. " + questions[0].text;
+    backBtn.style.display = "none";
+    return;
+  }
+
+  if(current === -999){
+
+    if(prevQuestion < questions.length - 1){
+      nextBtn.innerText = "Далее: " + (prevQuestion+2) + ". " + questions[prevQuestion+1].text;
+    } else {
+      nextBtn.innerText = "Конец";
+    }
+
+    backBtn.style.display = "block";
+    backBtn.innerText = "Назад: " + (prevQuestion+1) + ". " + questions[prevQuestion].text;
+
+    return;
+  }
+
+  if(current < questions.length - 1){
+    nextBtn.innerText = "Далее: " + (current+2) + ". " + questions[current+1].text;
+  } else {
+    nextBtn.innerText = "Конец";
+  }
+
+  if(current > 0){
+    backBtn.style.display = "block";
+    backBtn.innerText = "Назад: " + current + ". " + questions[current-1].text;
+  } else {
+    backBtn.style.display = "none";
+  }
+}
 </script>
 
 </body>
