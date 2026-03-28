@@ -74,17 +74,23 @@ fetch(CSV_URL)
     text:(cols[0]||"").trim(),
     options:cols.slice(1).map(c=>c.trim()).filter(Boolean)
   }));
+});
+
+/* 🔥 СИНХРОНИЗАЦИЯ С FIREBASE */
+db.ref('currentQuestion').on('value', snap => {
+  current = snap.val() ?? -1;
+
+  if(current === -1){
+    status.innerText = "Ожидание";
+  } else if(questions[current]){
+    status.innerText = "Сейчас: " + (current+1) + ". " + questions[current].text;
+  }
 
   updateButtons();
 });
 
 function showQuestion(i){
-  current = i;
   db.ref('currentQuestion').set(i);
-
-  status.innerText = "Сейчас: " + (i+1) + ". " + questions[i].text;
-
-  updateButtons();
 }
 
 nextBtn.onclick = ()=>{
@@ -97,10 +103,7 @@ backBtn.onclick = ()=>{
 };
 
 document.getElementById("resetBtn").onclick = ()=>{
-  current = -1;
   db.ref('currentQuestion').set(-1);
-  status.innerText = "Ожидание";
-  updateButtons();
 };
 
 function updateButtons(){
@@ -108,8 +111,10 @@ function updateButtons(){
 
   if(current === -1){
     nextBtn.innerText = "Начать: " + questions[0].text;
+    nextBtn.style.display="block";
   } else if(current < questions.length-1){
     nextBtn.innerText = "Далее: " + questions[current+1].text;
+    nextBtn.style.display="block";
   } else {
     nextBtn.style.display="none";
   }
