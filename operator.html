@@ -55,12 +55,13 @@ let interval = null;
 function start(){
   current = 0;
 
-  db.ref("votes").remove();
-
-  db.ref("game").set({
-    status:"playing",
-    currentQuestion:0,
-    timer:5
+  db.ref().set({
+    game:{
+      status:"playing",
+      currentQuestion:0,
+      timer:5
+    },
+    votes:{}
   });
 
   runTimer();
@@ -84,12 +85,12 @@ function pause(){
 }
 
 function reset(){
-  db.ref("game").set({
-    status:"waiting",
-    currentQuestion:null
+  db.ref().set({
+    game:{
+      status:"waiting",
+      currentQuestion:null
+    }
   });
-
-  db.ref("votes").remove();
 
   stopTimer();
   document.getElementById("timer").innerText="0";
