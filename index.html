@@ -34,7 +34,27 @@ body {
 
 h1 { font-size:5vw; margin:10px; }
 
-#timer { font-size:8vw; margin-bottom:30px; }
+/* 🔥 ПОЛОСКА */
+#timerBarWrap {
+  width:90%;
+  height:20px;
+  background:#333;
+  border-radius:20px;
+  overflow:hidden;
+  margin:20px auto;
+}
+
+#timerBar {
+  height:100%;
+  width:100%;
+  background:#00e676;
+  transition: width 1s linear, background 0.3s;
+}
+
+#timerText {
+  font-size:6vw;
+  margin-bottom:10px;
+}
 
 ul {
   flex:1;
@@ -76,7 +96,13 @@ li.selected {
 
 <div id="game">
   <h1 id="title"></h1>
-  <div id="timer"></div>
+
+  <div id="timerText"></div>
+
+  <div id="timerBarWrap">
+    <div id="timerBar"></div>
+  </div>
+
   <ul id="options"></ul>
 </div>
 
@@ -103,7 +129,8 @@ const game = document.getElementById("game");
 
 const title = document.getElementById("title");
 const options = document.getElementById("options");
-const timer = document.getElementById("timer");
+const timerText = document.getElementById("timerText");
+const timerBar = document.getElementById("timerBar");
 
 fetch(CSV_URL)
 .then(r => r.text())
@@ -176,7 +203,7 @@ db.ref('currentQuestion').on('value', snap => {
 
       li.classList.add('selected');
 
-      timer.innerText="";
+      timerText.innerText="";
       clearInterval(timerInterval);
 
       setTimeout(()=> showWaiting(), 800);
@@ -186,16 +213,27 @@ db.ref('currentQuestion').on('value', snap => {
   });
 
   let time=5;
-  timer.innerText="⏳ "+time;
+  timerText.innerText="⏳ "+time;
+  timerBar.style.width = "100%";
+  timerBar.style.background = "#00e676";
 
   timerInterval=setInterval(()=>{
     time--;
+
+    let percent = (time/5)*100;
+    timerBar.style.width = percent + "%";
+
+    if(time === 1){
+      timerBar.style.background = "red"; // 🔴 финал
+    }
+
     if(time<=0){
       clearInterval(timerInterval);
       showWaiting();
     } else {
-      timer.innerText="⏳ "+time;
+      timerText.innerText="⏳ "+time;
     }
+
   },1000);
 });
 </script>
