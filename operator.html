@@ -42,7 +42,7 @@ button {
 .back { background:orange; flex:0.8; }
 .reset { background:red; flex:0.7; }
 
-/* 🔥 модальное окно */
+/* 🔥 модалка */
 #confirmModal {
   position:fixed;
   top:0;
@@ -72,16 +72,26 @@ button {
 
 .modalBtn {
   width:100%;
-  padding:15px;
-  font-size:20px;
-  margin:10px 0;
+  padding:18px;
   border:none;
   border-radius:15px;
-  color:white;
+  margin:10px 0;
 }
 
-.yes { background:red; }
-.no { background:gray; }
+/* 🔥 главная кнопка */
+.noMain {
+  background:white;
+  color:black;
+  font-size:22px;
+  font-weight:900;
+}
+
+/* 🔥 вторичная */
+.yesSub {
+  background:#666;
+  color:#ddd;
+  font-size:18px;
+}
 </style>
 </head>
 
@@ -99,12 +109,18 @@ button {
   <button id="resetBtn" class="reset">Полный сброс</button>
 </div>
 
-<!-- 🔥 МОДАЛКА -->
+<!-- 🔥 модалка -->
 <div id="confirmModal">
   <div id="confirmBox">
     <p>Вы уверены, что хотите полностью сбросить игру?</p>
-    <button id="yesBtn" class="modalBtn yes">Да</button>
-    <button id="noBtn" class="modalBtn no">Нет</button>
+
+    <button id="noBtn" class="modalBtn noMain">
+      Нет, вернуться в игру
+    </button>
+
+    <button id="yesBtn" class="modalBtn yesSub">
+      Да
+    </button>
   </div>
 </div>
 
@@ -196,6 +212,7 @@ function startTimer(){
 
 /* управление */
 nextBtn.onclick = ()=>{
+
   if(current === -1){
     db.ref('currentQuestion').set(0);
     return;
@@ -214,6 +231,7 @@ nextBtn.onclick = ()=>{
 };
 
 backBtn.onclick = ()=>{
+
   if(current === -999){
     db.ref('currentQuestion').set(prevQuestion);
     return;
@@ -224,17 +242,17 @@ backBtn.onclick = ()=>{
   }
 };
 
-/* 🔥 кнопка сброса → открывает модалку */
+/* 🔥 открыть модалку */
 document.getElementById("resetBtn").onclick = ()=>{
   modal.style.display = "flex";
 };
 
-/* НЕТ */
+/* нет */
 noBtn.onclick = ()=>{
   modal.style.display = "none";
 };
 
-/* ДА */
+/* да */
 yesBtn.onclick = ()=>{
   db.ref('votes').remove();
   db.ref('currentQuestion').set(-1);
