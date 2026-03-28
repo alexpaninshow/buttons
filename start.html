@@ -38,7 +38,6 @@ body {
   font-size:18px;
 }
 
-/* состояния */
 .ready {
   color:#00e676;
   font-style:italic;
@@ -75,57 +74,98 @@ var btn = document.getElementById("startBtn");
 var status = document.getElementById("status");
 
 let csvReady = false;
+let firebaseReady = false;
 
-/* 🔥 НАДЁЖНАЯ ПРОВЕРКА */
-function checkSystem(){
+/* 🔥 ПРОВЕРКА CSV */
+function checkCSV(){
 
-  // всегда обновляем статус
-  status.className = "checking";
-  status.innerText = "Проверка системы...";
+  return new Promise((resolve) => {
 
-  // таймаут на fetch (чтобы не зависало)
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 4000);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4000);
 
-  fetch(CSV_URL, { signal: controller.signal })
-  .then(r => r.text())
-  .then(text => {
+    fetch(CSV_URL, { signal: controller.signal })
+    .then(r => r.text())
+    .then(text => {
+      clearTimeout(timeout);
 
-    clearTimeout(timeout);
+      const rows = text.trim().split('\n');
 
-    const rows = text.trim().split('\n');
-
-    if(rows.length > 1){
-      csvReady = true;
-      status.className = "ready";
-      status.innerText = "✔ Система готова к работе";
-    } else {
+      if(rows.length > 1){
+        csvReady = true;
+        resolve(true);
+      } else {
+        csvReady = false;
+        resolve(false);
+      }
+    })
+    .catch(() => {
+      clearTimeout(timeout);
       csvReady = false;
-      status.className = "error";
-      status.innerText = "Ошибка: таблица пустая";
-    }
+      resolve(false);
+    });
 
-  })
-  .catch(() => {
-
-    clearTimeout(timeout);
-
-    csvReady = false;
-    status.className = "error";
-    status.innerText = "Нет связи с таблицей";
   });
 }
 
-/* первый запуск */
-checkSystem();
+/* 🔥 ПРОВЕРКА FIREBASE */
+function checkFirebase(){
 
-/* каждые 5 сек */
+  return new Promise((resolve) => {
+
+    const testRef = db.ref('ping');
+
+    const timeout = setTimeout(() => {
+      firebaseReady = false;
+      resolve(false);
+    }, 3000);
+
+    testRef.set(Date.now(), (error) => {
+      clearTimeout(timeout);
+
+      if(error){
+        firebaseReady = false;
+        resolve(false);
+      } else {
+        firebaseReady = true;
+        resolve(true);
+      }
+    });
+
+  });
+}
+
+/* 🔥 ОБЩАЯ ПРОВЕРКА */
+async function checkSystem(){
+
+  status.className = "checking";
+  status.innerText = "Проверка системы...";
+
+  const csv = await checkCSV();
+  const fb = await checkFirebase();
+
+  if(csv && fb){
+    status.className = "ready";
+    status.innerText = "✔ Система готова к работе";
+  }
+  else if(!csv){
+    status.className = "error";
+    status.innerText = "Нет связи с таблицей";
+  }
+  else if(!fb){
+    status.className = "error";
+    status.innerText = "Firebase не отвечает";
+  }
+}
+
+/* запуск */
+checkSystem();
 setInterval(checkSystem, 5000);
 
 /* кнопка */
 btn.onclick = function(){
 
-  if(!csvReady){
+  if(!(csvReady && firebaseReady)){
     status.className = "error";
     status.innerText = "⛔ Система не готова";
     return;
