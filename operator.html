@@ -26,7 +26,7 @@ button {
 <body>
 
 <h1>Оператор</h1>
-<div id="status">Ожидание</div>
+<div id="status">Сейчас: Ожидание</div>
 
 <button id="nextBtn" class="next">Загрузка...</button>
 <button id="backBtn" class="back" style="display:none;">Назад</button>
@@ -50,17 +50,32 @@ const db = firebase.database();
 
 let questions = [];
 let current = -1;
+let autoTimer = null;
 
 const status = document.getElementById("status");
 const nextBtn = document.getElementById("nextBtn");
 const backBtn = document.getElementById("backBtn");
 
+// CSV парсер
 function parseCSV(text){
-  const rows = text.split("\n").map(r=>r.split(","));
-  return rows.slice(1).map(r=>({
-    text:r[0],
-    options:[r[1],r[2],r[3]].filter(o=>o)
-  }));
+  const rows = text
+    .replace(/\r/g, '')
+    .split('\n')
+    .filter(r => r.trim() !== '');
+
+  return rows.slice(1).map(row => {
+    const cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g) || [];
+
+    return {
+      text: (cols[0] || "").replace(/"/g, '').trim(),
+      options: [
+        cols[1],
+        cols[2],
+        cols[3]
+      ].map(c => (c || "").replace(/"/g, '').trim())
+       .filter(Boolean)
+    };
+  });
 }
 
 // загрузка
@@ -68,20 +83,30 @@ fetch(CSV_URL)
 .then(r=>r.text())
 .then(text=>{
   questions = parseCSV(text);
-  console.log("Loaded:", questions);
   updateButtons();
 })
 .catch(()=>{
-  console.warn("Fallback used");
   questions = FALLBACK_QUESTIONS;
   updateButtons();
 });
 
 function showQuestion(i){
+  if(autoTimer) clearTimeout(autoTimer);
+
   current = i;
   db.ref('currentQuestion').set(i);
+
   status.innerText = "Сейчас: " + questions[i].text;
   updateButtons();
+
+  // авто-сброс через 5 сек
+  autoTimer = setTimeout(()=>{
+    current = -1;
+    db.ref('currentQuestion').set(-1);
+
+    status.innerText = "Сейчас: Ожидание";
+    updateButtons();
+  }, 5000);
 }
 
 nextBtn.onclick = ()=>{
@@ -96,9 +121,12 @@ backBtn.onclick = ()=>{
 };
 
 document.getElementById("resetBtn").onclick = ()=>{
+  if(autoTimer) clearTimeout(autoTimer);
+
   current=-1;
   db.ref('currentQuestion').set(-1);
-  status.innerText="Ожидание";
+
+  status.innerText="Сейчас: Ожидание";
   updateButtons();
 };
 
