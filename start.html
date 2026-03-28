@@ -34,6 +34,10 @@ body {
 
   cursor:pointer;
 }
+
+#startBtn:active {
+  transform:scale(0.97);
+}
 </style>
 </head>
 
@@ -47,7 +51,7 @@ body {
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-// 🔥 ПРОСТАЯ ИНИЦИАЛИЗАЦИЯ
+// 🔥 инициализация
 firebase.initializeApp({
   databaseURL: "https://buttons-panin-default-rtdb.firebaseio.com"
 });
@@ -60,11 +64,20 @@ btn.onclick = function(){
   btn.innerText = "Запуск...";
   btn.disabled = true;
 
-  // 🔥 БЕЗ async — просто подряд
-  db.ref('currentQuestion').set(-999);
-  db.ref('votes').remove();
+  // 🔥 1. ЖЁСТКИЙ СБРОС СОСТОЯНИЯ (ломает любые залипания)
+  db.ref('currentQuestion').set(null);
 
-  // переход
+  setTimeout(function(){
+
+    // 🔥 2. ЧИСТИМ ГОЛОСА
+    db.ref('votes').remove();
+
+    // 🔥 3. ВКЛЮЧАЕМ "СМОТРИТЕ НА СЦЕНУ"
+    db.ref('currentQuestion').set(-999);
+
+  }, 50);
+
+  // 🔥 4. ПЕРЕХОД К ОПЕРАТОРУ
   setTimeout(function(){
     window.location.href = "operator.html";
   }, 300);
