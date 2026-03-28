@@ -9,26 +9,31 @@
 
 <style>
 body{
+  margin:0;
+  height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
   background:#000;
   color:white;
   font-family:'Montserrat',sans-serif;
-  text-align:center;
-  margin-top:100px;
 }
 
 button{
-  font-size:24px;
   padding:20px 40px;
-  border-radius:12px;
+  font-size:24px;
   border:none;
+  border-radius:12px;
+  cursor:pointer;
 }
 </style>
 </head>
 
 <body>
 
-<h1>Запуск спектакля</h1>
-<button onclick="start()">Начать спектакль</button>
+<h1>Готовность</h1>
+<button onclick="start()">Начинаем спектакль</button>
 
 <script>
 firebase.initializeApp({
@@ -40,12 +45,14 @@ const db = firebase.database();
 function start(){
   db.ref().set({
     game:{
-      status:"waiting",
+      status:"ready", // 👈 КЛЮЧЕВОЕ
       currentQuestion:0,
       timer:5
     },
     votes:{}
   });
+
+  alert("Система готова");
 }
 </script>
 
