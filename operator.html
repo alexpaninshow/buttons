@@ -78,19 +78,15 @@ const db = firebase.database();
 
 let questions = [];
 let current = -1;
-let readyCSV = false;
-let lastValue = null;
+let ready = false;
 let timerInterval = null;
 
 const status = document.getElementById("status");
 const timerEl = document.getElementById("timer");
 const nextBtn = document.getElementById("nextBtn");
 const backBtn = document.getElementById("backBtn");
-const resetBtn = document.getElementById("resetBtn");
 
-/* =========================
-   CSV
-========================= */
+/* CSV */
 fetch(CSV_URL)
 .then(r=>r.text())
 .then(text=>{
@@ -101,42 +97,17 @@ fetch(CSV_URL)
     options:cols.slice(1).map(c=>c.trim()).filter(Boolean)
   }));
 
-  readyCSV = true;
-
-  // 🔥 если Firebase уже пришёл — применяем
-  if(lastValue !== null){
-    updateState(lastValue);
-  }
-
+  ready = true;
   updateButtons();
-})
-.catch(()=>{
-  status.innerText = "Ошибка загрузки таблицы";
 });
 
-/* =========================
-   FIREBASE
-========================= */
+/* Firebase */
 db.ref('currentQuestion').on('value', snap => {
 
-  lastValue = snap.val();
+  if(!ready) return;
 
-  // 🔥 если CSV уже готов — применяем сразу
-  if(readyCSV){
-    updateState(lastValue);
-  }
-});
-
-/* =========================
-   СОСТОЯНИЕ
-========================= */
-function updateState(val){
-
-  if(val === null){
-    current = -1;
-  } else {
-    current = val;
-  }
+  const val = snap.val();
+  current = (val === null) ? -1 : Number(val);
 
   if(timerInterval){
     clearInterval(timerInterval);
@@ -147,7 +118,7 @@ function updateState(val){
     status.innerText = "Сейчас: " + (current+1) + ". " + questions[current].text;
     startTimer();
   } else if(current === -999){
-    status.innerText = "Сцена (внимание)";
+    status.innerText = "Сцена";
     timerEl.innerText = "⏳ -";
   } else {
     status.innerText = "Ожидание";
@@ -155,29 +126,19 @@ function updateState(val){
   }
 
   updateButtons();
-}
+});
 
-/* =========================
-   ТАЙМЕР
-========================= */
 function startTimer(){
-  let t = 5;
-  timerEl.innerText = "⏳ " + t;
+  let t=5;
+  timerEl.innerText="⏳ "+t;
 
-  timerInterval = setInterval(()=>{
+  timerInterval=setInterval(()=>{
     t--;
-    timerEl.innerText = "⏳ " + t;
-
-    if(t <= 0){
-      clearInterval(timerInterval);
-      timerInterval = null;
-    }
+    timerEl.innerText="⏳ "+t;
+    if(t<=0) clearInterval(timerInterval);
   },1000);
 }
 
-/* =========================
-   ПЕРЕКЛЮЧЕНИЕ
-========================= */
 function setState(val){
   db.ref('currentQuestion').set(val);
 }
@@ -187,24 +148,21 @@ nextBtn.onclick = ()=>{
 
   if(current === -1 || current === -999){
     setState(0);
-  } else if(current < questions.length - 1){
-    setState(current + 1);
+  } else if(current < questions.length-1){
+    setState(current+1);
   }
 };
 
 backBtn.onclick = ()=>{
   if(current > 0){
-    setState(current - 1);
+    setState(current-1);
   }
 };
 
-resetBtn.onclick = ()=>{
+document.getElementById("resetBtn").onclick = ()=>{
   setState(-1);
 };
 
-/* =========================
-   КНОПКИ
-========================= */
 function updateButtons(){
 
   if(!questions.length) return;
@@ -215,7 +173,7 @@ function updateButtons(){
     return;
   }
 
-  if(current < questions.length - 1){
+  if(current < questions.length-1){
     nextBtn.innerText = "Далее: " + (current+2) + ". " + questions[current+1].text;
   } else {
     nextBtn.innerText = "Конец";
