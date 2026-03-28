@@ -61,6 +61,7 @@ let current = -1;
 
 let timerInterval = null;
 let timeLeft = 0;
+let timerFinished = false;
 
 const status = document.getElementById("status");
 const timerEl = document.getElementById("timer");
@@ -86,6 +87,7 @@ db.ref('currentQuestion').on('value', snap => {
   current = snap.val() ?? -1;
 
   clearInterval(timerInterval);
+  timerFinished = false;
 
   if(current === -1){
     status.innerText = "Ожидание";
@@ -98,7 +100,7 @@ db.ref('currentQuestion').on('value', snap => {
   updateButtons();
 });
 
-/* таймер (только визуал) */
+/* таймер */
 function startTimer(){
   timeLeft = 5;
 
@@ -110,6 +112,10 @@ function startTimer(){
     if(timeLeft <= 0){
       clearInterval(timerInterval);
       timerEl.innerText = "⏳ 0";
+
+      timerFinished = true;
+      updateButtons(); // 🔥 важно
+
     } else {
       timerEl.innerText = "⏳ " + timeLeft;
     }
@@ -122,7 +128,7 @@ function showQuestion(i){
   db.ref('currentQuestion').set(i);
 }
 
-/* 🟢 ВСЕГДА ВПЕРЁД */
+/* вперёд */
 nextBtn.onclick = ()=>{
   if(!questions.length) return;
 
@@ -136,12 +142,24 @@ nextBtn.onclick = ()=>{
   }
 };
 
-/* 🟠 ВСЕГДА НАЗАД */
+/* назад */
 backBtn.onclick = ()=>{
   if(!questions.length) return;
+  if(current === -1) return;
 
-  if(current > 0){
-    showQuestion(current - 1);
+  const isLast = current === questions.length - 1;
+
+  if(isLast && timerFinished){
+    // 🔴 повтор последнего
+    showQuestion(current);
+  } else if(timerFinished){
+    // повтор любого другого
+    showQuestion(current);
+  } else {
+    // обычный назад
+    if(current > 0){
+      showQuestion(current - 1);
+    }
   }
 };
 
@@ -160,19 +178,28 @@ function updateButtons(){
     return;
   }
 
+  const isLast = current === questions.length - 1;
+
   // зелёная
-  if(current < questions.length - 1){
+  if(!isLast){
     nextBtn.innerText = "Далее: " + questions[current+1].text;
   } else {
-    nextBtn.innerText = "Последний вопрос";
+    nextBtn.innerText = "Конец";
   }
 
   // назад
-  if(current > 0){
-    backBtn.style.display = "block";
-    backBtn.innerText = "Назад: " + questions[current-1].text;
+  backBtn.style.display = "block";
+
+  if(timerFinished){
+    // 🔴 ПОСЛЕ ТАЙМЕРА (включая последний вопрос)
+    backBtn.innerText = "Назад: " + questions[current].text;
   } else {
-    backBtn.style.display = "none";
+    // 🟢 ВО ВРЕМЯ ТАЙМЕРА
+    if(current > 0){
+      backBtn.innerText = "Назад: " + questions[current-1].text;
+    } else {
+      backBtn.innerText = "Первый вопрос";
+    }
   }
 }
 </script>
