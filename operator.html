@@ -63,12 +63,14 @@ let timerInterval = null;
 let timeLeft = 0;
 let timerFinished = false;
 
+let lock = false; // 🔥 жёсткая блокировка
+
 const status = document.getElementById("status");
 const timerEl = document.getElementById("timer");
 const nextBtn = document.getElementById("nextBtn");
 const backBtn = document.getElementById("backBtn");
 
-/* загрузка вопросов */
+/* загрузка */
 fetch(CSV_URL)
 .then(r => r.text())
 .then(text => {
@@ -82,12 +84,15 @@ fetch(CSV_URL)
   updateButtons();
 });
 
-/* слушаем Firebase */
+/* Firebase */
 db.ref('currentQuestion').on('value', snap => {
+
   current = snap.val() ?? -1;
 
   clearInterval(timerInterval);
   timerFinished = false;
+
+  lock = false; // 🔥 снимаем блок
 
   if(current === -1){
     status.innerText = "Ожидание";
@@ -124,46 +129,47 @@ function startTimer(){
 
 /* переход */
 function showQuestion(i){
+  if(lock) return;
+  lock = true;
+
   db.ref('currentQuestion').set(i);
 }
 
 /* 🟢 вперёд */
 nextBtn.onclick = ()=>{
-  if(!questions.length) return;
+  if(!questions.length || lock) return;
 
-  if(current === -1){
+  const c = current; // 🔥 фиксируем
+
+  if(c === -1){
     showQuestion(0);
     return;
   }
 
-  if(current < questions.length - 1){
-    showQuestion(current + 1);
+  if(c < questions.length - 1){
+    showQuestion(c + 1);
   }
 };
 
-/* 🟠 назад — финальная логика */
+/* 🟠 назад (фикс) */
 backBtn.onclick = ()=>{
-  if(!questions.length) return;
-  if(current === -1) return;
+  if(!questions.length || lock) return;
 
-  const isLast = current === questions.length - 1;
+  const c = current; // 🔥 фиксируем
+
+  if(c <= 0) return;
+
+  const isLast = c === questions.length - 1;
 
   if(isLast){
-    // 🔥 на последнем ВСЕГДА назад
-    if(current > 0){
-      showQuestion(current - 1);
-    }
+    showQuestion(c - 1);
     return;
   }
 
   if(timerFinished){
-    // 🔁 повтор текущего
-    showQuestion(current);
+    showQuestion(c); // повтор
   } else {
-    // ⬅ обычный назад
-    if(current > 0){
-      showQuestion(current - 1);
-    }
+    showQuestion(c - 1);
   }
 };
 
@@ -184,20 +190,17 @@ function updateButtons(){
 
   const isLast = current === questions.length - 1;
 
-  // зелёная
   if(!isLast){
     nextBtn.innerText = "Далее: " + questions[current+1].text;
   } else {
     nextBtn.innerText = "Конец";
   }
 
-  // назад
   backBtn.style.display = "block";
 
   if(isLast){
-    // 🔥 последний вопрос
     if(timerFinished){
-      backBtn.innerText = "Назад: " + questions[current].text; // повтор
+      backBtn.innerText = "Назад: " + questions[current].text;
     } else {
       backBtn.innerText = "Назад: " + questions[current-1]?.text;
     }
