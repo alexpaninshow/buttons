@@ -1,109 +1,215 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Спектакль</title>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"></script>
+<meta charset="UTF-8">
+<title>Спектакль</title>
 
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial;
-      background: black;
-      color: white;
-      text-align: center;
-    }
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
 
-    #waiting {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-    }
+<style>
+html, body { height:100%; margin:0; }
 
-    #questionBlock {
-      display: none;
-      padding-top: 100px;
-    }
+body {
+  font-family:'Montserrat',sans-serif;
+  background:#111;
+  color:white;
+}
 
-    .answers button {
-      display: block;
-      margin: 10px auto;
-      padding: 12px 20px;
-      font-size: 16px;
-      width: 250px;
-      border-radius: 10px;
-      border: none;
-    }
-  </style>
+.screen {
+  position:fixed;
+  width:100%;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  text-align:center;
+}
+
+#start { background:#000; }
+#start img { max-width:80%; border-radius:20px; margin-bottom:30px; }
+
+#waiting { display:none; font-size:6vw; font-weight:900; }
+#game { display:none; height:100%; flex-direction:column; }
+
+h1 { font-size:5vw; margin:10px; }
+
+#timerBarWrap {
+  width:90%;
+  height:60px;
+  background:#222;
+  border-radius:40px;
+  overflow:hidden;
+  margin:30px auto;
+}
+
+#timerBar {
+  height:100%;
+  width:100%;
+  background:hsl(120,100%,50%);
+  transition: width 1s linear, background 1s linear;
+}
+
+ul {
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  margin:10px;
+  padding:0;
+}
+
+li {
+  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:6vw;
+  font-weight:900;
+  margin:8px 0;
+  background:#333;
+  border-radius:20px;
+  border:5px solid #888;
+  cursor:pointer;
+}
+
+li.selected {
+  border:6px solid #00e676;
+  background:#2e7d32;
+}
+</style>
 </head>
+
 <body>
 
-<div id="waiting">
-  <h1>Скоро начнём!</h1>
+<div id="start" class="screen">
+  <img src="start.jpg">
+  <div style="font-size:5vw;font-weight:900;">Скоро начнём!</div>
 </div>
 
-<div id="questionBlock">
-  <h2 id="questionText"></h2>
-  <div class="answers" id="answers"></div>
+<div id="waiting" class="screen">Смотрите на сцену!</div>
+
+<div id="game">
+  <h1 id="title"></h1>
+
+  <div id="timerBarWrap">
+    <div id="timerBar"></div>
+  </div>
+
+  <ul id="options"></ul>
 </div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-const firebaseConfig = {
-  // ВСТАВЬ СВОЙ CONFIG
-};
+const CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv&gid=0";
 
-const app = firebase.initializeApp(firebaseConfig);
+firebase.initializeApp({
+  databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"
+});
+
 const db = firebase.database();
 
+let questions = [];
+let ready = false;
+let voted = false;
+let timerInterval = null;
+
+/* загрузка вопросов */
+fetch(CSV_URL)
+.then(r => r.text())
+.then(text => {
+  const rows = text.trim().split('\n').map(r => r.split(','));
+
+  questions = rows.slice(1).map(cols => ({
+    text:(cols[0]||"").trim(),
+    options:cols.slice(1).map(c=>c.trim()).filter(Boolean)
+  }));
+
+  ready = true;
+});
+
+/* экраны */
+const start = document.getElementById("start");
 const waiting = document.getElementById("waiting");
-const questionBlock = document.getElementById("questionBlock");
-const questionText = document.getElementById("questionText");
-const answersDiv = document.getElementById("answers");
+const game = document.getElementById("game");
 
-const questions = [
-  {
-    text: "Ты кто?",
-    answers: ["Человек", "Робот"]
-  },
-  {
-    text: "Тебе страшно?",
-    answers: ["Да", "Нет"]
-  }
-];
+const title = document.getElementById("title");
+const options = document.getElementById("options");
+const timerBar = document.getElementById("timerBar");
 
-db.ref("game").on("value", (snap) => {
+function show(screen){
+  start.style.display="none";
+  waiting.style.display="none";
+  game.style.display="none";
+  screen.style.display="flex";
+}
+
+/* 🔥 ОСНОВНАЯ ЛОГИКА */
+db.ref("game").on("value", snap => {
+
   const data = snap.val();
-  if (!data) return;
+  if(!data) return show(start);
 
-  if (data.status === "waiting") {
-    waiting.style.display = "block";
-    questionBlock.style.display = "none";
-  }
+  if(data.status === "waiting") return show(start);
+  if(data.status === "pause") return show(waiting);
 
-  if (data.status === "playing") {
-    waiting.style.display = "none";
-    questionBlock.style.display = "block";
+  if(data.status === "playing"){
 
     const q = questions[data.currentQuestion];
-    questionText.innerText = q.text;
+    if(!ready || !q) return;
 
-    answersDiv.innerHTML = "";
+    show(game);
 
-    q.answers.forEach(ans => {
-      const btn = document.createElement("button");
-      btn.innerText = ans;
+    voted = false;
+    clearInterval(timerInterval);
 
-      btn.onclick = () => {
-        db.ref("answers").push({
-          answer: ans,
-          time: Date.now()
-        });
+    title.innerText = q.text;
+    options.innerHTML = "";
+
+    q.options.forEach((opt,i)=>{
+      const li = document.createElement("li");
+      li.innerText = opt;
+
+      li.onclick = ()=>{
+        if(voted) return;
+
+        voted = true;
+
+        db.ref("votes/"+data.currentQuestion+"/"+i)
+          .transaction(v => (v||0)+1);
+
+        li.classList.add("selected");
       };
 
-      answersDiv.appendChild(btn);
+      options.appendChild(li);
     });
+
+    /* таймер */
+    let total = data.timer || 5;
+    let time = total;
+
+    timerBar.style.transition="none";
+    timerBar.style.width="100%";
+
+    requestAnimationFrame(()=>{
+      timerBar.style.transition="width 1s linear, background 1s linear";
+    });
+
+    timerInterval = setInterval(()=>{
+      time--;
+
+      let percent = (time/total)*100;
+      timerBar.style.width = percent+"%";
+
+      let hue = 120 - (120*((total-time)/total));
+      timerBar.style.background = "hsl("+hue+",100%,50%)";
+
+      if(time<=0){
+        clearInterval(timerInterval);
+      }
+
+    },1000);
   }
 });
 </script>
