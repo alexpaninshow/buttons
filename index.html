@@ -53,13 +53,12 @@ let questions = [];
 let timerId=null;
 let voted=false;
 let time=0;
-let forceResetTimer=null;
 
 const title = document.getElementById("title");
 const options = document.getElementById("options");
 const timer = document.getElementById("timer");
 
-// CSV парсер
+// CSV
 function parseCSV(text){
   const rows = text.replace(/\r/g,'').split('\n').filter(r=>r.trim());
   return rows.slice(1).map(row=>{
@@ -73,31 +72,23 @@ function parseCSV(text){
   });
 }
 
-// загрузка
 fetch(CSV_URL)
 .then(r=>r.text())
 .then(text=>{
   questions=parseCSV(text);
 });
 
-// функция показа "Шоу"
-function showIdle(){
-  title.innerText="Шоу";
-  options.innerHTML="";
-  timer.innerText="";
-}
-
-// слушаем Firebase
+// 🔥 ТОЛЬКО СЛУШАЕМ FIREBASE
 db.ref('currentQuestion').on('value', snap => {
   const current = snap.val();
 
   if(timerId) clearInterval(timerId);
-  if(forceResetTimer) clearTimeout(forceResetTimer);
-
   voted=false;
 
   if(current===-1 || current===null){
-    showIdle();
+    title.innerText="Шоу";
+    options.innerHTML="";
+    timer.innerText="";
     return;
   }
 
@@ -123,9 +114,6 @@ db.ref('currentQuestion').on('value', snap => {
         .transaction(v=>(v||0)+1);
 
       li.classList.add('selected');
-
-      // 👉 сразу уходим в "Шоу" после ответа
-      setTimeout(showIdle, 300);
     };
 
     options.appendChild(li);
@@ -144,11 +132,6 @@ db.ref('currentQuestion').on('value', snap => {
       timer.innerText=time;
     }
   },1000);
-
-  // 👉 ГАРАНТИЯ: через 5 сек уйдём в "Шоу"
-  forceResetTimer = setTimeout(()=>{
-    showIdle();
-  },5000);
 });
 </script>
 
