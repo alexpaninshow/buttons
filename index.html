@@ -58,7 +58,6 @@ const title = document.getElementById("title");
 const options = document.getElementById("options");
 const timer = document.getElementById("timer");
 
-// CSV
 function parseCSV(text){
   const rows = text.replace(/\r/g,'').split('\n').filter(r=>r.trim());
   return rows.slice(1).map(row=>{
@@ -78,7 +77,6 @@ fetch(CSV_URL)
   questions=parseCSV(text);
 });
 
-// 🔥 ТОЛЬКО СЛУШАЕМ FIREBASE
 db.ref('currentQuestion').on('value', snap => {
   const current = snap.val();
 
@@ -92,12 +90,10 @@ db.ref('currentQuestion').on('value', snap => {
     return;
   }
 
+  localStorage.removeItem("voted_"+current);
+
   title.innerText=questions[current]?.text || "Нет вопроса";
   options.innerHTML="";
-
-  if(navigator.vibrate){
-    navigator.vibrate([100,50,100]);
-  }
 
   (questions[current]?.options || []).forEach((opt,i)=>{
     const li=document.createElement('li');
@@ -105,7 +101,6 @@ db.ref('currentQuestion').on('value', snap => {
 
     li.onclick=()=>{
       if(voted || time<=0) return;
-      if(localStorage.getItem("voted_"+current)) return;
 
       voted=true;
       localStorage.setItem("voted_"+current,true);
@@ -119,7 +114,6 @@ db.ref('currentQuestion').on('value', snap => {
     options.appendChild(li);
   });
 
-  // таймер
   time=5;
   timer.innerText=time;
 
