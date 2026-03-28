@@ -21,8 +21,6 @@ li {
   cursor:pointer;
 }
 
-li:hover { background:#666; }
-
 li.selected {
   border-color:#ffeb3b;
   background:#4caf50;
@@ -45,10 +43,6 @@ li.selected {
 <script>
 const CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv";
 
-const FALLBACK_QUESTIONS = [
-  { text:"Тест вопрос?", options:["Да","Нет","Не знаю"] }
-];
-
 const firebaseConfig = {
   databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"
 };
@@ -59,59 +53,51 @@ let questions = [];
 let timerId=null;
 let voted=false;
 let time=0;
+let forceResetTimer=null;
 
 const title = document.getElementById("title");
 const options = document.getElementById("options");
 const timer = document.getElementById("timer");
 
-// нормальный парсер CSV
+// CSV парсер
 function parseCSV(text){
-  const rows = text
-    .replace(/\r/g, '')
-    .split('\n')
-    .filter(r => r.trim() !== '');
-
-  return rows.slice(1).map(row => {
-    const cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g) || [];
-
+  const rows = text.replace(/\r/g,'').split('\n').filter(r=>r.trim());
+  return rows.slice(1).map(row=>{
+    const cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g)||[];
     return {
-      text: (cols[0] || "").replace(/"/g, '').trim(),
-      options: [
-        cols[1],
-        cols[2],
-        cols[3]
-      ].map(c => (c || "").replace(/"/g, '').trim())
-       .filter(Boolean)
+      text:(cols[0]||"").replace(/"/g,'').trim(),
+      options:[cols[1],cols[2],cols[3]]
+        .map(c=>(c||"").replace(/"/g,'').trim())
+        .filter(Boolean)
     };
   });
 }
 
-// загрузка вопросов
+// загрузка
 fetch(CSV_URL)
 .then(r=>r.text())
 .then(text=>{
-  questions = parseCSV(text);
-})
-.catch(()=>{
-  questions = FALLBACK_QUESTIONS;
+  questions=parseCSV(text);
 });
+
+// функция показа "Шоу"
+function showIdle(){
+  title.innerText="Шоу";
+  options.innerHTML="";
+  timer.innerText="";
+}
 
 // слушаем Firebase
 db.ref('currentQuestion').on('value', snap => {
   const current = snap.val();
 
   if(timerId) clearInterval(timerId);
+  if(forceResetTimer) clearTimeout(forceResetTimer);
+
   voted=false;
 
   if(current===-1 || current===null){
-    title.innerText="Шоу";
-    options.innerHTML="";
-    timer.innerText="";
-    return;
-  }
-
-  if(!questions.length){
-    title.innerText="Загрузка...";
+    showIdle();
     return;
   }
 
@@ -137,12 +123,15 @@ db.ref('currentQuestion').on('value', snap => {
         .transaction(v=>(v||0)+1);
 
       li.classList.add('selected');
+
+      // 👉 сразу уходим в "Шоу" после ответа
+      setTimeout(showIdle, 300);
     };
 
     options.appendChild(li);
   });
 
-  // таймер 5 сек
+  // таймер
   time=5;
   timer.innerText=time;
 
@@ -155,6 +144,11 @@ db.ref('currentQuestion').on('value', snap => {
       timer.innerText=time;
     }
   },1000);
+
+  // 👉 ГАРАНТИЯ: через 5 сек уйдём в "Шоу"
+  forceResetTimer = setTimeout(()=>{
+    showIdle();
+  },5000);
 });
 </script>
 
