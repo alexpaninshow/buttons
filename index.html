@@ -6,7 +6,6 @@
 
 <style>
 body { font-family:Arial; text-align:center; background:#333; color:white; padding:40px; }
-
 h1 { font-size:32px; margin-bottom:30px; }
 
 ul { list-style:none; padding:0; }
@@ -90,10 +89,6 @@ db.ref('currentQuestion').on('value', snap => {
   title.innerText=q.text;
   options.innerHTML="";
 
-  if(navigator.vibrate){
-    navigator.vibrate([100,50,100]);
-  }
-
   q.options.forEach((opt,i)=>{
     const li=document.createElement('li');
     li.innerText=opt;
@@ -110,8 +105,6 @@ db.ref('currentQuestion').on('value', snap => {
 
       clearInterval(timerId);
       timer.innerText="";
-      
-      // сразу в "Шоу"
       title.innerText="Шоу";
       options.innerHTML="";
     };
