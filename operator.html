@@ -20,6 +20,7 @@ body {
 
 h1 { font-size:5vw; margin:0; }
 #status { font-size:4vw; margin-top:10px; }
+#timer { font-size:6vw; margin-top:10px; }
 
 #buttons {
   flex:1;
@@ -48,6 +49,7 @@ button {
 <div id="top">
   <h1>Оператор</h1>
   <div id="status">Загрузка...</div>
+  <div id="timer">⏳ -</div>
 </div>
 
 <div id="buttons">
@@ -70,8 +72,10 @@ const db = firebase.database();
 
 let questions = [];
 let current = -1;
+let timerInterval = null;
 
 const status = document.getElementById("status");
+const timerEl = document.getElementById("timer");
 const nextBtn = document.getElementById("nextBtn");
 const backBtn = document.getElementById("backBtn");
 
@@ -95,18 +99,43 @@ db.ref('currentQuestion').on('value', snap => {
   const val = snap.val();
   current = (val === null) ? -1 : Number(val);
 
+  clearInterval(timerInterval);
+
   if(current === -999){
     status.innerText = "Смотрите на сцену";
+    timerEl.innerText = "⏳ -";
   }
   else if(current >= 0 && questions[current]){
     status.innerText = "Сейчас: " + (current+1) + ". " + questions[current].text;
+    startTimer(); // 🔥 запускаем таймер
   }
   else{
     status.innerText = "Ожидание";
+    timerEl.innerText = "⏳ -";
   }
 
   updateButtons();
 });
+
+/* ТАЙМЕР ОПЕРАТОРА */
+function startTimer(){
+
+  let t = 5;
+  timerEl.innerText = "⏳ " + t;
+
+  timerInterval = setInterval(()=>{
+    t--;
+    timerEl.innerText = "⏳ " + t;
+
+    if(t <= 0){
+      clearInterval(timerInterval);
+
+      // 🔥 СИНХРОННЫЙ ПЕРЕХОД
+      db.ref('currentQuestion').set(-999);
+    }
+
+  },1000);
+}
 
 /* управление */
 nextBtn.onclick = ()=>{
