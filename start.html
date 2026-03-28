@@ -27,6 +27,7 @@ body {
   color:white;
   border:none;
   border-radius:30px;
+  cursor:pointer;
 }
 
 #status { margin-top:20px; font-size:18px; }
@@ -56,25 +57,34 @@ const db = firebase.database();
 const status = document.getElementById("status");
 const btn = document.getElementById("startBtn");
 
-let csvReady=false;
-let firebaseReady=false;
+let csvReady = false;
+let firebaseReady = false;
+let isChecking = false;
 
+/* CSV */
 function checkCSV(){
   return fetch(CSV_URL)
-  .then(r=>r.text())
-  .then(t=>t.split('\n').length>1)
-  .catch(()=>false);
+    .then(r=>r.text())
+    .then(t=>t.split('\n').length>1)
+    .catch(()=>false);
 }
 
+/* Firebase */
 function checkFirebase(){
   return new Promise(res=>{
     db.ref('ping').set(Date.now(), e=>res(!e));
   });
 }
 
+/* ОБЩАЯ ПРОВЕРКА */
 async function checkSystem(){
-  status.className="checking";
-  status.innerText="Проверка системы...";
+
+  if(isChecking) return;
+
+  isChecking = true;
+
+  status.className = "checking";
+  status.innerText = "Проверка системы...";
 
   csvReady = await checkCSV();
   firebaseReady = await checkFirebase();
@@ -89,22 +99,48 @@ async function checkSystem(){
     status.className="error";
     status.innerText="Firebase не отвечает";
   }
+
+  isChecking = false;
 }
 
+/* запуск */
 checkSystem();
-setInterval(checkSystem,5000);
 
-btn.onclick=()=>{
+/* 🔥 теперь раз в минуту */
+setInterval(checkSystem, 60000);
+
+/* кнопка */
+btn.onclick = async () => {
+
+  // ❌ если прямо сейчас идёт проверка
+  if(isChecking){
+    status.className = "checking";
+    status.innerText = "⏳ Подождите, идёт проверка...";
+    return;
+  }
+
+  btn.innerText = "Проверка перед стартом...";
+  btn.disabled = true;
+
+  // 🔥 финальная проверка
+  await checkSystem();
+
   if(!(csvReady && firebaseReady)){
     status.className="error";
     status.innerText="⛔ Система не готова";
+    btn.disabled = false;
+    btn.innerText = "Начинаем спектакль";
     return;
   }
+
+  btn.innerText = "Запуск...";
 
   db.ref('votes').remove();
   db.ref('currentQuestion').set(-1);
 
-  setTimeout(()=>location.href="operator.html",300);
+  setTimeout(()=>{
+    window.location.href="operator.html";
+  },300);
 };
 </script>
 
