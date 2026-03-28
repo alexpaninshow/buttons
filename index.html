@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Спектакль</title>
+<title>Шоу</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
 
@@ -26,11 +26,34 @@ body {
   text-align:center;
 }
 
-#start { background:#000; }
+#start { background:#000; z-index:10; }
+
+#start img {
+  max-width:80%;
+  border-radius:20px;
+  margin-bottom:30px;
+}
+
 #waiting { display:none; font-size:6vw; font-weight:900; }
 #game { display:none; height:100%; flex-direction:column; }
 
 h1 { font-size:5vw; margin:10px; }
+
+#timerBarWrap {
+  width:90%;
+  height:70px;
+  background:#222;
+  border-radius:40px;
+  overflow:hidden;
+  margin:40px auto;
+}
+
+#timerBar {
+  height:100%;
+  width:100%;
+  background:hsl(120,100%,50%);
+  transition: width 1s linear, background 1s linear;
+}
 
 ul {
   flex:1;
@@ -45,17 +68,17 @@ li {
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size:6vw;
+  font-size:7vw;
   font-weight:900;
   margin:8px 0;
   background:#333;
   border-radius:20px;
-  border:5px solid #888;
+  border:6px solid #888;
   cursor:pointer;
 }
 
 li.selected {
-  border:6px solid #00e676;
+  border:8px solid #00e676;
   background:#2e7d32;
 }
 </style>
@@ -64,13 +87,19 @@ li.selected {
 <body>
 
 <div id="start" class="screen">
-  <h1>Скоро начнём!</h1>
+  <img src="start.jpg">
+  <div style="font-size:5vw;font-weight:900;">Скоро начнём!</div>
 </div>
 
 <div id="waiting" class="screen">Смотрите на сцену!</div>
 
 <div id="game">
   <h1 id="title"></h1>
+
+  <div id="timerBarWrap">
+    <div id="timerBar"></div>
+  </div>
+
   <ul id="options"></ul>
 </div>
 
@@ -89,6 +118,7 @@ const db = firebase.database();
 let questions = [];
 let ready = false;
 let voted = false;
+let timerInterval = null;
 
 fetch(CSV_URL)
 .then(r => r.text())
@@ -109,6 +139,7 @@ const game = document.getElementById("game");
 
 const title = document.getElementById("title");
 const options = document.getElementById("options");
+const timerBar = document.getElementById("timerBar");
 
 function show(screen){
   start.style.display="none";
@@ -126,22 +157,20 @@ db.ref("game").on("value", snap => {
     return;
   }
 
-  const status = data.status || "waiting";
-  const current = data.currentQuestion ?? 0;
+  if(data.status === "waiting") return show(start);
+  if(data.status === "pause") return show(waiting);
 
-  if(status === "waiting") return show(start);
-  if(status === "pause") return show(waiting);
-
-  if(status === "playing"){
+  if(data.status === "playing"){
 
     if(!ready) return;
 
-    const q = questions[current];
+    const q = questions[data.currentQuestion];
     if(!q) return;
 
     show(game);
 
     voted = false;
+    clearInterval(timerInterval);
 
     title.innerText = q.text;
     options.innerHTML = "";
@@ -154,7 +183,7 @@ db.ref("game").on("value", snap => {
         if(voted) return;
         voted = true;
 
-        db.ref("votes/"+current+"/"+i)
+        db.ref("votes/"+data.currentQuestion+"/"+i)
           .transaction(v => (v||0)+1);
 
         li.classList.add("selected");
@@ -162,6 +191,18 @@ db.ref("game").on("value", snap => {
 
       options.appendChild(li);
     });
+
+    let total = data.timer || 5;
+    let time = total;
+
+    timerInterval = setInterval(()=>{
+      time--;
+      timerBar.style.width = (time/total*100)+"%";
+
+      if(time<=0){
+        clearInterval(timerInterval);
+      }
+    },1000);
   }
 });
 </script>
