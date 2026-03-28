@@ -52,7 +52,6 @@ h1 { font-size:5vw; margin:10px; }
   height:100%;
   width:100%;
   background:hsl(120,100%,50%);
-  transition:width 1s linear, background 1s linear;
 }
 
 ul {
@@ -131,16 +130,14 @@ var timerBar = document.getElementById("timerBar");
 
 /* CSV */
 fetch(CSV_URL)
-.then(function(r){ return r.text(); })
-.then(function(text){
-  var rows = text.trim().split('\n').map(function(r){ return r.split(','); });
+.then(r=>r.text())
+.then(text=>{
+  var rows = text.trim().split('\n').map(r=>r.split(','));
 
-  questions = rows.slice(1).map(function(cols){
-    return {
-      text:(cols[0] || "").trim(),
-      options:cols.slice(1).map(function(c){ return c.trim(); }).filter(Boolean)
-    };
-  });
+  questions = rows.slice(1).map(cols=>({
+    text:(cols[0]||"").trim(),
+    options:cols.slice(1).map(c=>c.trim()).filter(Boolean)
+  }));
 });
 
 /* экраны */
@@ -163,7 +160,7 @@ function showGame(){
 }
 
 /* Firebase */
-db.ref('currentQuestion').on('value', function(snap){
+db.ref('currentQuestion').on('value', snap=>{
 
   var current = snap.val();
 
@@ -189,20 +186,19 @@ db.ref('currentQuestion').on('value', function(snap){
   title.innerText = q.text;
   options.innerHTML = "";
 
-  q.options.forEach(function(opt,i){
+  q.options.forEach((opt,i)=>{
 
     var li = document.createElement('li');
     li.innerText = opt;
 
-    li.onclick = function(){
-
+    li.onclick = ()=>{
       if(voted) return;
 
       voted = true;
       clearInterval(timerInterval);
 
       db.ref('votes/'+current+'/'+i)
-        .transaction(function(v){ return (v || 0) + 1; });
+        .transaction(v=>(v||0)+1);
 
       li.classList.add('selected');
 
@@ -212,27 +208,21 @@ db.ref('currentQuestion').on('value', function(snap){
     options.appendChild(li);
   });
 
-  var total = 5;
-  var time = total;
+  /* ПРАВИЛЬНЫЙ ПЛАВНЫЙ ТАЙМЕР */
 
+  timerBar.style.transition = "none";
   timerBar.style.width = "100%";
+  timerBar.style.background = "hsl(120,100%,50%)";
 
-  timerInterval = setInterval(function(){
+  timerBar.offsetHeight;
 
-    time--;
+  timerBar.style.transition = "width 5s linear, background 5s linear";
 
-    var percent = (time/total)*100;
-    timerBar.style.width = percent + "%";
+  setTimeout(()=>{
+    timerBar.style.width = "0%";
+    timerBar.style.background = "hsl(0,100%,50%)";
+  },50);
 
-    var hue = 120 - (120 * ((total-time)/total));
-    timerBar.style.background = "hsl(" + hue + ",100%,50%)";
-
-    if(time <= 0){
-      clearInterval(timerInterval);
-      setTimeout(showWaiting, 1000);
-    }
-
-  },1000);
 });
 </script>
 
