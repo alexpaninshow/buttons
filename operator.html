@@ -10,27 +10,26 @@ body {
   background:#111;
   color:white;
   text-align:center;
-  padding:20px;
+  padding:40px;
 }
 
-#status { font-size:22px; margin-bottom:10px; }
-#timer { font-size:40px; margin-bottom:20px; }
+#status { font-size:28px; margin-bottom:10px; }
+#timer { font-size:48px; margin-bottom:20px; }
 
 button {
-  width:80%;
-  font-size:18px;
-  padding:12px;
-  margin:8px auto;
+  width:85%;
+  font-size:20px;
+  padding:14px;
+  margin:10px auto;
   display:block;
   border:none;
-  border-radius:10px;
+  border-radius:12px;
   cursor:pointer;
 }
 
 .next { background:#4caf50; }
 .back { background:orange; }
 .reset { background:red; }
-.repeat { background:#2196f3; }
 </style>
 </head>
 
@@ -43,7 +42,6 @@ button {
 
 <button id="nextBtn" class="next"></button>
 <button id="backBtn" class="back"></button>
-<button id="repeatBtn" class="repeat">Повторить вопрос</button>
 <button id="resetBtn" class="reset">Сброс</button>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -60,6 +58,8 @@ const db = firebase.database();
 
 let questions = [];
 let current = -1;
+let timerFinished = false;
+let lock = false;
 let timerInterval = null;
 
 const status = document.getElementById("status");
@@ -81,10 +81,12 @@ fetch(CSV_URL)
   updateButtons();
 });
 
-/* слушаем */
+/* слушаем Firebase */
 db.ref('currentQuestion').on('value', snap => {
 
   current = snap.val() ?? -1;
+  timerFinished = false;
+  lock = false;
 
   if(timerInterval){
     clearInterval(timerInterval);
@@ -95,7 +97,7 @@ db.ref('currentQuestion').on('value', snap => {
     status.innerText = "Ожидание";
     timerEl.innerText = "⏳ -";
   } else if(current >= 0){
-    status.innerText = (current+1) + ". " + questions[current].text;
+    status.innerText = "Сейчас: " + (current+1) + ". " + questions[current].text;
     startTimer();
   }
 
@@ -104,6 +106,11 @@ db.ref('currentQuestion').on('value', snap => {
 
 /* таймер */
 function startTimer(){
+
+  if(timerInterval){
+    clearInterval(timerInterval);
+  }
+
   let t = 5;
   timerEl.innerText = "⏳ " + t;
 
@@ -112,7 +119,11 @@ function startTimer(){
 
     if(t <= 0){
       clearInterval(timerInterval);
+      timerInterval = null;
+
       timerEl.innerText = "⏳ 0";
+      timerFinished = true;
+      updateButtons();
     } else {
       timerEl.innerText = "⏳ " + t;
     }
@@ -122,12 +133,17 @@ function startTimer(){
 
 /* переход */
 function showQuestion(i){
+  if(lock) return;
+  lock = true;
+
   db.ref('currentQuestion').set(i);
+
+  setTimeout(()=> lock = false, 300);
 }
 
-/* кнопки */
+/* вперёд */
 nextBtn.onclick = ()=>{
-  if(!questions.length) return;
+  if(lock || !questions.length) return;
 
   if(current === -1){
     showQuestion(0);
@@ -136,34 +152,55 @@ nextBtn.onclick = ()=>{
   }
 };
 
+/* НАЗАД — ВОТ ТУТ ГЛАВНОЕ ИСПРАВЛЕНИЕ */
 backBtn.onclick = ()=>{
-  if(current > 0){
-    showQuestion(current - 1);
-  }
-};
+  if(lock || !questions.length) return;
 
-repeatBtn.onclick = ()=>{
-  if(current >= 0){
+  if(current === -1) return;
+
+  if(timerFinished){
+    // 👉 повтор текущего вопроса
     showQuestion(current);
+  } else {
+    // 👉 реально назад
+    if(current > 0){
+      showQuestion(current - 1);
+    }
   }
 };
 
+/* сброс */
 resetBtn.onclick = ()=>{
   db.ref('currentQuestion').set(-1);
 };
 
-/* подписи */
+/* кнопки */
 function updateButtons(){
   if(!questions.length) return;
 
   if(current === -1){
-    nextBtn.innerText = "Начать";
+    nextBtn.innerText = "Начать: " + questions[0].text;
     backBtn.style.display = "none";
     return;
   }
 
-  nextBtn.innerText = "Далее";
+  if(current < questions.length - 1){
+    nextBtn.innerText = "Далее: " + questions[current+1].text;
+  } else {
+    nextBtn.innerText = "Конец";
+  }
+
   backBtn.style.display = "block";
+
+  if(timerFinished){
+    backBtn.innerText = "Повторить вопрос";
+  } else {
+    if(current > 0){
+      backBtn.innerText = "Назад: " + questions[current-1].text;
+    } else {
+      backBtn.innerText = "Первый вопрос";
+    }
+  }
 }
 </script>
 
