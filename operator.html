@@ -34,11 +34,6 @@ button {
   cursor:pointer;
 }
 
-button:disabled {
-  opacity:0.5;
-  cursor:not-allowed;
-}
-
 .next { background:#4caf50; color:white; }
 .back { background:orange; color:white; }
 .reset { background:red; color:white; }
@@ -52,8 +47,8 @@ button:disabled {
 <div id="status">Загрузка...</div>
 <div id="timer">⏳ -</div>
 
-<button id="nextBtn" class="next" disabled>Загрузка...</button>
-<button id="backBtn" class="back" disabled>Назад</button>
+<button id="nextBtn" class="next">Загрузка...</button>
+<button id="backBtn" class="back">Назад</button>
 <button id="resetBtn" class="reset">Сбросить игру</button>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -79,9 +74,8 @@ const status = document.getElementById("status");
 const timerEl = document.getElementById("timer");
 const nextBtn = document.getElementById("nextBtn");
 const backBtn = document.getElementById("backBtn");
-const resetBtn = document.getElementById("resetBtn");
 
-/* загрузка вопросов */
+/* загрузка */
 fetch(CSV_URL)
 .then(r => r.text())
 .then(text => {
@@ -91,10 +85,6 @@ fetch(CSV_URL)
     text:(cols[0]||"").trim(),
     options:cols.slice(1).map(c=>c.trim()).filter(Boolean)
   }));
-
-  // ✅ включаем кнопки
-  nextBtn.disabled = false;
-  backBtn.disabled = false;
 
   updateButtons();
 });
@@ -145,7 +135,7 @@ function showQuestion(i){
   db.ref('currentQuestion').set(i);
 }
 
-/* зелёная */
+/* 🟢 ВСЕГДА ВПЕРЁД (мгновенно) */
 nextBtn.onclick = ()=>{
   if(!questions.length) return;
 
@@ -159,15 +149,16 @@ nextBtn.onclick = ()=>{
   }
 };
 
-/* назад */
+/* 🟠 ВСЕГДА РАБОТАЕТ МГНОВЕННО */
 backBtn.onclick = ()=>{
   if(!questions.length) return;
-
   if(current === -1) return;
 
   if(timerFinished){
-    showQuestion(current); // повтор
+    // 🔁 повтор текущего
+    showQuestion(current);
   } else {
+    // ⬅ предыдущий
     if(current > 0){
       showQuestion(current - 1);
     }
