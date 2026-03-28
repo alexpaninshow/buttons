@@ -7,16 +7,23 @@
 <style>
 html,body{margin:0;height:100%;font-family:Arial;background:#111;color:#fff}
 
-.screen{position:fixed;width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center}
+.screen{
+  position:fixed;width:100%;height:100%;
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;text-align:center
+}
 
 #waiting{display:none;font-size:6vw}
 #game{display:none;width:100%;height:100%;flex-direction:column}
 
-#timerWrap{height:50px;background:#222;margin:20px;border-radius:20px;overflow:hidden}
+#timerWrap{height:40px;background:#222;margin:20px;border-radius:20px;overflow:hidden}
 #bar{height:100%;width:100%;background:hsl(120,100%,50%)}
 
 ul{flex:1;padding:10px}
-li{margin:8px 0;padding:20px;background:#333;border-radius:10px;font-size:5vw}
+li{
+  margin:8px 0;padding:20px;background:#333;
+  border-radius:10px;font-size:5vw
+}
 .selected{background:#4caf50}
 </style>
 </head>
@@ -41,112 +48,97 @@ firebase.initializeApp({
 });
 var db=firebase.database();
 
-/* ===== USER ===== */
-var userId = localStorage.getItem("uid");
-if(!userId){
-  userId = "u"+Math.random().toString(36).substr(2,9);
-  localStorage.setItem("uid", userId);
+/* USER */
+var uid=localStorage.getItem("uid");
+if(!uid){
+  uid="u"+Math.random().toString(36).substr(2,9);
+  localStorage.setItem("uid",uid);
 }
 
-function updateUser(q, selected){
-  db.ref("users/"+userId).set({
-    t: Date.now(),
-    q: q,
-    selected: selected ?? null
-  });
-}
-
-/* ===== DOM ===== */
-var startEl=document.getElementById("start");
-var waitingEl=document.getElementById("waiting");
-var gameEl=document.getElementById("game");
-var qEl=document.getElementById("q");
-var opts=document.getElementById("opts");
-var bar=document.getElementById("bar");
-
-/* ===== DATA ===== */
+/* DATA */
 var questions=[];
+var loaded=false;
 var answered=JSON.parse(localStorage.getItem("ans")||"{}");
 
-function save(){localStorage.setItem("ans",JSON.stringify(answered));}
-
-/* ===== CSV ===== */
-fetch("https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv&gid=0")
+/* CSV */
+fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vQVLFjRWrX9DiTY9f32pSs8v0Y3MfxLSFC-G-Gi43Z37Lt75BMj-1J8nQGNzgAQdOsR2_pKUmdxU7G6/pub?gid=0&single=true&output=csv")
 .then(r=>r.text())
 .then(t=>{
+  if(t.indexOf("<!DOCTYPE")!==-1){alert("Ошибка таблицы");return;}
+
   var rows=t.trim().split('\n');
+
   for(var i=1;i<rows.length;i++){
-    var c=rows[i].split(',');
-    var q={text:c[0],options:[]};
-    for(var j=1;j<c.length;j++) if(c[j]) q.options.push(c[j]);
+    var cols=rows[i].split(',');
+    var q={text:cols[0],options:[]};
+
+    for(var j=1;j<cols.length;j++){
+      if(cols[j].trim()!=="") q.options.push(cols[j].trim());
+    }
+
     questions.push(q);
   }
+
+  loaded=true;
 });
 
-/* ===== UI ===== */
-function show(screen){
-  startEl.style.display="none";
-  waitingEl.style.display="none";
-  gameEl.style.display="none";
-  document.getElementById(screen).style.display="flex";
+/* UI */
+function show(id){
+  document.getElementById("start").style.display="none";
+  document.getElementById("waiting").style.display="none";
+  document.getElementById("game").style.display="none";
+  document.getElementById(id).style.display="flex";
 }
 
-/* ===== SYNC ===== */
-db.ref("currentQuestion").on("value",function(s){
+/* SYNC */
+db.ref("currentQuestion").on("value",s=>{
 
   var d=s.val();
-  if(!d) return;
+  if(!d || !loaded) return;
 
   var i=d.index;
 
-  if(i===-1){
-    show("start");
-    updateUser(-1,null);
-    return;
-  }
-
-  if(i===-999){
-    show("waiting");
-    updateUser(-999,null);
-    return;
-  }
+  if(i===-1){ show("start"); return; }
+  if(i===-999){ show("waiting"); return; }
 
   if(!questions[i]) return;
 
   show("game");
-  updateUser(i, answered[i] ?? null);
 
-  qEl.innerText=questions[i].text;
+  var q=questions[i];
+  var opts=document.getElementById("opts");
   opts.innerHTML="";
 
-  for(let k=0;k<questions[i].options.length;k++){
+  var selected=answered[i];
+
+  for(let k=0;k<q.options.length;k++){
 
     var li=document.createElement("li");
-    li.innerText=questions[i].options[k];
+    li.innerText=q.options[k];
 
-    if(answered[i]!==undefined){
-      if(answered[i]===k) li.classList.add("selected");
+    if(selected!==undefined){
+      if(selected===k) li.classList.add("selected");
       li.style.opacity=0.6;
     }else{
       li.onclick=function(){
-        answered[i]=k;
-        save();
 
-        updateUser(i,k);
+        answered[i]=k;
+        localStorage.setItem("ans",JSON.stringify(answered));
 
         db.ref("votes/"+i+"/"+k).transaction(v=>(v||0)+1);
 
         li.classList.add("selected");
 
-        setTimeout(function(){
+        setTimeout(()=>{
           show("waiting");
-          updateUser(-999,null);
-        },500);
+        },300);
       };
     }
 
     opts.appendChild(li);
   }
+
+  document.getElementById("q").innerText=q.text;
 
   /* таймер */
   var total=5000;
@@ -155,16 +147,15 @@ db.ref("currentQuestion").on("value",function(s){
   if(passed>total)passed=total;
 
   var remain=total-passed;
+  var bar=document.getElementById("bar");
 
   bar.style.transition="none";
   bar.style.width=(remain/total*100)+"%";
   bar.offsetHeight;
   bar.style.transition="width "+remain+"ms linear";
-
-  setTimeout(function(){
-    bar.style.width="0%";
-  },50);
+  setTimeout(()=>bar.style.width="0%",50);
 });
 </script>
+
 </body>
 </html>
