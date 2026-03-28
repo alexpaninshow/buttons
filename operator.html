@@ -72,6 +72,7 @@ const db = firebase.database();
 
 let questions = [];
 let current = -1;
+let lastPlayed = -1;
 let lastQuestionIndex = 0;
 let timerInterval = null;
 
@@ -104,6 +105,11 @@ db.ref('currentQuestion').on('value', snap => {
 
   clearInterval(timerInterval);
 
+  // 🔥 запоминаем последний сыгранный вопрос
+  if(current >= 0){
+    lastPlayed = current;
+  }
+
   if(current === -999){
     status.innerText = "Смотрите на сцену";
     timerEl.innerText = "⏳ -";
@@ -133,7 +139,6 @@ function startTimer(){
     if(t <= 0){
       clearInterval(timerInterval);
 
-      // переход в ожидание
       db.ref('currentQuestion').set(-999);
     }
 
@@ -142,9 +147,17 @@ function startTimer(){
 
 /* управление */
 nextBtn.onclick = ()=>{
-  if(current === -1 || current === -999){
+
+  if(current === -1){
     db.ref('currentQuestion').set(0);
   } 
+  else if(current === -999){
+
+    if(lastPlayed < lastQuestionIndex){
+      db.ref('currentQuestion').set(lastPlayed + 1);
+    }
+
+  }
   else if(current < lastQuestionIndex){
     db.ref('currentQuestion').set(current + 1);
   }
@@ -152,9 +165,8 @@ nextBtn.onclick = ()=>{
 
 backBtn.onclick = ()=>{
 
-  // 🔥 ВАЖНО: если мы в состоянии ожидания — возвращаем последний вопрос
   if(current === -999){
-    db.ref('currentQuestion').set(lastQuestionIndex);
+    db.ref('currentQuestion').set(lastPlayed);
     return;
   }
 
@@ -165,6 +177,7 @@ backBtn.onclick = ()=>{
 
 document.getElementById("resetBtn").onclick = ()=>{
   db.ref('currentQuestion').set(-1);
+  lastPlayed = -1;
 };
 
 /* подписи */
@@ -179,9 +192,28 @@ function updateButtons(){
   }
 
   if(current === -999){
-    nextBtn.innerText = "Начать: 1. " + questions[0].text;
-    backBtn.style.display = "block";
-    backBtn.innerText = "Назад: " + (lastQuestionIndex+1) + ". " + questions[lastQuestionIndex].text;
+
+    if(lastPlayed === -1){
+      nextBtn.innerText = "Начать: 1. " + questions[0].text;
+      backBtn.style.display = "none";
+    } 
+    else {
+
+      if(lastPlayed < lastQuestionIndex){
+        nextBtn.innerText = "Далее: " + (lastPlayed+2) + ". " + questions[lastPlayed+1].text;
+      } else {
+        nextBtn.innerText = "Конец";
+      }
+
+      backBtn.style.display = "block";
+
+      if(lastPlayed > 0){
+        backBtn.innerText = "Назад: " + (lastPlayed) + ". " + questions[lastPlayed-1].text;
+      } else {
+        backBtn.style.display = "none";
+      }
+    }
+
     return;
   }
 
@@ -195,6 +227,8 @@ function updateButtons(){
 
   if(current > 0){
     backBtn.innerText = "Назад: " + current + ". " + questions[current-1].text;
+  } else {
+    backBtn.style.display = "none";
   }
 }
 </script>
