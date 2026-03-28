@@ -52,6 +52,7 @@ h1 { font-size:5vw; margin:10px; }
   height:100%;
   width:100%;
   background:hsl(120,100%,50%);
+  transition:width 1s linear, background 1s linear;
 }
 
 ul {
@@ -117,7 +118,6 @@ firebase.initializeApp({
 const db = firebase.database();
 
 let questions = [];
-let ready = false;
 let timerInterval = null;
 let voted = false;
 
@@ -139,8 +139,6 @@ fetch(CSV_URL)
     text:(cols[0]||"").trim(),
     options:cols.slice(1).map(c=>c.trim()).filter(Boolean)
   }));
-
-  ready = true;
 });
 
 /* экраны */
@@ -162,42 +160,10 @@ function showGame(){
   game.style.display="flex";
 }
 
-/* плавный таймер */
-function startTimer(){
-
-  clearInterval(timerInterval);
-
-  let total = 5000;
-  let start = Date.now();
-
-  timerBar.style.width = "100%";
-  timerBar.style.background = "hsl(120,100%,50%)";
-
-  timerInterval = setInterval(()=>{
-
-    let elapsed = Date.now() - start;
-    let progress = elapsed / total;
-
-    if(progress >= 1){
-      progress = 1;
-      clearInterval(timerInterval);
-      setTimeout(showWaiting, 1000);
-    }
-
-    let percent = (1 - progress) * 100;
-    timerBar.style.width = percent + "%";
-
-    let hue = 120 - (120 * progress);
-    timerBar.style.background = "hsl(" + hue + ",100%,50%)";
-
-  }, 50);
-}
-
 /* Firebase */
 db.ref('currentQuestion').on('value', snap => {
 
-  const val = snap.val();
-  const current = (val === null) ? -1 : Number(val);
+  const current = snap.val();
 
   if(current === -1){
     showStart();
@@ -209,11 +175,12 @@ db.ref('currentQuestion').on('value', snap => {
     return;
   }
 
-  if(!ready || !questions[current]) return;
+  if(!questions[current]) return;
 
   showGame();
 
   voted = false;
+  clearInterval(timerInterval);
 
   const q = questions[current];
 
@@ -241,7 +208,27 @@ db.ref('currentQuestion').on('value', snap => {
     options.appendChild(li);
   });
 
-  startTimer();
+  /* таймер */
+  let total = 5;
+  let time = total;
+
+  timerBar.style.width = "100%";
+
+  timerInterval=setInterval(()=>{
+    time--;
+
+    let percent = (time/total)*100;
+    timerBar.style.width = percent + "%";
+
+    let hue = 120 - (120 * ((total-time)/total));
+    timerBar.style.background = "hsl(" + hue + ",100%,50%)";
+
+    if(time <= 0){
+      clearInterval(timerInterval);
+      setTimeout(showWaiting, 1000);
+    }
+
+  },1000);
 });
 </script>
 
