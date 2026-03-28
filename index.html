@@ -15,6 +15,7 @@ body {
   color:white;
 }
 
+/* ЭКРАНЫ */
 .screen {
   position:fixed;
   width:100%;
@@ -26,30 +27,31 @@ body {
   text-align:center;
 }
 
-#start {
-  background:#000;
-  z-index:10;
-}
-
-#start img {
-  max-width:80%;
-  border-radius:20px;
-  margin-bottom:30px;
-  box-shadow:0 0 40px rgba(0,0,0,0.6);
-}
-
-#waiting { display:none; font-size:6vw; font-weight:900; }
+#start { background:#000; }
+#waiting { display:none; font-size:5vw; font-weight:900; }
 #game { display:none; height:100%; flex-direction:column; }
 
-h1 { font-size:5vw; margin:10px; }
+/* СТАРТ */
+#start img {
+  max-width:70%;
+  border-radius:20px;
+  margin-bottom:20px;
+}
 
+/* ВОПРОС */
+h1 {
+  font-size:4vw;
+  margin:10px;
+}
+
+/* ТАЙМЕР */
 #timerBarWrap {
-  width:90%;
-  height:70px;
+  width:85%;
+  height:50px;
   background:#222;
-  border-radius:40px;
+  border-radius:30px;
   overflow:hidden;
-  margin:40px auto;
+  margin:20px auto;
 }
 
 #timerBar {
@@ -59,6 +61,7 @@ h1 { font-size:5vw; margin:10px; }
   transition: width 1s linear, background 1s linear;
 }
 
+/* ВАРИАНТЫ */
 ul {
   flex:1;
   display:flex;
@@ -72,17 +75,17 @@ li {
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size:7vw;
+  font-size:5vw;
   font-weight:900;
-  margin:8px 0;
+  margin:6px 0;
   background:#333;
-  border-radius:20px;
-  border:6px solid #888;
+  border-radius:15px;
+  border:4px solid #888;
   cursor:pointer;
 }
 
 li.selected {
-  border:8px solid #00e676;
+  border:5px solid #00e676;
   background:#2e7d32;
 }
 </style>
@@ -92,9 +95,7 @@ li.selected {
 
 <div id="start" class="screen">
   <img src="start.jpg">
-  <div style="font-size:5vw;font-weight:900;">
-    Скоро начнём!
-  </div>
+  <div style="font-size:4vw;font-weight:900;">Скоро начнём!</div>
 </div>
 
 <div id="waiting" class="screen">Смотрите на сцену!</div>
@@ -125,7 +126,6 @@ let questions = [];
 let ready = false;
 let voted = false;
 let timerInterval = null;
-let timerStopped = false;
 
 const startScreen = document.getElementById("start");
 const waiting = document.getElementById("waiting");
@@ -135,6 +135,7 @@ const title = document.getElementById("title");
 const options = document.getElementById("options");
 const timerBar = document.getElementById("timerBar");
 
+/* загрузка */
 fetch(CSV_URL)
 .then(r => r.text())
 .then(text => {
@@ -148,6 +149,7 @@ fetch(CSV_URL)
   ready = true;
 });
 
+/* экраны */
 function showStart(){
   startScreen.style.display="flex";
   waiting.style.display="none";
@@ -166,7 +168,9 @@ function showGame(){
   game.style.display="flex";
 }
 
+/* слушаем */
 db.ref('currentQuestion').on('value', snap => {
+
   const current = snap.val();
 
   if(current === null || current === -1){
@@ -174,18 +178,11 @@ db.ref('currentQuestion').on('value', snap => {
     return;
   }
 
-  if(current === -999){
-    showWaiting();
-    return;
-  }
-
-  if(!ready) return;
-  if(!questions[current]) return;
+  if(!ready || !questions[current]) return;
 
   showGame();
 
   voted = false;
-  timerStopped = false;
   clearInterval(timerInterval);
 
   const q = questions[current];
@@ -201,8 +198,6 @@ db.ref('currentQuestion').on('value', snap => {
       if(voted) return;
 
       voted=true;
-      timerStopped = true;
-
       clearInterval(timerInterval);
 
       db.ref('votes/'+current+'/'+i)
@@ -216,20 +211,18 @@ db.ref('currentQuestion').on('value', snap => {
     options.appendChild(li);
   });
 
+  /* таймер */
   let total = 5;
   let time = total;
 
   timerBar.style.transition = "none";
   timerBar.style.width = "100%";
-  timerBar.style.background = "hsl(120,100%,50%)";
 
   setTimeout(()=>{
     timerBar.style.transition = "width 1s linear, background 1s linear";
   },50);
 
   timerInterval=setInterval(()=>{
-    if(timerStopped) return;
-
     time--;
 
     let percent = (time/total)*100;
@@ -241,10 +234,7 @@ db.ref('currentQuestion').on('value', snap => {
 
     if(time <= 0){
       clearInterval(timerInterval);
-
-      setTimeout(()=>{
-        showWaiting();
-      },1000);
+      setTimeout(()=> showWaiting(), 800);
     }
 
   },1000);
