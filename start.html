@@ -4,60 +4,55 @@
 <meta charset="UTF-8">
 <title>Старт</title>
 
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
 <style>
-html, body { height:100%; margin:0; }
-body {
-  background:#111;
+body{
+  background:#000;
+  color:white;
+  font-family:Arial;
   display:flex;
   align-items:center;
   justify-content:center;
-  font-family:Arial;
+  height:100vh;
+  flex-direction:column;
 }
-#startBtn {
-  width:90%;
-  max-width:600px;
-  padding:40px 20px;
-  font-size:28px;
-  font-weight:bold;
-  background:#2196f3;
-  color:white;
+
+button{
+  padding:20px 40px;
+  font-size:24px;
   border:none;
-  border-radius:30px;
+  border-radius:12px;
+  cursor:pointer;
 }
 </style>
 </head>
 
 <body>
 
-<button id="startBtn">Начинаем спектакль</button>
-
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<h1>Готовность к спектаклю</h1>
+<button onclick="start()">▶️ НАЧАТЬ СПЕКТАКЛЬ</button>
 
 <script>
 firebase.initializeApp({
   databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"
 });
 
-var db = firebase.database();
-var btn = document.getElementById("startBtn");
+const db = firebase.database();
 
-btn.onclick = function(){
-
-  btn.innerText = "Запуск...";
-  btn.disabled = true;
-
-  db.ref('votes').remove();
-
-  db.ref('currentQuestion').set({
-    state: -999,
-    t: Date.now()
+function start(){
+  db.ref().set({
+    game:{
+      status:"pause",
+      currentQuestion:0,
+      timer:5
+    },
+    votes:{}
   });
 
-  setTimeout(function(){
-    window.location.href = "operator.html";
-  },200);
-};
+  alert("Спектакль запущен");
+}
 </script>
 
 </body>
