@@ -7,26 +7,21 @@
 <style>
 body{
   margin:0;
-  display:flex;
   background:#111;
   color:#fff;
   font-family:Arial;
-}
-
-#left{
-  flex:1;
   display:flex;
-  flex-direction:column;
+  justify-content:center;
   align-items:center;
-  justify-content:flex-start;
-  padding:20px;
+  height:100vh;
+  flex-direction:column;
 }
 
-#status{font-size:22px;margin-bottom:10px}
-#timer{font-size:28px;margin-bottom:20px}
+#status{font-size:24px;margin-bottom:10px}
+#timer{font-size:30px;margin-bottom:20px}
 
 #buttons{
-  width:100%;
+  width:300px;
   display:flex;
   flex-direction:column;
 }
@@ -44,35 +39,14 @@ button{
 .back{background:orange}
 .reset{background:red}
 
-#viewer{
-  width:300px;
-  background:#000;
-  padding:10px;
-}
-
-#vBar{
-  height:8px;
-  background:lime;
-  width:100%;
-}
-
-.vOpt{
-  background:#333;
-  margin:4px 0;
-  padding:6px;
-  border-radius:6px;
-}
-
-.sel{background:#4caf50}
+#result{margin-top:20px;font-size:20px}
 </style>
 </head>
 
 <body>
 
-<div id="left">
-
 <div id="status">Загрузка...</div>
-<div id="timer">⏳</div>
+<div id="timer"></div>
 
 <div id="buttons">
 <button id="nextBtn" class="next"></button>
@@ -81,14 +55,6 @@ button{
 </div>
 
 <div id="result"></div>
-
-</div>
-
-<div id="viewer">
-<div id="vTitle"></div>
-<div id="vBar"></div>
-<div id="vOpts"></div>
-</div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -101,13 +67,13 @@ var db=firebase.database();
 
 var questions=[];
 var current=-1;
-var users={};
-var activeUser=null;
 
-/* ===== CSV (БЕЗ ЛИШНИХ ВАРИАНТОВ) ===== */
-fetch("https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv&gid=0")
+/* CSV */
+fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vQVLFjRWrX9DiTY9f32pSs8v0Y3MfxLSFC-G-Gi43Z37Lt75BMj-1J8nQGNzgAQdOsR2_pKUmdxU7G6/pub?gid=0&single=true&output=csv")
 .then(r=>r.text())
 .then(t=>{
+  if(t.indexOf("<!DOCTYPE")!==-1){alert("Ошибка таблицы");return;}
+
   var rows=t.trim().split('\n');
 
   for(var i=1;i<rows.length;i++){
@@ -115,8 +81,7 @@ fetch("https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx
     var q={text:cols[0],options:[]};
 
     for(var j=1;j<cols.length;j++){
-      var val=cols[j].trim();
-      if(val!=="") q.options.push(val);
+      if(cols[j].trim()!=="") q.options.push(cols[j].trim());
     }
 
     questions.push(q);
@@ -125,31 +90,7 @@ fetch("https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx
   updateButtons();
 });
 
-/* ===== USERS ===== */
-db.ref("users").on("value",s=>{
-  users=s.val()||{};
-  pickUser();
-});
-
-function pickUser(){
-  var now=Date.now();
-  var alive=[];
-
-  for(var id in users){
-    if(now-users[id].t<6000) alive.push(id);
-  }
-
-  if(!alive.length){
-    activeUser=null;
-    return;
-  }
-
-  if(!activeUser || !users[activeUser] || now-users[activeUser].t>6000){
-    activeUser=alive[Math.floor(Math.random()*alive.length)];
-  }
-}
-
-/* ===== СИНХРОНИЗАЦИЯ ===== */
+/* SYNC */
 db.ref("currentQuestion").on("value",s=>{
   var d=s.val(); if(!d) return;
 
@@ -157,10 +98,8 @@ db.ref("currentQuestion").on("value",s=>{
 
   updateStatus(d);
   updateButtons();
-  updateViewer(d);
   showResult();
 
-  /* АВТО ПЕРЕХОД В ОЖИДАНИЕ */
   if(current>=0){
     setTimeout(()=>{
       db.ref("currentQuestion").once("value",snap=>{
@@ -173,7 +112,7 @@ db.ref("currentQuestion").on("value",s=>{
   }
 });
 
-/* ===== СТАТУС ===== */
+/* STATUS */
 function updateStatus(d){
   if(current>=0 && questions[current]){
     status.innerText=(current+1)+". "+questions[current].text;
@@ -187,7 +126,7 @@ function updateStatus(d){
   }
 }
 
-/* ===== ТАЙМЕР ===== */
+/* TIMER */
 function startTimer(st){
   clearInterval(window.ti);
 
@@ -201,7 +140,7 @@ function startTimer(st){
   window.ti=setInterval(tick,200);
 }
 
-/* ===== КНОПКИ ===== */
+/* КНОПКИ */
 nextBtn.onclick=function(){
   if(current<0) setQ(0);
   else if(current<questions.length-1) setQ(current+1);
@@ -218,7 +157,7 @@ function setQ(i){
   });
 }
 
-/* ===== ПОДПИСИ ===== */
+/* ПОДПИСИ */
 function updateButtons(){
 
   if(!questions.length) return;
@@ -236,7 +175,7 @@ function updateButtons(){
   }
 }
 
-/* ===== РЕЗУЛЬТАТ ===== */
+/* РЕЗУЛЬТАТ */
 function showResult(){
   if(current<0) return;
 
@@ -263,61 +202,11 @@ function showResult(){
   });
 }
 
-/* ===== VIEWER ===== */
-function updateViewer(d){
-
-  if(current===-999){
-    vTitle.innerText="Смотрите на сцену!";
-    vOpts.innerHTML="";
-    return;
-  }
-
-  if(!activeUser || !users[activeUser]){
-    vTitle.innerText="Нет зрителей";
-    vOpts.innerHTML="";
-    return;
-  }
-
-  var u=users[activeUser];
-
-  if(!questions[u.q]) return;
-
-  vTitle.innerText=questions[u.q].text;
-  vOpts.innerHTML="";
-
-  for(var i=0;i<questions[u.q].options.length;i++){
-    var el=document.createElement("div");
-    el.className="vOpt";
-    el.innerText=questions[u.q].options[i];
-
-    if(u.selected===i) el.classList.add("sel");
-
-    vOpts.appendChild(el);
-  }
-
-  var total=5000;
-  var passed=Date.now()-d.startTime;
-
-  if(passed<0)passed=0;
-  if(passed>total)passed=total;
-
-  var remain=total-passed;
-
-  vBar.style.transition="none";
-  vBar.style.width=(remain/total*100)+"%";
-  vBar.offsetHeight;
-  vBar.style.transition="width "+remain+"ms linear";
-
-  setTimeout(()=>vBar.style.width="0%",50);
-}
-
-/* ===== СБРОС ===== */
+/* СБРОС */
 resetBtn.onclick=function(){
-
   if(!confirm("Вы уверены, что хотите полностью сбросить игру?")) return;
 
   db.ref("votes").remove();
-  db.ref("users").remove();
   db.ref("currentQuestion").set({index:-1,startTime:Date.now()});
 };
 </script>
