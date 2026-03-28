@@ -5,15 +5,30 @@
 <title>Оператор</title>
 
 <style>
-body { font-family: Arial; text-align: center; background:#222; color:white; padding:40px; }
+body { 
+  font-family: Arial; 
+  text-align: center; 
+  background:#222; 
+  color:white; 
+  padding:40px; 
+}
 
 #status { font-size:26px; margin-bottom:10px; }
 #timer { font-size:24px; margin-bottom:20px; color:#ffeb3b; }
 
+/* 🔥 ВЕРТИКАЛЬНЫЕ КНОПКИ */
+.buttons {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+
 button {
+  width: 80%;
+  max-width: 500px;
   font-size:20px;
-  padding:15px 25px;
-  margin:10px;
+  padding:15px;
+  margin:8px 0;
   border-radius:10px;
   border:none;
   cursor:pointer;
@@ -32,9 +47,11 @@ button {
 <div id="status">Сейчас: Ожидание</div>
 <div id="timer"></div>
 
-<button id="nextBtn" class="next">Загрузка...</button>
-<button id="backBtn" class="back" style="display:none;">Назад</button>
-<button id="resetBtn" class="reset">Сбросить игру</button>
+<div class="buttons">
+  <button id="nextBtn" class="next">Загрузка...</button>
+  <button id="backBtn" class="back" style="display:none;">Назад</button>
+  <button id="resetBtn" class="reset">Сбросить игру</button>
+</div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -50,8 +67,6 @@ const db = firebase.database();
 
 let questions = [];
 let current = -1;
-
-// 🔥 ВАЖНО: это теперь главный индекс
 let lastAskedIndex = -1;
 
 let autoTimer = null;
@@ -105,7 +120,7 @@ function showQuestion(i){
   if(autoTimer) clearTimeout(autoTimer);
 
   current = i;
-  lastAskedIndex = i; // 🔥 ВСЕГДА обновляем
+  lastAskedIndex = i;
 
   db.ref('currentQuestion').set(i);
 
@@ -127,23 +142,19 @@ function showQuestion(i){
 
 // 👉 ВПЕРЁД
 nextBtn.onclick = ()=>{
-  let nextIndex;
+  let nextIndex = lastAskedIndex + 1;
 
-  if(lastAskedIndex === -1){
-    nextIndex = 0;
-  } else {
-    nextIndex = lastAskedIndex + 1;
-  }
+  if(lastAskedIndex === -1) nextIndex = 0;
 
   if(nextIndex < questions.length){
     showQuestion(nextIndex);
   }
 };
 
-// 👉 НАЗАД (🔥 ГЛАВНЫЙ ФИКС)
+// 👉 НАЗАД (предыдущий вопрос)
 backBtn.onclick = ()=>{
-  if(lastAskedIndex >= 0){
-    showQuestion(lastAskedIndex);
+  if(lastAskedIndex > 0){
+    showQuestion(lastAskedIndex - 1);
   }
 };
 
@@ -165,7 +176,7 @@ document.getElementById("resetBtn").onclick = ()=>{
 function updateButtons(){
   if(!questions.length) return;
 
-  // 👉 следующий вопрос
+  // 👉 ВПЕРЁД
   let nextIndex = lastAskedIndex + 1;
 
   if(nextIndex < questions.length){
@@ -175,8 +186,13 @@ function updateButtons(){
     nextBtn.style.display="none";
   }
 
-  // 🔥 КНОПКА НАЗАД ВСЕГДА ЕСЛИ БЫЛ ХОТЯ БЫ 1 ВОПРОС
-  backBtn.style.display = (lastAskedIndex >= 0) ? "inline-block" : "none";
+  // 👉 НАЗАД С ТЕКСТОМ
+  if(lastAskedIndex > 0){
+    backBtn.innerText = "Назад: " + questions[lastAskedIndex - 1].text;
+    backBtn.style.display="inline-block";
+  } else {
+    backBtn.style.display="none";
+  }
 }
 </script>
 
