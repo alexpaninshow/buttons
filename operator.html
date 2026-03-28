@@ -20,7 +20,6 @@ body {
 
 h1 { font-size:5vw; margin:0; }
 #status { font-size:4vw; margin-top:10px; }
-#timer { font-size:6vw; margin-top:10px; }
 
 #buttons {
   flex:1;
@@ -30,21 +29,17 @@ h1 { font-size:5vw; margin:0; }
 }
 
 button {
-  margin:6px 0;
-  font-size:4.5vw;
+  margin:8px 0;
+  font-size:5vw;
   font-weight:bold;
   border-radius:20px;
-  border:4px solid transparent;
+  border:none;
   color:white;
 }
 
-.next { background:#4caf50; flex:1.6; }
-.back { background:orange; flex:0.7; margin-top:15px; }
-.reset { background:red; flex:0.6; }
-
-button:active {
-  border:4px solid white;
-}
+.next { background:#4caf50; flex:1.5; }
+.back { background:orange; flex:0.8; }
+.reset { background:red; flex:0.7; }
 </style>
 </head>
 
@@ -53,7 +48,6 @@ button:active {
 <div id="top">
   <h1>Оператор</h1>
   <div id="status">Загрузка...</div>
-  <div id="timer">⏳ -</div>
 </div>
 
 <div id="buttons">
@@ -76,7 +70,6 @@ const db = firebase.database();
 
 let questions = [];
 let current = -1;
-let ready = false;
 
 const status = document.getElementById("status");
 const nextBtn = document.getElementById("nextBtn");
@@ -89,11 +82,10 @@ fetch(CSV_URL)
   const rows=text.trim().split('\n').map(r=>r.split(','));
 
   questions = rows.slice(1).map(c=>({
-    text:c[0],
+    text:(c[0]||"").trim(),
     options:c.slice(1).filter(Boolean)
   }));
 
-  ready = true;
   updateButtons();
 });
 
@@ -101,13 +93,15 @@ fetch(CSV_URL)
 db.ref('currentQuestion').on('value', snap => {
 
   const val = snap.val();
-  current = (val === null) ? -1 : val;
+  current = (val === null) ? -1 : Number(val);
 
-  if(current >= 0 && questions[current]){
-    status.innerText = "Сейчас: " + (current+1) + ". " + questions[current].text;
-  } else if(current === -999){
+  if(current === -999){
     status.innerText = "Смотрите на сцену";
-  } else {
+  }
+  else if(current >= 0 && questions[current]){
+    status.innerText = "Сейчас: " + (current+1) + ". " + questions[current].text;
+  }
+  else{
     status.innerText = "Ожидание";
   }
 
@@ -118,14 +112,14 @@ db.ref('currentQuestion').on('value', snap => {
 nextBtn.onclick = ()=>{
   if(current === -1 || current === -999){
     db.ref('currentQuestion').set(0);
-  } else {
-    db.ref('currentQuestion').set(current+1);
+  } else if(current < questions.length-1){
+    db.ref('currentQuestion').set(current + 1);
   }
 };
 
 backBtn.onclick = ()=>{
   if(current > 0){
-    db.ref('currentQuestion').set(current-1);
+    db.ref('currentQuestion').set(current - 1);
   }
 };
 
@@ -133,10 +127,10 @@ document.getElementById("resetBtn").onclick = ()=>{
   db.ref('currentQuestion').set(-1);
 };
 
-/* кнопки */
+/* подписи */
 function updateButtons(){
 
-  if(!ready) return;
+  if(!questions.length) return;
 
   if(current === -1 || current === -999){
     nextBtn.innerText = "Начать: 1. " + questions[0].text;
@@ -144,8 +138,17 @@ function updateButtons(){
     return;
   }
 
-  nextBtn.innerText = "Далее";
+  if(current < questions.length-1){
+    nextBtn.innerText = "Далее: " + (current+2) + ". " + questions[current+1].text;
+  } else {
+    nextBtn.innerText = "Конец";
+  }
+
   backBtn.style.display = "block";
+
+  if(current > 0){
+    backBtn.innerText = "Назад: " + current + ". " + questions[current-1].text;
+  }
 }
 </script>
 
