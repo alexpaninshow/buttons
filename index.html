@@ -27,22 +27,14 @@ body {
 }
 
 #start { background:#000; z-index:10; }
-
-#start img {
-  max-width:85%;
-  border-radius:20px;
-  margin-bottom:20px;
-}
+#start img { max-width:85%; border-radius:20px; margin-bottom:20px; }
 
 #waiting { display:none; font-size:6vw; font-weight:900; }
 #game { display:none; height:100%; flex-direction:column; }
 
 h1 { font-size:5vw; margin:10px; }
 
-#timer {
-  font-size:8vw;
-  margin-bottom:30px;
-}
+#timer { font-size:8vw; margin-bottom:30px; }
 
 ul {
   flex:1;
@@ -77,14 +69,10 @@ li.selected {
 
 <div id="start" class="screen">
   <img src="https://drive.google.com/uc?export=view&id=1Z75HN4p5klgCvDHPNyzhb2SeLdln3cUg">
-  <div style="font-size:5vw;font-weight:900;">
-    Скоро начнём!
-  </div>
+  <div style="font-size:5vw;font-weight:900;">Скоро начнём!</div>
 </div>
 
-<div id="waiting" class="screen">
-  Смотрите на сцену!
-</div>
+<div id="waiting" class="screen">Смотрите на сцену!</div>
 
 <div id="game">
   <h1 id="title"></h1>
@@ -148,12 +136,16 @@ function showGame(){
   game.style.display="flex";
 }
 
-/* 🔥 ГЛАВНОЕ ИСПРАВЛЕНИЕ */
 db.ref('currentQuestion').on('value', snap => {
   const current = snap.val();
 
   if(current === null || current === -1){
-    showStart(); // всегда стартовый экран
+    showStart();
+    return;
+  }
+
+  if(current === -999){
+    showWaiting();
     return;
   }
 
@@ -187,9 +179,7 @@ db.ref('currentQuestion').on('value', snap => {
       timer.innerText="";
       clearInterval(timerInterval);
 
-      setTimeout(()=>{
-        showWaiting();
-      },800);
+      setTimeout(()=> showWaiting(), 800);
     };
 
     options.appendChild(li);
