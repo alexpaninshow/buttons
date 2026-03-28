@@ -79,13 +79,21 @@ li.selected {
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-const CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv&gid=0";
+const firebaseConfig = {
+  apiKey: "AIzaSyXXXX",
+  authDomain: "buttons-panin.firebaseapp.com",
+  databaseURL: "https://buttons-panin-default-rtdb.firebaseio.com",
+  projectId: "buttons-panin",
+  storageBucket: "buttons-panin.appspot.com",
+  messagingSenderId: "XXXX",
+  appId: "XXXX"
+};
 
-firebase.initializeApp({
-  databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"
-});
+firebase.initializeApp(firebaseConfig);
 
 const db = firebase.database();
+
+const CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv&gid=0";
 
 let questions = [];
 let ready = false;
