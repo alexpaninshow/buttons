@@ -78,7 +78,7 @@ var db = firebase.database();
 
 var questions = [];
 var current = -1;
-var prevQuestion = -1;
+var lastQuestion = -1;
 var timerInterval = null;
 
 var status = document.getElementById("status");
@@ -110,13 +110,13 @@ db.ref('currentQuestion').on('value', function(snap){
   current = snap.val();
 
   if(current >= 0){
-    prevQuestion = current;
+    lastQuestion = current;
   }
 
   if(timerInterval) clearInterval(timerInterval);
 
   if(current === -999){
-    status.innerText = "Смотрите на сцену!";
+    status.innerText = "Ожидание...";
     timerEl.innerText = "⏳ -";
     showResult();
   }
@@ -126,7 +126,7 @@ db.ref('currentQuestion').on('value', function(snap){
     startTimer();
   }
   else{
-    status.innerText = "Ожидание";
+    status.innerText = "Ожидание...";
     timerEl.innerText = "⏳ -";
     resultEl.innerText = "";
   }
@@ -151,15 +151,15 @@ function startTimer(){
   },1000);
 }
 
-/* результат */
+/* результат — полностью отдельно */
 function showResult(){
 
-  if(prevQuestion < 0 || !questions[prevQuestion]) return;
+  if(lastQuestion < 0 || !questions[lastQuestion]) return;
 
-  db.ref('votes/'+prevQuestion).once('value', function(snap){
+  db.ref('votes/'+lastQuestion).once('value', function(snap){
 
     var votes = snap.val() || {};
-    var opts = questions[prevQuestion].options;
+    var opts = questions[lastQuestion].options;
 
     var max = -1;
     var countMax = 0;
@@ -188,26 +188,46 @@ function showResult(){
   });
 }
 
-/* кнопки */
+/* КНОПКИ */
+
 nextBtn.onclick = function(){
 
   if(!questions.length) return;
 
-  if(current === -1 || current === -999){
+  if(current === -1){
     db.ref('currentQuestion').set(0);
+    return;
   }
-  else if(current < questions.length - 1){
+
+  if(current === -999){
+    if(lastQuestion < questions.length - 1){
+      db.ref('currentQuestion').set(lastQuestion + 1);
+    }
+    return;
+  }
+
+  if(current < questions.length - 1){
     db.ref('currentQuestion').set(current + 1);
   }
 };
 
 backBtn.onclick = function(){
 
+  // из ожидания
+  if(current === -999){
+    if(lastQuestion > 0){
+      db.ref('currentQuestion').set(lastQuestion - 1);
+    }
+    return;
+  }
+
+  // обычный режим
   if(current > 0){
     db.ref('currentQuestion').set(current - 1);
   }
 };
 
+/* сброс */
 document.getElementById("resetBtn").onclick = function(){
 
   if(!confirm("Вы уверены, что хотите полностью сбросить игру?")) return;
@@ -216,27 +236,26 @@ document.getElementById("resetBtn").onclick = function(){
   db.ref('currentQuestion').set(-1);
 };
 
-/* подписи кнопок */
+/* ПОДПИСИ — ПРОСТАЯ ЛОГИКА */
 function updateButtons(){
 
   if(!questions.length) return;
 
-  if(current === -1 || current === -999){
-    nextBtn.innerText = "Начать: 1. " + questions[0].text;
-    backBtn.style.display = "none";
-    return;
-  }
+  var base = (current === -999) ? lastQuestion : current;
 
-  if(current < questions.length - 1){
-    nextBtn.innerText = "Далее: " + (current+2) + ". " + questions[current+1].text;
+  // NEXT
+  if(base < questions.length - 1){
+    nextBtn.innerText = "Далее: " + (base+2) + ". " + questions[base+1].text;
   } else {
     nextBtn.innerText = "Конец";
   }
 
-  backBtn.style.display = "block";
-
-  if(current > 0){
-    backBtn.innerText = "Назад: " + current + ". " + questions[current-1].text;
+  // BACK
+  if(base > 0){
+    backBtn.style.display = "block";
+    backBtn.innerText = "Назад: " + base + ". " + questions[base-1].text;
+  } else {
+    backBtn.style.display = "none";
   }
 }
 </script>
