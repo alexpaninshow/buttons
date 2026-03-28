@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Старт</title>
+<title>Старт спектакля</title>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -32,20 +32,28 @@ button{
 
 <body>
 
-<h1>Готовность</h1>
+<h1>Запуск спектакля</h1>
 <button onclick="start()">Начинаем спектакль</button>
 
 <script>
-firebase.initializeApp({
-  databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"
-});
+const firebaseConfig = {
+  apiKey: "AIzaSyXXXX",
+  authDomain: "buttons-panin.firebaseapp.com",
+  databaseURL: "https://buttons-panin-default-rtdb.firebaseio.com",
+  projectId: "buttons-panin",
+  storageBucket: "buttons-panin.appspot.com",
+  messagingSenderId: "XXXX",
+  appId: "XXXX"
+};
+
+firebase.initializeApp(firebaseConfig);
 
 const db = firebase.database();
 
 function start(){
   db.ref().set({
     game:{
-      status:"ready", // 👈 КЛЮЧЕВОЕ
+      status:"ready",
       currentQuestion:0,
       timer:5
     },
