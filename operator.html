@@ -41,6 +41,47 @@ button {
 .next { background:#4caf50; flex:1.5; }
 .back { background:orange; flex:0.8; }
 .reset { background:red; flex:0.7; }
+
+/* 🔥 модальное окно */
+#confirmModal {
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:rgba(0,0,0,0.85);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:100;
+}
+
+#confirmBox {
+  background:#222;
+  padding:30px;
+  border-radius:20px;
+  text-align:center;
+  width:80%;
+  max-width:400px;
+}
+
+#confirmBox p {
+  font-size:22px;
+  margin-bottom:20px;
+}
+
+.modalBtn {
+  width:100%;
+  padding:15px;
+  font-size:20px;
+  margin:10px 0;
+  border:none;
+  border-radius:15px;
+  color:white;
+}
+
+.yes { background:red; }
+.no { background:gray; }
 </style>
 </head>
 
@@ -56,6 +97,15 @@ button {
   <button id="nextBtn" class="next"></button>
   <button id="backBtn" class="back"></button>
   <button id="resetBtn" class="reset">Полный сброс</button>
+</div>
+
+<!-- 🔥 МОДАЛКА -->
+<div id="confirmModal">
+  <div id="confirmBox">
+    <p>Вы уверены, что хотите полностью сбросить игру?</p>
+    <button id="yesBtn" class="modalBtn yes">Да</button>
+    <button id="noBtn" class="modalBtn no">Нет</button>
+  </div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -80,7 +130,11 @@ const timerEl = document.getElementById("timer");
 const nextBtn = document.getElementById("nextBtn");
 const backBtn = document.getElementById("backBtn");
 
-/* загрузка CSV */
+const modal = document.getElementById("confirmModal");
+const yesBtn = document.getElementById("yesBtn");
+const noBtn = document.getElementById("noBtn");
+
+/* CSV */
 fetch(CSV_URL)
 .then(r=>r.text())
 .then(text=>{
@@ -126,7 +180,6 @@ db.ref('currentQuestion').on('value', snap => {
 
 /* таймер */
 function startTimer(){
-
   let t = 5;
   timerEl.innerText = "⏳ " + t;
 
@@ -138,20 +191,16 @@ function startTimer(){
       clearInterval(timerInterval);
       db.ref('currentQuestion').set(-999);
     }
-
   },1000);
 }
 
 /* управление */
 nextBtn.onclick = ()=>{
-
-  // старт
   if(current === -1){
     db.ref('currentQuestion').set(0);
     return;
   }
 
-  // после таймера
   if(current === -999){
     if(prevQuestion < questions.length - 1){
       db.ref('currentQuestion').set(prevQuestion + 1);
@@ -159,14 +208,12 @@ nextBtn.onclick = ()=>{
     return;
   }
 
-  // обычный переход
   if(current < questions.length - 1){
     db.ref('currentQuestion').set(current + 1);
   }
 };
 
 backBtn.onclick = ()=>{
-
   if(current === -999){
     db.ref('currentQuestion').set(prevQuestion);
     return;
@@ -177,9 +224,22 @@ backBtn.onclick = ()=>{
   }
 };
 
+/* 🔥 кнопка сброса → открывает модалку */
 document.getElementById("resetBtn").onclick = ()=>{
+  modal.style.display = "flex";
+};
+
+/* НЕТ */
+noBtn.onclick = ()=>{
+  modal.style.display = "none";
+};
+
+/* ДА */
+yesBtn.onclick = ()=>{
+  db.ref('votes').remove();
   db.ref('currentQuestion').set(-1);
   prevQuestion = -1;
+  modal.style.display = "none";
 };
 
 /* подписи */
@@ -187,31 +247,26 @@ function updateButtons(){
 
   if(!questions.length) return;
 
-  // старт
   if(current === -1){
     nextBtn.innerText = "Начать: 1. " + questions[0].text;
     backBtn.style.display = "none";
     return;
   }
 
-  // после таймера
   if(current === -999){
 
-    // Далее
     if(prevQuestion < questions.length - 1){
       nextBtn.innerText = "Далее: " + (prevQuestion+2) + ". " + questions[prevQuestion+1].text;
     } else {
       nextBtn.innerText = "Конец";
     }
 
-    // Назад = повтор текущего
     backBtn.style.display = "block";
     backBtn.innerText = "Назад: " + (prevQuestion+1) + ". " + questions[prevQuestion].text;
 
     return;
   }
 
-  // обычный режим
   if(current < questions.length - 1){
     nextBtn.innerText = "Далее: " + (current+2) + ". " + questions[current+1].text;
   } else {
