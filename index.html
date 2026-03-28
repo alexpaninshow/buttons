@@ -71,12 +71,14 @@ function parseCSV(text){
   });
 }
 
+// загрузка
 fetch(CSV_URL)
 .then(r=>r.text())
 .then(text=>{
   questions=parseCSV(text);
 });
 
+// слушаем
 db.ref('currentQuestion').on('value', snap => {
   const current = snap.val();
 
@@ -90,12 +92,12 @@ db.ref('currentQuestion').on('value', snap => {
     return;
   }
 
-  localStorage.removeItem("voted_"+current);
+  if(!questions[current]) return; // защита
 
-  title.innerText=questions[current]?.text || "Нет вопроса";
+  title.innerText=questions[current].text;
   options.innerHTML="";
 
-  (questions[current]?.options || []).forEach((opt,i)=>{
+  questions[current].options.forEach((opt,i)=>{
     const li=document.createElement('li');
     li.innerText=opt;
 
@@ -103,7 +105,6 @@ db.ref('currentQuestion').on('value', snap => {
       if(voted || time<=0) return;
 
       voted=true;
-      localStorage.setItem("voted_"+current,true);
 
       db.ref('votes/'+current+'/'+i)
         .transaction(v=>(v||0)+1);
