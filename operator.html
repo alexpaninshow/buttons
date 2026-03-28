@@ -49,7 +49,6 @@ h1 {
 }
 
 button {
-  flex:1;
   margin:6px 0;
 
   font-size:4.2vw;
@@ -70,12 +69,24 @@ button {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* цвета */
-.next { background:#4caf50; }
-.back { background:orange; }
-.reset { background:red; }
+/* 🔥 РАЗМЕРЫ КНОПОК */
+.next {
+  background:#4caf50;
+  flex:1.2; /* чуть больше остальных */
+}
 
-/* эффект нажатия */
+.back {
+  background:orange;
+  flex:0.9; /* немного меньше */
+  margin-top:14px; /* 👈 отступ от зелёной */
+}
+
+.reset {
+  background:red;
+  flex:0.9; /* немного меньше */
+}
+
+/* эффект */
 button.pressed {
   border:6px solid white;
   transform: scale(0.97);
@@ -148,7 +159,7 @@ fetch(CSV_URL)
   updateButtons();
 });
 
-/* слушаем Firebase */
+/* слушаем */
 db.ref('currentQuestion').on('value', snap => {
 
   current = snap.val() ?? -1;
@@ -237,7 +248,7 @@ resetBtn.onclick = ()=>{
   db.ref('currentQuestion').set(-1);
 };
 
-/* подписи кнопок */
+/* подписи */
 function updateButtons(){
   if(!questions.length || current === null) return;
 
@@ -247,14 +258,12 @@ function updateButtons(){
     return;
   }
 
-  // ВПЕРЁД
   if(current < questions.length - 1){
     nextBtn.innerText = "Далее: " + (current+2) + ". " + questions[current+1].text;
   } else {
     nextBtn.innerText = "Конец";
   }
 
-  // НАЗАД
   backBtn.style.display = "block";
 
   if(timerFinished){
