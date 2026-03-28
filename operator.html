@@ -42,7 +42,7 @@ button {
 
 <div class="buttons">
   <button id="nextBtn" class="next">Загрузка...</button>
-  <button id="backBtn" class="back" style="display:none;">Назад</button>
+  <button id="backBtn" class="back">Назад</button>
   <button id="resetBtn" class="reset">Сбросить игру</button>
 </div>
 
@@ -63,15 +63,12 @@ let current = -1;
 
 let autoTimer = null;
 let visualTimer = null;
-let time = 0;
 
 const status = document.getElementById("status");
 const nextBtn = document.getElementById("nextBtn");
 const backBtn = document.getElementById("backBtn");
 const timerDiv = document.getElementById("timer");
 
-
-// CSV
 function parseCSV(text){
   const rows = text.trim().split('\n').map(r=>r.split(','));
   return rows.slice(1).map(cols=>({
@@ -87,47 +84,38 @@ fetch(CSV_URL)
   updateButtons();
 });
 
-
-// очистка
-function clearAllTimers(){
+function clearAll(){
   if(autoTimer) clearTimeout(autoTimer);
   if(visualTimer) clearInterval(visualTimer);
-  timerDiv.innerText = "";
+  timerDiv.innerText="";
 }
 
-
-// таймер
 function startTimer(){
-  time = 5;
+  let time = 5;
   timerDiv.innerText = "Таймер: " + time;
 
   visualTimer = setInterval(()=>{
     time--;
-    if(time <= 0){
+    if(time<=0){
       clearInterval(visualTimer);
-      timerDiv.innerText = "";
+      timerDiv.innerText="";
     } else {
-      timerDiv.innerText = "Таймер: " + time;
+      timerDiv.innerText="Таймер: " + time;
     }
   },1000);
 }
 
-
-// 🔥 ГЛАВНАЯ ФУНКЦИЯ
-function showQuestion(i, instant = false){
-
-  clearAllTimers();
+function showQuestion(i, instant=false){
+  clearAll();
 
   current = i;
 
-  // 💥 мгновенное обновление ВСЕМ
   db.ref('currentQuestion').set(i);
 
   status.innerText = "Сейчас: " + questions[i].text;
 
   updateButtons();
 
-  // ❗ ЕСЛИ НАЗАД → БЕЗ ТАЙМЕРА
   if(instant) return;
 
   startTimer();
@@ -135,56 +123,61 @@ function showQuestion(i, instant = false){
   autoTimer = setTimeout(()=>{
     db.ref('currentQuestion').set(-1);
     status.innerText = "Сейчас: Ожидание";
-    timerDiv.innerText = "";
+    current = -1;
+    updateButtons();
   },5000);
 }
 
-
 // вперед
 nextBtn.onclick = ()=>{
-  if(current < questions.length - 1){
-    showQuestion(current + 1, false);
+  let next = current + 1;
+  if(current === -1) next = 0;
+
+  if(next < questions.length){
+    showQuestion(next);
   }
 };
 
-
-// 🔥 НАЗАД = МГНОВЕННО
+// 🔥 НАЗАД (исправленный)
 backBtn.onclick = ()=>{
-  if(current > 0){
-    showQuestion(current - 1, true);
+
+  let prev;
+
+  if(current === -1){
+    // если в "Шоу" → возвращаемся к последнему заданному
+    prev = questions.length - 1;
+  } else {
+    prev = current - 1;
+  }
+
+  if(prev >= 0){
+    showQuestion(prev, true);
   }
 };
 
-
-// сброс
 document.getElementById("resetBtn").onclick = ()=>{
-  clearAllTimers();
-
+  clearAll();
   current = -1;
-
   db.ref('currentQuestion').set(-1);
-
   status.innerText="Сейчас: Ожидание";
   updateButtons();
 };
 
-
-// кнопки
 function updateButtons(){
   if(!questions.length) return;
 
-  if(current < questions.length - 1){
-    nextBtn.style.display="inline-block";
-    nextBtn.innerText = "Вопрос " + (current+2) + ": " + questions[current+1].text;
-  } else {
-    nextBtn.style.display="none";
+  let next = current === -1 ? 0 : current + 1;
+
+  if(next < questions.length){
+    nextBtn.innerText = "Вопрос " + (next+1) + ": " + questions[next].text;
   }
 
-  if(current > 0){
-    backBtn.style.display="inline-block";
-    backBtn.innerText = "Назад: " + questions[current-1].text;
+  let prev = current - 1;
+
+  if(prev >= 0){
+    backBtn.innerText = "Назад: " + questions[prev].text;
   } else {
-    backBtn.style.display="none";
+    backBtn.innerText = "Назад";
   }
 }
 </script>
