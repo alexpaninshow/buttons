@@ -50,7 +50,9 @@ const db = firebase.database();
 
 let questions = [];
 let current = -1;
-let lastQuestionIndex = -1;
+
+// 🔥 ВАЖНО: это теперь главный индекс
+let lastAskedIndex = -1;
 
 let autoTimer = null;
 let visualTimer = null;
@@ -103,37 +105,45 @@ function showQuestion(i){
   if(autoTimer) clearTimeout(autoTimer);
 
   current = i;
-  lastQuestionIndex = i;
+  lastAskedIndex = i; // 🔥 ВСЕГДА обновляем
 
   db.ref('currentQuestion').set(i);
 
   status.innerText = "Сейчас: " + questions[i].text;
   updateButtons();
 
-  startVisualTimer(); // 🔥 таймер оператору
+  startVisualTimer();
 
   autoTimer = setTimeout(()=>{
     current = -1;
     db.ref('currentQuestion').set(-1);
 
     status.innerText = "Сейчас: Ожидание";
-    timerDiv.innerText = ""; // убираем таймер
+    timerDiv.innerText = "";
 
     updateButtons();
   }, 5000);
 }
 
+// 👉 ВПЕРЁД
 nextBtn.onclick = ()=>{
-  let nextIndex = current === -1 ? lastQuestionIndex + 1 : current + 1;
+  let nextIndex;
+
+  if(lastAskedIndex === -1){
+    nextIndex = 0;
+  } else {
+    nextIndex = lastAskedIndex + 1;
+  }
 
   if(nextIndex < questions.length){
     showQuestion(nextIndex);
   }
 };
 
+// 👉 НАЗАД (🔥 ГЛАВНЫЙ ФИКС)
 backBtn.onclick = ()=>{
-  if(lastQuestionIndex > 0){
-    showQuestion(lastQuestionIndex - 1);
+  if(lastAskedIndex >= 0){
+    showQuestion(lastAskedIndex);
   }
 };
 
@@ -141,8 +151,8 @@ document.getElementById("resetBtn").onclick = ()=>{
   if(autoTimer) clearTimeout(autoTimer);
   if(visualTimer) clearInterval(visualTimer);
 
-  current=-1;
-  lastQuestionIndex=-1;
+  current = -1;
+  lastAskedIndex = -1;
 
   db.ref('currentQuestion').set(-1);
 
@@ -155,7 +165,8 @@ document.getElementById("resetBtn").onclick = ()=>{
 function updateButtons(){
   if(!questions.length) return;
 
-  let nextIndex = current === -1 ? lastQuestionIndex + 1 : current + 1;
+  // 👉 следующий вопрос
+  let nextIndex = lastAskedIndex + 1;
 
   if(nextIndex < questions.length){
     nextBtn.innerText="Вопрос "+(nextIndex+1)+": "+questions[nextIndex].text;
@@ -164,8 +175,8 @@ function updateButtons(){
     nextBtn.style.display="none";
   }
 
-  // 🔥 ВСЕГДА после первого вопроса
-  backBtn.style.display = (lastQuestionIndex > 0) ? "inline-block" : "none";
+  // 🔥 КНОПКА НАЗАД ВСЕГДА ЕСЛИ БЫЛ ХОТЯ БЫ 1 ВОПРОС
+  backBtn.style.display = (lastAskedIndex >= 0) ? "inline-block" : "none";
 }
 </script>
 
