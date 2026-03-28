@@ -2,65 +2,231 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Старт</title>
+<title>Оператор</title>
 
 <style>
-html, body {
-  height:100%;
-  margin:0;
-}
+html, body { height:100%; margin:0; }
 
 body {
-  background:#111;
-  display:flex;
-  align-items:center;
-  justify-content:center;
   font-family:Arial;
+  background:#111;
+  color:white;
+  display:flex;
+  flex-direction:column;
+  text-align:center;
 }
 
-#startBtn {
-  width:90%;
-  max-width:600px;
-  padding:40px 20px;
-  font-size:28px;
+#top { padding:20px; }
+
+h1 { font-size:5vw; margin:0; }
+#status { font-size:4vw; margin-top:10px; }
+#timer { font-size:6vw; margin-top:10px; }
+
+#buttons {
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  padding:10px;
+}
+
+button {
+  margin:6px 0;
+  font-size:4.5vw;
   font-weight:bold;
-  background:#2196f3;
+  border-radius:20px;
+  border:4px solid transparent;
   color:white;
-  border:none;
-  border-radius:30px;
   cursor:pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.next { background:#4caf50; flex:1.6; }
+.back { background:orange; flex:0.7; margin-top:15px; }
+.reset { background:red; flex:0.6; }
+
+button:active {
+  border:4px solid white;
 }
 </style>
 </head>
 
 <body>
 
-<button id="startBtn">Начинаем спектакль</button>
+<div id="top">
+  <h1>Оператор</h1>
+  <div id="status">Загрузка...</div>
+  <div id="timer">⏳ -</div>
+</div>
+
+<div id="buttons">
+  <button id="nextBtn" class="next"></button>
+  <button id="backBtn" class="back"></button>
+  <button id="resetBtn" class="reset">Сброс</button>
+</div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
+const CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv&gid=0";
+
 firebase.initializeApp({
-  databaseURL: "https://buttons-panin-default-rtdb.firebaseio.com"
+  databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"
 });
 
-var db = firebase.database();
-var btn = document.getElementById("startBtn");
+const db = firebase.database();
 
-btn.onclick = function() {
+let questions = [];
+let current = -1;
+let readyCSV = false;
+let lastValue = null;
+let timerInterval = null;
 
-  btn.innerText = "Запуск...";
-  btn.disabled = true;
+const status = document.getElementById("status");
+const timerEl = document.getElementById("timer");
+const nextBtn = document.getElementById("nextBtn");
+const backBtn = document.getElementById("backBtn");
+const resetBtn = document.getElementById("resetBtn");
 
-  db.ref('votes').remove();
+/* =========================
+   CSV
+========================= */
+fetch(CSV_URL)
+.then(r=>r.text())
+.then(text=>{
+  const rows=text.trim().split('\n').map(r=>r.split(','));
 
-  db.ref('currentQuestion').set(-999);
+  questions = rows.slice(1).map(cols => ({
+    text:(cols[0]||"").trim(),
+    options:cols.slice(1).map(c=>c.trim()).filter(Boolean)
+  }));
 
-  setTimeout(function() {
-    window.location.href = "operator.html";
-  }, 200);
+  readyCSV = true;
+
+  // 🔥 если Firebase уже пришёл — применяем
+  if(lastValue !== null){
+    updateState(lastValue);
+  }
+
+  updateButtons();
+})
+.catch(()=>{
+  status.innerText = "Ошибка загрузки таблицы";
+});
+
+/* =========================
+   FIREBASE
+========================= */
+db.ref('currentQuestion').on('value', snap => {
+
+  lastValue = snap.val();
+
+  // 🔥 если CSV уже готов — применяем сразу
+  if(readyCSV){
+    updateState(lastValue);
+  }
+});
+
+/* =========================
+   СОСТОЯНИЕ
+========================= */
+function updateState(val){
+
+  if(val === null){
+    current = -1;
+  } else {
+    current = val;
+  }
+
+  if(timerInterval){
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+
+  if(current >= 0 && questions[current]){
+    status.innerText = "Сейчас: " + (current+1) + ". " + questions[current].text;
+    startTimer();
+  } else if(current === -999){
+    status.innerText = "Сцена (внимание)";
+    timerEl.innerText = "⏳ -";
+  } else {
+    status.innerText = "Ожидание";
+    timerEl.innerText = "⏳ -";
+  }
+
+  updateButtons();
+}
+
+/* =========================
+   ТАЙМЕР
+========================= */
+function startTimer(){
+  let t = 5;
+  timerEl.innerText = "⏳ " + t;
+
+  timerInterval = setInterval(()=>{
+    t--;
+    timerEl.innerText = "⏳ " + t;
+
+    if(t <= 0){
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
+  },1000);
+}
+
+/* =========================
+   ПЕРЕКЛЮЧЕНИЕ
+========================= */
+function setState(val){
+  db.ref('currentQuestion').set(val);
+}
+
+nextBtn.onclick = ()=>{
+  if(!questions.length) return;
+
+  if(current === -1 || current === -999){
+    setState(0);
+  } else if(current < questions.length - 1){
+    setState(current + 1);
+  }
 };
+
+backBtn.onclick = ()=>{
+  if(current > 0){
+    setState(current - 1);
+  }
+};
+
+resetBtn.onclick = ()=>{
+  setState(-1);
+};
+
+/* =========================
+   КНОПКИ
+========================= */
+function updateButtons(){
+
+  if(!questions.length) return;
+
+  if(current === -1 || current === -999){
+    nextBtn.innerText = "Начать: 1. " + questions[0].text;
+    backBtn.style.display = "none";
+    return;
+  }
+
+  if(current < questions.length - 1){
+    nextBtn.innerText = "Далее: " + (current+2) + ". " + questions[current+1].text;
+  } else {
+    nextBtn.innerText = "Конец";
+  }
+
+  backBtn.style.display = "block";
+
+  if(current > 0){
+    backBtn.innerText = "Назад: " + current + ". " + questions[current-1].text;
+  }
+}
 </script>
 
 </body>
