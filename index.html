@@ -34,7 +34,7 @@ body {
 
 h1 { font-size:5vw; margin:10px; }
 
-/* 🔥 ЕЩЁ ТОЛЩЕ */
+/* 🔥 ТОЛСТАЯ ПОЛОСА */
 #timerBarWrap {
   width:90%;
   height:70px;
@@ -47,7 +47,7 @@ h1 { font-size:5vw; margin:10px; }
 #timerBar {
   height:100%;
   width:100%;
-  background:hsl(120, 100%, 50%); /* старт зелёный */
+  background:hsl(120,100%,50%);
   transition: width 1s linear, background 1s linear;
 }
 
@@ -205,7 +205,15 @@ db.ref('currentQuestion').on('value', snap => {
   let total = 5;
   let time = total;
 
+  // 🔥 СТАРТ: сразу зелёная и полная
+  timerBar.style.transition = "none";
   timerBar.style.width = "100%";
+  timerBar.style.background = "hsl(120,100%,50%)";
+
+  // даём браузеру применить старт
+  setTimeout(()=>{
+    timerBar.style.transition = "width 1s linear, background 1s linear";
+  },50);
 
   timerInterval=setInterval(()=>{
     time--;
@@ -213,14 +221,17 @@ db.ref('currentQuestion').on('value', snap => {
     let percent = (time/total)*100;
     timerBar.style.width = percent + "%";
 
-    // 🔥 ПЛАВНЫЙ ЦВЕТ: 120 (зелёный) → 0 (красный)
     let progress = (total - time) / total;
-    let hue = 120 - (120 * progress); 
-    timerBar.style.background = "hsl(" + hue + ", 100%, 50%)";
+    let hue = 120 - (120 * progress);
+    timerBar.style.background = "hsl(" + hue + ",100%,50%)";
 
-    if(time<=0){
+    // 🔥 КЛЮЧ: ждём полного исчезновения
+    if(time <= 0){
       clearInterval(timerInterval);
-      showWaiting();
+
+      setTimeout(()=>{
+        showWaiting();
+      }, 1000); // ⬅ ровно время анимации исчезновения
     }
 
   },1000);
