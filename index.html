@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>Шоу</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
 
 <style>
 html, body { height:100%; margin:0; }
@@ -15,37 +15,31 @@ body {
   color:white;
 }
 
+/* экраны */
 .screen {
   position:fixed;
   width:100%;
   height:100%;
   display:flex;
-  flex-direction:column;
   align-items:center;
   justify-content:center;
+  flex-direction:column;
   text-align:center;
 }
 
-#waiting {
-  display:none;
+#waiting { display:none; font-size:6vw; }
+#game { display:none; height:100%; flex-direction:column; }
+
+/* старт без картинки */
+#start {
   font-size:6vw;
   font-weight:900;
 }
 
-#game {
-  display:none;
-  height:100%;
-  flex-direction:column;
-}
-
-h1 {
-  text-align:center;
-  font-size:5vw;
-  margin:10px;
-}
+/* вопрос */
+h1 { font-size:5vw; }
 
 #timer {
-  text-align:center;
   font-size:8vw;
   margin-bottom:20px;
 }
@@ -81,22 +75,14 @@ li.selected {
 
 <body>
 
-<!-- старт -->
 <div id="start" class="screen">
-  <img id="startImg"
-       src="https://drive.google.com/uc?export=view&id=1Z75HN4p5klgCvDHPNyzhb2SeLdln3cUg"
-       style="max-width:85%;border-radius:20px;">
-  <div style="font-size:5vw;font-weight:900;margin-top:20px;">
-    Скоро начнём!
-  </div>
+  Скоро начнём!
 </div>
 
-<!-- ожидание -->
 <div id="waiting" class="screen">
   Смотрите на сцену!
 </div>
 
-<!-- игра -->
 <div id="game">
   <h1 id="title"></h1>
   <div id="timer"></div>
@@ -126,38 +112,24 @@ const title = document.getElementById("title");
 const options = document.getElementById("options");
 const timer = document.getElementById("timer");
 
-function showStart(){
-  startScreen.style.display="flex";
-  waiting.style.display="none";
-  game.style.display="none";
-}
-
-function showWaiting(){
-  startScreen.style.display="none";
-  waiting.style.display="flex";
-  game.style.display="none";
-}
-
-function showGame(){
-  startScreen.style.display="none";
-  waiting.style.display="none";
-  game.style.display="flex";
-}
-
-function parseCSV(text){
-  const rows = text.trim().split('\n').map(r=>r.split(','));
-  return rows.slice(1).map(cols=>({
-    text:(cols[0]||"").trim(),
-    options:cols.slice(1).map(c=>c.trim()).filter(Boolean)
-  }));
-}
-
+/* 👉 ЗАГРУЗКА ВОПРОСОВ (С ПРОВЕРКОЙ) */
 fetch(CSV_URL)
 .then(r=>r.text())
 .then(text=>{
-  questions=parseCSV(text);
+  const rows = text.trim().split('\n').map(r=>r.split(','));
+
+  questions = rows.slice(1).map(cols=>({
+    text:(cols[0]||"").trim(),
+    options:cols.slice(1).map(c=>c.trim()).filter(Boolean)
+  }));
+
+  console.log("Вопросы загружены:", questions);
+})
+.catch(()=>{
+  alert("Ошибка загрузки таблицы");
 });
 
+/* 👉 ЛОГИКА */
 db.ref('currentQuestion').on('value', snap => {
   const current = snap.val();
 
@@ -165,13 +137,22 @@ db.ref('currentQuestion').on('value', snap => {
   voted=false;
 
   if(current === -1){
-    showStart();
+    startScreen.style.display="flex";
+    waiting.style.display="none";
+    game.style.display="none";
     return;
   }
 
-  const q = questions[current];
+  if(!questions[current]){
+    console.log("Нет вопроса:", current);
+    return;
+  }
 
-  showGame();
+  startScreen.style.display="none";
+  waiting.style.display="none";
+  game.style.display="flex";
+
+  const q = questions[current];
 
   title.innerText=q.text;
   options.innerHTML="";
@@ -194,7 +175,8 @@ db.ref('currentQuestion').on('value', snap => {
       clearInterval(timerInterval);
 
       setTimeout(()=>{
-        showWaiting();
+        game.style.display="none";
+        waiting.style.display="flex";
       },800);
     };
 
@@ -208,7 +190,8 @@ db.ref('currentQuestion').on('value', snap => {
     time--;
     if(time<=0){
       clearInterval(timerInterval);
-      showWaiting();
+      game.style.display="none";
+      waiting.style.display="flex";
     } else {
       timer.innerText="⏳ "+time;
     }
