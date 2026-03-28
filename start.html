@@ -38,15 +38,19 @@ body {
   font-size:18px;
 }
 
-/* ✅ готово */
+/* состояния */
 .ready {
   color:#00e676;
   font-style:italic;
 }
 
-/* ❌ ошибка */
 .error {
   color:#ff5252;
+}
+
+.checking {
+  color:#ccc;
+  font-style:italic;
 }
 </style>
 </head>
@@ -72,12 +76,22 @@ var status = document.getElementById("status");
 
 let csvReady = false;
 
-/* 🔁 ПРОВЕРКА */
+/* 🔥 НАДЁЖНАЯ ПРОВЕРКА */
 function checkSystem(){
 
-  fetch(CSV_URL)
+  // всегда обновляем статус
+  status.className = "checking";
+  status.innerText = "Проверка системы...";
+
+  // таймаут на fetch (чтобы не зависало)
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 4000);
+
+  fetch(CSV_URL, { signal: controller.signal })
   .then(r => r.text())
   .then(text => {
+
+    clearTimeout(timeout);
 
     const rows = text.trim().split('\n');
 
@@ -93,6 +107,9 @@ function checkSystem(){
 
   })
   .catch(() => {
+
+    clearTimeout(timeout);
+
     csvReady = false;
     status.className = "error";
     status.innerText = "Нет связи с таблицей";
@@ -102,10 +119,10 @@ function checkSystem(){
 /* первый запуск */
 checkSystem();
 
-/* 🔁 каждые 5 секунд */
+/* каждые 5 сек */
 setInterval(checkSystem, 5000);
 
-/* 🔥 КНОПКА */
+/* кнопка */
 btn.onclick = function(){
 
   if(!csvReady){
