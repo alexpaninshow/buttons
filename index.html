@@ -15,7 +15,6 @@ body {
   color:white;
 }
 
-/* экраны */
 .screen {
   position:fixed;
   width:100%;
@@ -27,24 +26,19 @@ body {
   text-align:center;
 }
 
-#waiting { display:none; font-size:6vw; }
+#waiting { display:none; font-size:6vw; font-weight:900; }
 #game { display:none; height:100%; flex-direction:column; }
 
-/* СТАРТ */
 #start {
-  z-index:1;
+  font-size:6vw;
+  font-weight:900;
 }
 
-#start img {
-  max-width:85%;
-  border-radius:20px;
-}
-
-h1 { font-size:5vw; }
+h1 { font-size:5vw; margin:10px; }
 
 #timer {
   font-size:8vw;
-  margin-bottom:20px;
+  margin-bottom:30px;
 }
 
 ul {
@@ -65,12 +59,12 @@ li {
   margin:8px 0;
   background:#333;
   border-radius:20px;
-  border:5px solid #777;
+  border:6px solid #888;
   cursor:pointer;
 }
 
 li.selected {
-  border:6px solid #00e676;
+  border:8px solid #00e676;
   background:#2e7d32;
 }
 </style>
@@ -78,20 +72,14 @@ li.selected {
 
 <body>
 
-<!-- старт -->
 <div id="start" class="screen">
-  <img src="https://drive.google.com/uc?export=view&id=1Z75HN4p5klgCvDHPNyzhb2SeLdln3cUg">
-  <div style="font-size:5vw;font-weight:900;margin-top:20px;">
-    Скоро начнём!
-  </div>
+  Скоро начнём!
 </div>
 
-<!-- ожидание -->
 <div id="waiting" class="screen">
   Смотрите на сцену!
 </div>
 
-<!-- игра -->
 <div id="game">
   <h1 id="title"></h1>
   <div id="timer"></div>
@@ -126,14 +114,13 @@ fetch(CSV_URL)
 .then(r=>r.text())
 .then(text=>{
   const rows = text.trim().split('\n').map(r=>r.split(','));
-
   questions = rows.slice(1).map(cols=>({
     text:(cols[0]||"").trim(),
     options:cols.slice(1).map(c=>c.trim()).filter(Boolean)
   }));
 });
 
-/* показ экранов */
+/* экраны */
 function showStart(){
   startScreen.style.display="flex";
   waiting.style.display="none";
@@ -147,25 +134,16 @@ function showWaiting(){
 }
 
 function showGame(){
-  startScreen.style.display="none"; // 💥 ГАРАНТИЯ
+  startScreen.style.display="none";
   waiting.style.display="none";
   game.style.display="flex";
 }
 
-/* главный слушатель */
+/* слушаем Firebase */
 db.ref('currentQuestion').on('value', snap => {
   let current = snap.val();
 
-  // 💥 ВАЖНО: защита от null
-  if(current === null){
-    showStart();
-    return;
-  }
-
-  clearInterval(timerInterval);
-  voted=false;
-
-  if(current === -1){
+  if(current === null || current === -1){
     showStart();
     return;
   }
@@ -173,6 +151,9 @@ db.ref('currentQuestion').on('value', snap => {
   if(!questions[current]) return;
 
   showGame();
+
+  voted=false;
+  clearInterval(timerInterval);
 
   const q = questions[current];
 
