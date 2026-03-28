@@ -70,27 +70,27 @@ const nextBtn = document.getElementById("nextBtn");
 const backBtn = document.getElementById("backBtn");
 const timerDiv = document.getElementById("timer");
 
+
+// ✅ СТАБИЛЬНЫЙ ПАРСЕР (без багов)
 function parseCSV(text){
-  const rows = text.replace(/\r/g,'').split('\n').filter(r=>r.trim());
-  return rows.slice(1).map(row=>{
-    const cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g)||[];
-    return {
-      text:(cols[0]||"").replace(/"/g,'').trim(),
-      options:[cols[1],cols[2],cols[3]]
-        .map(c=>(c||"").replace(/"/g,'').trim())
-        .filter(Boolean)
-    };
-  });
+  const rows = text.trim().split('\n').map(r=>r.split(','));
+  return rows.slice(1).map(cols=>({
+    text: (cols[0]||"").trim(),
+    options: cols.slice(1).map(c=>c.trim()).filter(Boolean)
+  }));
 }
 
+// загрузка вопросов
 fetch(CSV_URL)
 .then(r=>r.text())
 .then(text=>{
-  questions=parseCSV(text);
-  nextBtn.innerText="Начать игру";
+  questions = parseCSV(text);
+  nextBtn.innerText = "Начать игру";
   updateButtons();
 });
 
+
+// таймер оператора
 function startVisualTimer(){
   if(visualTimer) clearInterval(visualTimer);
 
@@ -108,6 +108,8 @@ function startVisualTimer(){
   },1000);
 }
 
+
+// показ вопроса
 function showQuestion(i){
   if(autoTimer) clearTimeout(autoTimer);
 
@@ -116,20 +118,21 @@ function showQuestion(i){
   db.ref('currentQuestion').set(i);
 
   status.innerText = "Сейчас: " + questions[i].text;
-  updateButtons();
 
   startVisualTimer();
+  updateButtons();
 
+  // авто-переход в "Шоу"
   autoTimer = setTimeout(()=>{
     db.ref('currentQuestion').set(-1);
-
     status.innerText = "Сейчас: Ожидание";
     timerDiv.innerText = "";
-
     updateButtons();
   }, 5000);
 }
 
+
+// следующая кнопка
 nextBtn.onclick = ()=>{
   let nextIndex = history.length === 0 ? 0 : history[history.length - 1] + 1;
 
@@ -138,6 +141,8 @@ nextBtn.onclick = ()=>{
   }
 };
 
+
+// кнопка назад
 backBtn.onclick = ()=>{
   if(history.length === 0) return;
 
@@ -150,6 +155,8 @@ backBtn.onclick = ()=>{
   showQuestion(prevIndex);
 };
 
+
+// сброс
 document.getElementById("resetBtn").onclick = ()=>{
   if(autoTimer) clearTimeout(autoTimer);
   if(visualTimer) clearInterval(visualTimer);
@@ -158,27 +165,33 @@ document.getElementById("resetBtn").onclick = ()=>{
 
   db.ref('currentQuestion').set(-1);
 
-  status.innerText="Сейчас: Ожидание";
-  timerDiv.innerText="";
+  status.innerText = "Сейчас: Ожидание";
+  timerDiv.innerText = "";
 
   updateButtons();
 };
 
+
+// обновление кнопок
 function updateButtons(){
   if(!questions.length) return;
 
   let nextIndex = history.length === 0 ? 0 : history[history.length - 1] + 1;
 
+  // следующая кнопка
   if(nextIndex < questions.length){
-    nextBtn.innerText="Вопрос "+(nextIndex+1)+": "+questions[nextIndex].text;
-    nextBtn.style.display="inline-block";
+    nextBtn.innerText = "Вопрос " + (nextIndex+1) + ": " + questions[nextIndex].text;
+    nextBtn.style.display = "inline-block";
   } else {
-    nextBtn.style.display="none";
+    nextBtn.style.display = "none";
   }
 
-  // 🔥 ГЛАВНАЯ ЛОГИКА
-  if(history.length === 1 && timerDiv.innerText !== ""){
-    backBtn.style.display="none";
+  // 🔥 логика "Назад"
+  const isFirstQuestionRunning =
+    history.length === 1 && timerDiv.innerText !== "";
+
+  if(isFirstQuestionRunning){
+    backBtn.style.display = "none";
     return;
   }
 
@@ -188,9 +201,9 @@ function updateButtons(){
       : history[0];
 
     backBtn.innerText = "Назад: " + questions[prevIndex].text;
-    backBtn.style.display="inline-block";
+    backBtn.style.display = "inline-block";
   } else {
-    backBtn.style.display="none";
+    backBtn.style.display = "none";
   }
 }
 </script>
