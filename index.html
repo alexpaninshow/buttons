@@ -4,8 +4,16 @@
 <meta charset="UTF-8">
 <title>Шоу</title>
 
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
+
 <style>
-body { font-family:Arial; background:#111; color:white; text-align:center; }
+html, body { height:100%; margin:0; }
+
+body {
+  font-family:'Montserrat',sans-serif;
+  background:#111;
+  color:white;
+}
 
 .screen {
   position:fixed;
@@ -15,26 +23,62 @@ body { font-family:Arial; background:#111; color:white; text-align:center; }
   align-items:center;
   justify-content:center;
   flex-direction:column;
+  text-align:center;
 }
 
-#waiting, #game { display:none; }
+#waiting { display:none; font-size:6vw; font-weight:900; }
+#game { display:none; height:100%; flex-direction:column; }
+
+#start {
+  font-size:6vw;
+  font-weight:900;
+}
+
+h1 { font-size:5vw; margin:10px; }
+
+#timer {
+  font-size:8vw;
+  margin-bottom:30px;
+}
+
+ul {
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  margin:10px;
+  padding:0;
+}
 
 li {
-  font-size:30px;
-  margin:10px;
-  padding:20px;
-  border:3px solid white;
+  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:7vw;
+  font-weight:900;
+  margin:8px 0;
+  background:#333;
+  border-radius:20px;
+  border:6px solid #888;
   cursor:pointer;
+}
+
+li.selected {
+  border:8px solid #00e676;
+  background:#2e7d32;
 }
 </style>
 </head>
 
 <body>
 
-<div id="debug" style="position:fixed;top:10px;left:10px;font-size:14px;color:#0f0"></div>
+<div id="start" class="screen">
+  Скоро начнём!
+</div>
 
-<div id="start" class="screen">Скоро начнём!</div>
-<div id="waiting" class="screen">Смотрите на сцену!</div>
+<div id="waiting" class="screen">
+  Смотрите на сцену!
+</div>
 
 <div id="game">
   <h1 id="title"></h1>
@@ -54,53 +98,110 @@ firebase.initializeApp({
 
 const db = firebase.database();
 
-let questions=[];
-let timerInterval=null;
+let questions = [];
+let ready = false;
+let voted = false;
+let timerInterval = null;
 
-const debug = document.getElementById("debug");
+const startScreen = document.getElementById("start");
+const waiting = document.getElementById("waiting");
+const game = document.getElementById("game");
 
+const title = document.getElementById("title");
+const options = document.getElementById("options");
+const timer = document.getElementById("timer");
+
+/* загрузка вопросов */
 fetch(CSV_URL)
-.then(r=>r.text())
-.then(text=>{
-  const rows = text.trim().split('\n').map(r=>r.split(','));
-  questions = rows.slice(1).map(c=>({
-    text:c[0],
-    options:c.slice(1)
+.then(r => r.text())
+.then(text => {
+  const rows = text.trim().split('\n').map(r => r.split(','));
+
+  questions = rows.slice(1).map(cols => ({
+    text: (cols[0] || "").trim(),
+    options: cols.slice(1).map(c => c.trim()).filter(Boolean)
   }));
+
+  ready = true;
 });
 
-function show(id){
-  document.getElementById("start").style.display="none";
-  document.getElementById("waiting").style.display="none";
-  document.getElementById("game").style.display="none";
-  document.getElementById(id).style.display="flex";
+/* экраны */
+function showStart(){
+  startScreen.style.display="flex";
+  waiting.style.display="none";
+  game.style.display="none";
 }
 
-db.ref('currentQuestion').on('value', snap=>{
-  const val = snap.val();
+function showWaiting(){
+  startScreen.style.display="none";
+  waiting.style.display="flex";
+  game.style.display="none";
+}
 
-  debug.innerText = "Firebase currentQuestion: " + val;
+function showGame(){
+  startScreen.style.display="none";
+  waiting.style.display="none";
+  game.style.display="flex";
+}
 
-  if(val === null || val === -1){
-    show("start");
+/* слушатель Firebase */
+db.ref('currentQuestion').on('value', snap => {
+  const current = snap.val();
+
+  if(current === null || current === -1){
+    showStart();
     return;
   }
 
-  if(!questions[val]) return;
+  if(!ready) return;
+  if(!questions[current]) return;
 
-  show("game");
+  showGame();
 
-  const q = questions[val];
-  document.getElementById("title").innerText = q.text;
+  voted = false;
+  clearInterval(timerInterval);
 
-  const ul = document.getElementById("options");
-  ul.innerHTML="";
+  const q = questions[current];
 
-  q.options.forEach(opt=>{
-    const li=document.createElement("li");
-    li.innerText=opt;
-    ul.appendChild(li);
+  title.innerText = q.text;
+  options.innerHTML = "";
+
+  q.options.forEach((opt, i) => {
+    const li = document.createElement('li');
+    li.innerText = opt;
+
+    li.onclick = () => {
+      if(voted) return;
+      voted = true;
+
+      db.ref('votes/'+current+'/'+i)
+        .transaction(v => (v||0)+1);
+
+      li.classList.add('selected');
+
+      timer.innerText = "";
+      clearInterval(timerInterval);
+
+      setTimeout(() => {
+        showWaiting();
+      }, 800);
+    };
+
+    options.appendChild(li);
   });
+
+  let time = 5;
+  timer.innerText = "⏳ " + time;
+
+  timerInterval = setInterval(() => {
+    time--;
+    if(time <= 0){
+      clearInterval(timerInterval);
+      showWaiting();
+    } else {
+      timer.innerText = "⏳ " + time;
+    }
+  }, 1000);
 });
 </script>
 
