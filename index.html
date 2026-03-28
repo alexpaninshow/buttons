@@ -194,17 +194,15 @@ db.ref('currentQuestion').on('value', snap => {
     options.appendChild(li);
   });
 
-  /* 🔥 ИДЕАЛЬНЫЙ ТАЙМЕР (как у тебя был изначально) */
+  /* ТАЙМЕР */
   let total = 5;
   let time = total;
 
-  // жёсткий ресет
   timerBar.style.transition = "none";
   timerBar.style.width = "100%";
   timerBar.style.background = "hsl(120,100%,50%)";
 
-  // даём браузеру применить стиль
-  requestAnimationFrame(() => {
+  requestAnimationFrame(()=>{
     timerBar.style.transition = "width 1s linear, background 1s linear";
   });
 
@@ -215,12 +213,16 @@ db.ref('currentQuestion').on('value', snap => {
     timerBar.style.width = percent + "%";
 
     let progress = (total - time) / total;
-    let hue = 120 - (120 * progress); // 120 → 0
+    let hue = 120 - (120 * progress);
     timerBar.style.background = "hsl(" + hue + ",100%,50%)";
 
     if(time <= 0){
       clearInterval(timerInterval);
-      setTimeout(()=> showWaiting(), 800);
+
+      // 🔥 ЖДЁМ ДОЕЗД ПОЛОСКИ ДО КОНЦА
+      setTimeout(()=>{
+        showWaiting();
+      },1000); // ровно длительность transition
     }
 
   },1000);
