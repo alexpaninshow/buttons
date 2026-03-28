@@ -13,8 +13,15 @@ body {
   padding:40px;
 }
 
-#status { font-size:28px; margin-bottom:10px; }
-#timer { font-size:48px; margin-bottom:20px; }
+#status {
+  font-size:28px;
+  margin-bottom:10px;
+}
+
+#timer {
+  font-size:48px;
+  margin-bottom:20px;
+}
 
 button {
   width:90%;
@@ -27,9 +34,9 @@ button {
   cursor:pointer;
 }
 
-.next { background:#4caf50; }
-.back { background:orange; }
-.reset { background:red; }
+.next { background:#4caf50; color:white; }
+.back { background:orange; color:white; }
+.reset { background:red; color:white; }
 </style>
 </head>
 
@@ -40,9 +47,9 @@ button {
 <div id="status">Ожидание</div>
 <div id="timer">⏳ -</div>
 
-<button id="nextBtn" class="next">...</button>
+<button id="nextBtn" class="next">Загрузка...</button>
 <button id="backBtn" class="back">Назад</button>
-<button id="resetBtn" class="reset">Сброс</button>
+<button id="resetBtn" class="reset">Сбросить игру</button>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -57,16 +64,19 @@ firebase.initializeApp({
 const db = firebase.database();
 
 let questions = [];
-let state = { currentQuestion: -1, startedAt: null };
+let current = -1;
+
+let timerInterval = null;
+let timeLeft = 0;
+let timerFinished = false;
 
 const status = document.getElementById("status");
 const timerEl = document.getElementById("timer");
 const nextBtn = document.getElementById("nextBtn");
 const backBtn = document.getElementById("backBtn");
+const resetBtn = document.getElementById("resetBtn");
 
-const DURATION = 5; // секунды
-
-/* загрузка */
+/* загрузка вопросов */
 fetch(CSV_URL)
 .then(r => r.text())
 .then(text => {
@@ -78,87 +88,114 @@ fetch(CSV_URL)
   }));
 });
 
-/* 🔥 ЧИТАЕМ СОСТОЯНИЕ */
-db.ref('gameState').on('value', snap => {
-  state = snap.val() || { currentQuestion: -1 };
+/* слушаем Firebase */
+db.ref('currentQuestion').on('value', snap => {
+  current = snap.val() ?? -1;
 
-  updateUI();
-});
+  clearInterval(timerInterval);
+  timerFinished = false;
 
-/* запуск вопроса */
-function startQuestion(i){
-  db.ref('gameState').set({
-    currentQuestion: i,
-    startedAt: Date.now()
-  });
-}
-
-/* сброс */
-function reset(){
-  db.ref('gameState').set({
-    currentQuestion: -1,
-    startedAt: null
-  });
-}
-
-/* UI */
-function updateUI(){
-  const q = state.currentQuestion;
-
-  if(q === -1){
+  if(current === -1){
     status.innerText = "Ожидание";
     timerEl.innerText = "⏳ -";
-    nextBtn.innerText = "Начать";
-    return;
+  } else if(questions[current]){
+    status.innerText = "Сейчас: " + (current+1) + ". " + questions[current].text;
+    startTimer();
   }
 
-  const elapsed = (Date.now() - state.startedAt) / 1000;
-  const timeLeft = Math.max(0, Math.ceil(DURATION - elapsed));
+  updateButtons();
+});
+
+/* таймер */
+function startTimer(){
+  timeLeft = 5;
 
   timerEl.innerText = "⏳ " + timeLeft;
 
-  status.innerText = "Сейчас: " + (q+1) + ". " + (questions[q]?.text || "");
+  timerInterval = setInterval(()=>{
+    timeLeft--;
 
-  if(timeLeft > 0){
-    nextBtn.innerText = "Далее: " + (questions[q+1]?.text || "конец");
-  } else {
-    nextBtn.innerText = "Повтор: " + questions[q].text;
-  }
+    if(timeLeft <= 0){
+      clearInterval(timerInterval);
+      timerEl.innerText = "⏳ 0";
+
+      timerFinished = true;
+      updateButtons();
+
+    } else {
+      timerEl.innerText = "⏳ " + timeLeft;
+    }
+
+  },1000);
 }
 
-/* тик таймера */
-setInterval(updateUI, 200);
+/* переход */
+function showQuestion(i){
+  db.ref('currentQuestion').set(i);
+}
 
-/* кнопки */
+/* 🟢 зелёная кнопка — ВСЕГДА вперёд */
 nextBtn.onclick = ()=>{
-  const q = state.currentQuestion;
-
-  if(q === -1){
-    startQuestion(0);
+  if(current === -1){
+    showQuestion(0);
     return;
   }
 
-  const elapsed = (Date.now() - state.startedAt) / 1000;
+  if(current < questions.length - 1){
+    showQuestion(current + 1);
+  }
+};
 
-  if(elapsed >= DURATION){
-    // повтор
-    startQuestion(q);
+/* 🟠 назад — умная логика */
+backBtn.onclick = ()=>{
+  if(current === -1) return;
+
+  if(timerFinished){
+    // повтор текущего вопроса
+    showQuestion(current);
   } else {
-    // вперёд
-    if(q < questions.length - 1){
-      startQuestion(q + 1);
+    // переход на предыдущий
+    if(current > 0){
+      showQuestion(current - 1);
     }
   }
 };
 
-backBtn.onclick = ()=>{
-  const q = state.currentQuestion;
-  if(q > 0){
-    startQuestion(q - 1);
-  }
+/* сброс */
+resetBtn.onclick = ()=>{
+  db.ref('currentQuestion').set(-1);
 };
 
-resetBtn.onclick = reset;
+/* обновление текста кнопок */
+function updateButtons(){
+  if(!questions.length) return;
+
+  if(current === -1){
+    nextBtn.innerText = "Начать: " + questions[0].text;
+    backBtn.style.display = "none";
+    return;
+  }
+
+  // зелёная кнопка
+  if(current < questions.length - 1){
+    nextBtn.innerText = "Далее: " + questions[current+1].text;
+  } else {
+    nextBtn.innerText = "Конец";
+  }
+
+  // кнопка назад
+  backBtn.style.display = "block";
+
+  if(timerFinished){
+    backBtn.innerText = "Назад: " + questions[current].text;
+  } else {
+    if(current > 0){
+      backBtn.innerText = "Назад: " + questions[current-1].text;
+    } else {
+      backBtn.innerText = "Первый вопрос";
+    }
+  }
+}
 </script>
 
 </body>
