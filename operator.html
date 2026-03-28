@@ -16,26 +16,24 @@ body {
 #status { font-size:28px; margin-bottom:10px; }
 #timer { font-size:48px; margin-bottom:20px; }
 
-/* 🔥 фикс мобилок */
+/* КНОПКИ */
 button {
-  width:90%;
-  font-size:22px;
-  padding:18px;
-  margin:12px auto;
+  width:92%;
+  font-size:24px;
+  padding:20px;
+  margin:14px auto;
   display:block;
-  border-radius:14px;
+  border-radius:16px;
   cursor:pointer;
 
-  /* убираем системные стили */
+  min-height:70px; /* 👈 удобно для пальца */
+
   border:4px solid transparent;
   outline:none;
   appearance:none;
   -webkit-appearance:none;
 
-  /* фикс синего текста */
   color:white;
-
-  /* убираем highlight */
   -webkit-tap-highlight-color: transparent;
 
   transition: transform 0.05s, border 0.05s;
@@ -46,7 +44,7 @@ button {
 .back { background:orange; }
 .reset { background:red; }
 
-/* 🔥 класс нажатия (через JS) */
+/* эффект нажатия */
 button.pressed {
   transform: scale(0.96);
   border:4px solid white;
@@ -89,7 +87,7 @@ const nextBtn = document.getElementById("nextBtn");
 const backBtn = document.getElementById("backBtn");
 const resetBtn = document.getElementById("resetBtn");
 
-/* 🔥 универсальный эффект нажатия (моб + десктоп) */
+/* эффект нажатия */
 function addPressEffect(btn){
   btn.addEventListener("touchstart", () => btn.classList.add("pressed"));
   btn.addEventListener("touchend", () => btn.classList.remove("pressed"));
@@ -141,7 +139,6 @@ db.ref('currentQuestion').on('value', snap => {
 
 /* таймер */
 function startTimer(){
-
   if(timerInterval){
     clearInterval(timerInterval);
   }
@@ -175,9 +172,7 @@ function showQuestion(i){
 
   ref.once('value').then(snap => {
     if(snap.val() === i){
-      ref.set(null).then(()=>{
-        ref.set(i);
-      });
+      ref.set(null).then(()=> ref.set(i));
     } else {
       ref.set(i);
     }
