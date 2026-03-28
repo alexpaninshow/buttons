@@ -5,93 +5,44 @@
 <title>Оператор</title>
 
 <style>
-html, body {
-  height:100%;
-  margin:0;
-}
-
 body {
   font-family:Arial;
   background:#111;
   color:white;
-  display:flex;
-  flex-direction:column;
-}
-
-/* статус */
-#status {
   text-align:center;
-  font-size:28px;
-  font-weight:bold;
-  padding:15px;
+  padding:40px;
 }
 
-/* таймер */
-#timer {
-  text-align:center;
-  font-size:36px;
-  font-weight:bold;
-  margin-bottom:10px;
-}
+#status { font-size:28px; margin-bottom:10px; }
+#timer { font-size:48px; margin-bottom:20px; }
 
-/* контейнер */
-.buttons {
-  flex:1;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:flex-start;
-
-  gap:25px;        /* расстояние между кнопками */
-  padding:20px;
-}
-
-/* 🔥 нормальный размер кнопок */
 button {
   width:90%;
-  max-width:700px;
-
-  height:70px;
-  font-size:20px;
-
-  border-radius:16px;
-  border:5px solid transparent;
-
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  text-align:center;
-
+  font-size:24px;
+  padding:20px;
+  margin:10px auto;
+  display:block;
+  border:none;
+  border-radius:12px;
   cursor:pointer;
 }
 
-/* мгновенная рамка */
-button:active {
-  border:5px solid white;
-}
-
-/* цвета */
-.next { background:#4caf50; color:white; }
-.back { background:orange; color:white; }
-.reset { background:red; color:white; }
-
-button:disabled {
-  opacity:0.4;
-  cursor:not-allowed;
-}
+.next { background:#4caf50; }
+.back { background:orange; }
+.reset { background:red; }
 </style>
 </head>
 
 <body>
 
-<div id="status">Ожидание</div>
-<div id="timer"></div>
+<h1>Оператор</h1>
 
-<div class="buttons">
-  <button id="nextBtn" class="next">Загрузка...</button>
-  <button id="backBtn" class="back">Назад</button>
-  <button id="resetBtn" class="reset">Сбросить игру</button>
-</div>
+<div id="status">Загрузка...</div>
+<div id="timer">⏳ -</div>
+
+<button id="nextBtn" class="next"></button>
+<button id="backBtn" class="back"></button>
+<button id="resetBtn" class="reset">Сброс</button>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -107,15 +58,16 @@ const db = firebase.database();
 
 let questions = [];
 let current = -1;
+let timerFinished = false;
+let lock = false;
 let timerInterval = null;
 
 const status = document.getElementById("status");
-const timerDiv = document.getElementById("timer");
-
+const timerEl = document.getElementById("timer");
 const nextBtn = document.getElementById("nextBtn");
 const backBtn = document.getElementById("backBtn");
 
-/* загрузка */
+/* загрузка вопросов */
 fetch(CSV_URL)
 .then(r => r.text())
 .then(text => {
@@ -129,61 +81,101 @@ fetch(CSV_URL)
   updateButtons();
 });
 
-/* показать вопрос */
-function showQuestion(i){
-  current = i;
+/* слушаем Firebase */
+db.ref('currentQuestion').on('value', snap => {
 
-  db.ref('currentQuestion').set(i);
+  current = snap.val() ?? -1;
+  timerFinished = false;
+  lock = false;
 
-  status.innerText = "Сейчас: " + (i+1) + ". " + questions[i].text;
+  // 🔥 убиваем старый таймер
+  if(timerInterval){
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
 
-  startTimer();
+  if(current === -1){
+    status.innerText = "Ожидание";
+    timerEl.innerText = "⏳ -";
+  } else if(current >= 0){
+    status.innerText = "Сейчас: " + (current+1) + ". " + questions[current].text;
+    startTimer();
+  }
+
   updateButtons();
-}
+});
 
 /* таймер */
 function startTimer(){
-  clearInterval(timerInterval);
 
-  let time = 5;
-  timerDiv.innerText = "⏳ " + time;
+  // 🔥 гарантия одного таймера
+  if(timerInterval){
+    clearInterval(timerInterval);
+  }
+
+  let t = 5;
+  timerEl.innerText = "⏳ " + t;
 
   timerInterval = setInterval(()=>{
-    time--;
-    timerDiv.innerText = "⏳ " + time;
+    t--;
 
-    if(time <= 0){
+    if(t <= 0){
       clearInterval(timerInterval);
-      timerDiv.innerText = "";
+      timerInterval = null;
 
-      db.ref('currentQuestion').set(-999);
+      timerEl.innerText = "⏳ 0";
+      timerFinished = true;
+      updateButtons();
+    } else {
+      timerEl.innerText = "⏳ " + t;
     }
+
   },1000);
+}
+
+/* переход */
+function showQuestion(i){
+  if(lock) return;
+  lock = true;
+
+  if(i === current){
+    // 🔁 форс-перезапуск
+    db.ref('currentQuestion').set(-999);
+    setTimeout(()=> db.ref('currentQuestion').set(i), 50);
+  } else {
+    db.ref('currentQuestion').set(i);
+  }
 }
 
 /* вперёд */
 nextBtn.onclick = ()=>{
-  if(current === -1) showQuestion(0);
-  else if(current < questions.length-1) showQuestion(current+1);
+  if(lock || !questions.length) return;
+
+  if(current === -1){
+    showQuestion(0);
+  } else if(current < questions.length - 1){
+    showQuestion(current + 1);
+  }
 };
 
 /* назад */
 backBtn.onclick = ()=>{
-  if(current > 0) showQuestion(current-1);
+  if(lock || !questions.length) return;
+
+  if(current === -1) return;
+
+  if(timerFinished){
+    showQuestion(current); // повтор
+  } else {
+    if(current > 0){
+      showQuestion(current - 1);
+    }
+  }
 };
 
-/* reset */
-document.getElementById("resetBtn").onclick = ()=>{
-  current = -1;
-
-  clearInterval(timerInterval);
-  timerDiv.innerText = "";
-
+/* сброс */
+resetBtn.onclick = ()=>{
   db.ref('currentQuestion').set(-1);
-
-  status.innerText = "Ожидание";
-
-  updateButtons();
 };
 
 /* обновление кнопок */
@@ -192,19 +184,26 @@ function updateButtons(){
 
   if(current === -1){
     nextBtn.innerText = "Начать: " + questions[0].text;
-    nextBtn.style.display = "block";
-  } else if(current < questions.length-1){
-    nextBtn.innerText = "Далее: " + questions[current+1].text;
-    nextBtn.style.display = "block";
-  } else {
-    nextBtn.style.display="none";
+    backBtn.style.display = "none";
+    return;
   }
 
-  if(current > 0){
-    backBtn.style.display="block";
-    backBtn.innerText = "Назад: " + questions[current-1].text;
+  if(current < questions.length - 1){
+    nextBtn.innerText = "Далее: " + questions[current+1].text;
   } else {
-    backBtn.style.display="none";
+    nextBtn.innerText = "Конец";
+  }
+
+  backBtn.style.display = "block";
+
+  if(timerFinished){
+    backBtn.innerText = "Назад: " + questions[current].text;
+  } else {
+    if(current > 0){
+      backBtn.innerText = "Назад: " + questions[current-1].text;
+    } else {
+      backBtn.innerText = "Первый вопрос";
+    }
   }
 }
 </script>
