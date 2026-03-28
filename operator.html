@@ -68,7 +68,7 @@ const timerEl = document.getElementById("timer");
 const nextBtn = document.getElementById("nextBtn");
 const backBtn = document.getElementById("backBtn");
 
-/* загрузка */
+/* загрузка вопросов */
 fetch(CSV_URL)
 .then(r => r.text())
 .then(text => {
@@ -82,7 +82,7 @@ fetch(CSV_URL)
   updateButtons();
 });
 
-/* Firebase */
+/* слушаем Firebase */
 db.ref('currentQuestion').on('value', snap => {
   current = snap.val() ?? -1;
 
@@ -114,8 +114,7 @@ function startTimer(){
       timerEl.innerText = "⏳ 0";
 
       timerFinished = true;
-      updateButtons(); // 🔥 важно
-
+      updateButtons();
     } else {
       timerEl.innerText = "⏳ " + timeLeft;
     }
@@ -128,7 +127,7 @@ function showQuestion(i){
   db.ref('currentQuestion').set(i);
 }
 
-/* вперёд */
+/* 🟢 вперёд */
 nextBtn.onclick = ()=>{
   if(!questions.length) return;
 
@@ -142,21 +141,26 @@ nextBtn.onclick = ()=>{
   }
 };
 
-/* назад */
+/* 🟠 назад — финальная логика */
 backBtn.onclick = ()=>{
   if(!questions.length) return;
   if(current === -1) return;
 
   const isLast = current === questions.length - 1;
 
-  if(isLast && timerFinished){
-    // 🔴 повтор последнего
-    showQuestion(current);
-  } else if(timerFinished){
-    // повтор любого другого
+  if(isLast){
+    // 🔥 на последнем ВСЕГДА назад
+    if(current > 0){
+      showQuestion(current - 1);
+    }
+    return;
+  }
+
+  if(timerFinished){
+    // 🔁 повтор текущего
     showQuestion(current);
   } else {
-    // обычный назад
+    // ⬅ обычный назад
     if(current > 0){
       showQuestion(current - 1);
     }
@@ -190,15 +194,22 @@ function updateButtons(){
   // назад
   backBtn.style.display = "block";
 
-  if(timerFinished){
-    // 🔴 ПОСЛЕ ТАЙМЕРА (включая последний вопрос)
-    backBtn.innerText = "Назад: " + questions[current].text;
-  } else {
-    // 🟢 ВО ВРЕМЯ ТАЙМЕРА
-    if(current > 0){
-      backBtn.innerText = "Назад: " + questions[current-1].text;
+  if(isLast){
+    // 🔥 последний вопрос
+    if(timerFinished){
+      backBtn.innerText = "Назад: " + questions[current].text; // повтор
     } else {
-      backBtn.innerText = "Первый вопрос";
+      backBtn.innerText = "Назад: " + questions[current-1]?.text;
+    }
+  } else {
+    if(timerFinished){
+      backBtn.innerText = "Назад: " + questions[current].text;
+    } else {
+      if(current > 0){
+        backBtn.innerText = "Назад: " + questions[current-1].text;
+      } else {
+        backBtn.innerText = "Первый вопрос";
+      }
     }
   }
 }
