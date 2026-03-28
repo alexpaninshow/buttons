@@ -45,7 +45,9 @@ body {
 }
 
 @media (min-width:700px){
-  #startBtn { font-size:32px; }
+  #startBtn {
+    font-size:32px;
+  }
 }
 
 #startBtn:active {
@@ -60,12 +62,14 @@ body {
   Спектакль начинается
 </button>
 
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
+// 🔥 ИНИЦИАЛИЗАЦИЯ (ОДИН РАЗ!)
 firebase.initializeApp({
-  databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"
+  databaseURL: "https://buttons-panin-default-rtdb.firebaseio.com"
 });
 
 const db = firebase.database();
@@ -77,19 +81,20 @@ btn.onclick = async () => {
   btn.disabled = true;
 
   try {
-    // 🔥 сигнал перезагрузки зрителям
+    // сигнал reload зрителям
     await db.ref('reloadSignal').set(Date.now());
 
-    // 🔥 переводим всех в "Смотрите на сцену"
+    // режим "Смотрите на сцену"
     await db.ref('currentQuestion').set(-999);
 
-    // чистим голоса
+    // очистка голосов
     await db.ref('votes').remove();
 
-  } catch(e){
-    console.log(e);
+  } catch (e) {
+    console.error(e);
   }
 
+  // переход к оператору
   window.location.href = "operator.html";
 };
 </script>
