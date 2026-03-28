@@ -2,53 +2,63 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Шоу</title>
+<title>Оператор</title>
 
 <style>
 body {
-  font-family:Arial;
-  text-align:center;
-  background:#333;
+  font-family: Arial;
+  text-align: center;
+  background:#222;
   color:white;
   padding:20px;
 }
 
-h1 {
-  font-size:40px;
-  margin-bottom:30px;
-}
-
-ul { list-style:none; padding:0; }
-
-li {
-  font-size:36px;
-  padding:30px;
-  margin:20px;
-  background:#555;
-  border-radius:15px;
-  border:4px solid transparent;
-  transition: all 0.3s ease;
-  cursor:pointer;
-}
-
-li.selected {
-  border-color:#ffeb3b;
-  background:#4caf50;
-  transform: scale(1.08);
+#status {
+  font-size:30px;
+  margin-bottom:10px;
 }
 
 #timer {
-  font-size:40px;
-  margin-top:30px;
+  font-size:28px;
+  margin-bottom:20px;
+  color:#ffeb3b;
 }
+
+.buttons {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+
+button {
+  width: 90%;
+  max-width: 600px;
+  font-size:26px;
+  padding:25px;
+  margin:10px 0;
+  border-radius:15px;
+  border:none;
+  cursor:pointer;
+}
+
+.next { background:#4caf50; color:white; }
+.back { background:orange; color:white; }
+.reset { background:red; color:white; }
 </style>
 </head>
 
 <body>
 
-<h1 id="title">Шоу</h1>
-<ul id="options"></ul>
+<h1>Оператор</h1>
+
+<div id="status">Сейчас: Ожидание</div>
 <div id="timer"></div>
+
+<div class="buttons">
+  <button id="nextBtn" class="next">Загрузка...</button>
+  <button id="backBtn" class="back" style="display:none;">Назад</button>
+  <button id="resetBtn" class="reset">Сбросить игру</button>
+</div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -57,20 +67,24 @@ li.selected {
 const CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv";
 
 const firebaseConfig = {
-  databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"
+  databaseURL: "https://buttons-panin-default-rtdb.firebaseio.com"
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-let questions=[];
-let timerId=null;
-let voted=false;
-let time=0;
+let questions = [];
+let current = -1;
+let lastShown = -1;
 
-const title = document.getElementById("title");
-const options = document.getElementById("options");
-const timer = document.getElementById("timer");
+let autoTimer = null;
+let visualTimer = null;
 
+const status = document.getElementById("status");
+const nextBtn = document.getElementById("nextBtn");
+const backBtn = document.getElementById("backBtn");
+const timerDiv = document.getElementById("timer");
+
+// --- CSV парсер ---
 function parseCSV(text){
   const rows = text.trim().split('\n').map(r=>r.split(','));
   return rows.slice(1).map(cols=>({
@@ -79,67 +93,116 @@ function parseCSV(text){
   }));
 }
 
+// --- загрузка вопросов ---
 fetch(CSV_URL)
 .then(r=>r.text())
 .then(text=>{
-  questions=parseCSV(text);
+  questions = parseCSV(text);
+  updateButtons();
 });
 
-db.ref('currentQuestion').on('value', snap => {
-  const current = snap.val();
+// --- очистка таймеров ---
+function clearAll(){
+  if(autoTimer) clearTimeout(autoTimer);
+  if(visualTimer) clearInterval(visualTimer);
+  timerDiv.innerText="";
+}
 
-  clearInterval(timerId);
-  voted=false;
+// --- таймер ---
+function startTimer(){
+  let time = 5;
+  timerDiv.innerText = "Таймер: " + time;
 
-  if(current===-1 || current===null){
-    title.innerText="Шоу";
-    options.innerHTML="";
-    timer.innerText="";
-    return;
-  }
-
-  const q = questions[current];
-  title.innerText=q.text;
-  options.innerHTML="";
-
-  q.options.forEach((opt,i)=>{
-    const li=document.createElement('li');
-    li.innerText=opt;
-
-    li.onclick=()=>{
-      if(voted || time<=0) return;
-
-      voted=true;
-
-      db.ref('votes/'+current+'/'+i)
-        .transaction(v=>(v||0)+1);
-
-      li.classList.add('selected');
-
-      clearInterval(timerId);
-      timer.innerText="";
-      title.innerText="Шоу";
-      options.innerHTML="";
-    };
-
-    options.appendChild(li);
-  });
-
-  time=5;
-  timer.innerText=time;
-
-  timerId=setInterval(()=>{
+  visualTimer = setInterval(()=>{
     time--;
-    if(time<=0){
-      clearInterval(timerId);
-      timer.innerText="";
-      title.innerText="Шоу";
-      options.innerHTML="";
+    if(time <= 0){
+      clearInterval(visualTimer);
+      timerDiv.innerText = "";
     } else {
-      timer.innerText=time;
+      timerDiv.innerText = "Таймер: " + time;
     }
   },1000);
-});
+}
+
+// --- показать вопрос ---
+function showQuestion(i, instant=false){
+  clearAll();
+
+  current = i;
+  lastShown = i; // 🔥 ключевой момент
+
+  db.ref('currentQuestion').set(i);
+
+  status.innerText = "Сейчас: " + (i+1) + ". " + questions[i].text;
+
+  updateButtons();
+
+  if(instant) return;
+
+  startTimer();
+
+  autoTimer = setTimeout(()=>{
+    db.ref('currentQuestion').set(-1);
+    status.innerText = "Сейчас: Ожидание";
+    current = -1;
+    updateButtons();
+  },5000);
+}
+
+// --- ВПЕРЁД ---
+nextBtn.onclick = ()=>{
+  let base = lastShown >= 0 ? lastShown : current;
+  let next = base + 1;
+
+  if(next < questions.length){
+    showQuestion(next);
+  }
+};
+
+// --- НАЗАД ---
+backBtn.onclick = ()=>{
+  let base = lastShown >= 0 ? lastShown : current;
+  let prev = base - 1;
+
+  if(prev >= 0){
+    showQuestion(prev, true);
+  }
+};
+
+// --- СБРОС ---
+resetBtn.onclick = ()=>{
+  clearAll();
+  current = -1;
+  lastShown = -1;
+  db.ref('currentQuestion').set(-1);
+  status.innerText = "Сейчас: Ожидание";
+  updateButtons();
+};
+
+// --- ОБНОВЛЕНИЕ КНОПОК ---
+function updateButtons(){
+  if(!questions.length) return;
+
+  let base = lastShown >= 0 ? lastShown : current;
+
+  // ВПЕРЁД
+  let next = base + 1;
+  if(next < questions.length){
+    nextBtn.style.display = "inline-block";
+    nextBtn.innerText = "Вопрос " + (next+1) + ": " + questions[next].text;
+  } else {
+    nextBtn.style.display = "none";
+  }
+
+  // НАЗАД
+  let prev = base - 1;
+  if(prev >= 0){
+    backBtn.style.display = "inline-block";
+    backBtn.innerText = "Назад: " + (prev+1) + ". " + questions[prev].text;
+  } else {
+    backBtn.style.display = "none";
+  }
+}
 </script>
 
 </body>
