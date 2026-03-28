@@ -201,17 +201,8 @@ db.ref('currentQuestion').on('value', function(snap){
       voted = true;
       clearInterval(timerInterval);
 
-      var voteRef = db.ref('votes/'+current+'/'+i);
-
-      voteRef.transaction(function(v){
-        if(!v){
-          return {count:1, last:Date.now()};
-        }
-        return {
-          count:(v.count || 0) + 1,
-          last:Date.now()
-        };
-      });
+      db.ref('votes/'+current+'/'+i)
+        .transaction(function(v){ return (v || 0) + 1; });
 
       li.classList.add('selected');
 
