@@ -68,6 +68,7 @@ let current = -1;
 
 let timerInterval = null;
 let timeLeft = 0;
+let timerFinished = false; // 🔥 ВАЖНО
 
 const status = document.getElementById("status");
 const timerEl = document.getElementById("timer");
@@ -91,20 +92,20 @@ db.ref('currentQuestion').on('value', snap => {
   current = snap.val() ?? -1;
 
   clearInterval(timerInterval);
+  timerFinished = false;
 
   if(current === -1){
     status.innerText = "Ожидание";
     timerEl.innerText = "⏳ -";
   } else if(questions[current]){
     status.innerText = "Сейчас: " + (current+1) + ". " + questions[current].text;
-
-    startTimer(); // только отображение
+    startTimer();
   }
 
   updateButtons();
 });
 
-/* ⏱ ТАЙМЕР БЕЗ АВТОПЕРЕХОДА */
+/* ⏱ таймер */
 function startTimer(){
   timeLeft = 5;
 
@@ -116,7 +117,10 @@ function startTimer(){
     if(timeLeft <= 0){
       clearInterval(timerInterval);
       timerEl.innerText = "⏳ 0";
-      // ❌ НЕТ перехода!
+
+      timerFinished = true; // 🔥 таймер закончился
+      updateButtons();     // 🔥 обновляем текст кнопки
+
     } else {
       timerEl.innerText = "⏳ " + timeLeft;
     }
@@ -129,9 +133,22 @@ function showQuestion(i){
   db.ref('currentQuestion').set(i);
 }
 
+/* 🔥 ГЛАВНАЯ ЛОГИКА КНОПКИ */
 nextBtn.onclick = ()=>{
-  if(current === -1) showQuestion(0);
-  else if(current < questions.length-1) showQuestion(current+1);
+  if(current === -1){
+    showQuestion(0);
+    return;
+  }
+
+  if(timerFinished){
+    // 🔁 ПЕРЕЗАПУСК ТЕКУЩЕГО ВОПРОСА
+    showQuestion(current);
+  } else {
+    // ⬅ НАЗАД
+    if(current > 0){
+      showQuestion(current - 1);
+    }
+  }
 };
 
 backBtn.onclick = ()=>{
@@ -142,20 +159,28 @@ document.getElementById("resetBtn").onclick = ()=>{
   db.ref('currentQuestion').set(-1);
 };
 
-/* кнопки */
+/* 🔥 ОБНОВЛЕНИЕ ТЕКСТА КНОПКИ */
 function updateButtons(){
   if(!questions.length) return;
 
   if(current === -1){
     nextBtn.innerText = "Начать: " + questions[0].text;
-    nextBtn.style.display="block";
-  } else if(current < questions.length-1){
-    nextBtn.innerText = "Далее: " + questions[current+1].text;
-    nextBtn.style.display="block";
-  } else {
-    nextBtn.style.display="none";
+    return;
   }
 
+  if(timerFinished){
+    // 🔁 после таймера
+    nextBtn.innerText = "Повтор: " + questions[current].text;
+  } else {
+    // ⬅ во время таймера
+    if(current > 0){
+      nextBtn.innerText = "Назад: " + questions[current-1].text;
+    } else {
+      nextBtn.innerText = "Идёт первый вопрос";
+    }
+  }
+
+  // обычная кнопка назад (оранжевая)
   if(current > 0){
     backBtn.style.display="block";
     backBtn.innerText = "Назад: " + questions[current-1].text;
