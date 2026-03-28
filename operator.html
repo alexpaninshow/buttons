@@ -60,13 +60,14 @@ let questions = [];
 let current = -1;
 let timerFinished = false;
 let lock = false;
-let timerInterval = null; // 🔥 фикс
+let timerInterval = null;
 
 const status = document.getElementById("status");
 const timerEl = document.getElementById("timer");
 const nextBtn = document.getElementById("nextBtn");
 const backBtn = document.getElementById("backBtn");
 
+/* загрузка вопросов */
 fetch(CSV_URL)
 .then(r => r.text())
 .then(text => {
@@ -80,14 +81,17 @@ fetch(CSV_URL)
   updateButtons();
 });
 
+/* слушаем Firebase */
 db.ref('currentQuestion').on('value', snap => {
 
   current = snap.val() ?? -1;
   timerFinished = false;
   lock = false;
 
+  // 🔥 убиваем старый таймер
   if(timerInterval){
     clearInterval(timerInterval);
+    timerInterval = null;
   }
 
   if(current === -1){
@@ -101,7 +105,10 @@ db.ref('currentQuestion').on('value', snap => {
   updateButtons();
 });
 
+/* таймер */
 function startTimer(){
+
+  // 🔥 гарантия одного таймера
   if(timerInterval){
     clearInterval(timerInterval);
   }
@@ -112,23 +119,27 @@ function startTimer(){
   timerInterval = setInterval(()=>{
     t--;
 
-    if(t<=0){
+    if(t <= 0){
       clearInterval(timerInterval);
       timerInterval = null;
+
       timerEl.innerText = "⏳ 0";
       timerFinished = true;
       updateButtons();
     } else {
       timerEl.innerText = "⏳ " + t;
     }
+
   },1000);
 }
 
+/* переход */
 function showQuestion(i){
   if(lock) return;
   lock = true;
 
   if(i === current){
+    // 🔁 форс-перезапуск
     db.ref('currentQuestion').set(-999);
     setTimeout(()=> db.ref('currentQuestion').set(i), 50);
   } else {
@@ -136,34 +147,38 @@ function showQuestion(i){
   }
 }
 
+/* вперёд */
 nextBtn.onclick = ()=>{
   if(lock || !questions.length) return;
 
   if(current === -1){
     showQuestion(0);
-  } else if(current < questions.length-1){
-    showQuestion(current+1);
+  } else if(current < questions.length - 1){
+    showQuestion(current + 1);
   }
 };
 
+/* назад */
 backBtn.onclick = ()=>{
   if(lock || !questions.length) return;
 
   if(current === -1) return;
 
   if(timerFinished){
-    showQuestion(current);
+    showQuestion(current); // повтор
   } else {
     if(current > 0){
-      showQuestion(current-1);
+      showQuestion(current - 1);
     }
   }
 };
 
+/* сброс */
 resetBtn.onclick = ()=>{
   db.ref('currentQuestion').set(-1);
 };
 
+/* обновление кнопок */
 function updateButtons(){
   if(!questions.length) return;
 
@@ -173,7 +188,7 @@ function updateButtons(){
     return;
   }
 
-  if(current < questions.length-1){
+  if(current < questions.length - 1){
     nextBtn.innerText = "Далее: " + questions[current+1].text;
   } else {
     nextBtn.innerText = "Конец";
