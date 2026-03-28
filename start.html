@@ -42,20 +42,15 @@ body {
   justify-content:center;
   text-align:center;
 
-  word-break:break-word;
-
-  transition:transform 0.1s, box-shadow 0.1s;
+  transition:transform 0.1s;
 }
 
 @media (min-width:700px){
-  #startBtn {
-    font-size:32px;
-  }
+  #startBtn { font-size:32px; }
 }
 
 #startBtn:active {
   transform:scale(0.97);
-  box-shadow:0 0 20px rgba(33,150,243,0.7);
 }
 </style>
 </head>
@@ -83,11 +78,13 @@ btn.onclick = async () => {
   btn.disabled = true;
 
   try {
-    // чистый старт
-    await db.ref('currentQuestion').set(-1);
+    // 🔥 теперь запускаем режим ожидания сцены
+    await db.ref('currentQuestion').set(-999);
+
+    // чистим голоса
     await db.ref('votes').remove();
 
-    // очистка кеша
+    // кеш
     if ('caches' in window) {
       caches.keys().then(names => {
         names.forEach(name => caches.delete(name));
