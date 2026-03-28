@@ -5,11 +5,7 @@
 <title>Старт</title>
 
 <style>
-html, body {
-  height:100%;
-  margin:0;
-}
-
+html, body { height:100%; margin:0; }
 body {
   background:#111;
   display:flex;
@@ -17,7 +13,6 @@ body {
   justify-content:center;
   font-family:Arial;
 }
-
 #startBtn {
   width:90%;
   max-width:600px;
@@ -28,7 +23,6 @@ body {
   color:white;
   border:none;
   border-radius:30px;
-  cursor:pointer;
 }
 </style>
 </head>
@@ -42,7 +36,7 @@ body {
 
 <script>
 firebase.initializeApp({
-  databaseURL: "https://buttons-panin-default-rtdb.firebaseio.com"
+  databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"
 });
 
 var db = firebase.database();
@@ -53,15 +47,16 @@ btn.onclick = function(){
   btn.innerText = "Запуск...";
   btn.disabled = true;
 
-  // сброс
   db.ref('votes').remove();
 
-  // ВАЖНО: только одно состояние
-  db.ref('currentQuestion').set(-999);
+  db.ref('currentQuestion').set({
+    state: -999,
+    t: Date.now()
+  });
 
   setTimeout(function(){
     window.location.href = "operator.html";
-  }, 200);
+  },200);
 };
 </script>
 
