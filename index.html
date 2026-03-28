@@ -8,77 +8,33 @@
 
 <style>
 html, body { height:100%; margin:0; }
-
-body {
-  font-family:'Montserrat',sans-serif;
-  background:#111;
-  color:white;
-}
+body { font-family:'Montserrat',sans-serif; background:#111; color:white; }
 
 .screen {
-  position:fixed;
-  width:100%;
-  height:100%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  flex-direction:column;
-  text-align:center;
+  position:fixed; width:100%; height:100%;
+  display:flex; align-items:center; justify-content:center;
+  flex-direction:column; text-align:center;
 }
 
-#start { background:#000; z-index:10; }
-
-#start img {
-  max-width:80%;
-  border-radius:20px;
-  margin-bottom:30px;
-}
-
+#start { background:#000; }
 #waiting { display:none; font-size:6vw; font-weight:900; }
 #game { display:none; height:100%; flex-direction:column; }
 
-h1 { font-size:5vw; margin:10px; }
+h1 { font-size:5vw; }
 
 #timerBarWrap {
-  width:90%;
-  height:70px;
-  background:#222;
-  border-radius:40px;
-  overflow:hidden;
-  margin:40px auto;
+  width:90%; height:60px; background:#222;
+  border-radius:30px; overflow:hidden; margin:20px auto;
 }
 
-#timerBar {
-  height:100%;
-  width:100%;
-  background:hsl(120,100%,50%);
-}
+#timerBar { height:100%; width:100%; background:hsl(120,100%,50%); }
 
-ul {
-  flex:1;
-  display:flex;
-  flex-direction:column;
-  margin:10px;
-  padding:0;
-}
+ul { flex:1; display:flex; flex-direction:column; padding:0; margin:10px; }
 
 li {
-  flex:1;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:7vw;
-  font-weight:900;
-  margin:8px 0;
-  background:#333;
-  border-radius:20px;
-  border:6px solid #888;
-  cursor:pointer;
-}
-
-li.selected {
-  border:8px solid #00e676;
-  background:#2e7d32;
+  flex:1; display:flex; align-items:center; justify-content:center;
+  font-size:6vw; margin:6px 0; background:#333;
+  border-radius:15px; border:4px solid #888;
 }
 </style>
 </head>
@@ -86,21 +42,14 @@ li.selected {
 <body>
 
 <div id="start" class="screen">
-  <img src="start.jpg">
-  <div style="font-size:5vw;font-weight:900;">
-    Скоро начнём!
-  </div>
+  <div style="font-size:5vw;font-weight:900;">Скоро начнём!</div>
 </div>
 
 <div id="waiting" class="screen">Смотрите на сцену!</div>
 
 <div id="game">
   <h1 id="title"></h1>
-
-  <div id="timerBarWrap">
-    <div id="timerBar"></div>
-  </div>
-
+  <div id="timerBarWrap"><div id="timerBar"></div></div>
   <ul id="options"></ul>
 </div>
 
@@ -108,145 +57,100 @@ li.selected {
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-var CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv&gid=0";
-
 firebase.initializeApp({
   databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"
 });
 
 var db = firebase.database();
 
-var questions = [];
-var timerInterval = null;
-var voted = false;
+/* USER ID */
+var userId = localStorage.getItem("uid");
+if(!userId){
+  userId = "u"+Math.random().toString(36).substr(2,9);
+  localStorage.setItem("uid", userId);
+}
 
-var startScreen = document.getElementById("start");
-var waiting = document.getElementById("waiting");
-var game = document.getElementById("game");
+/* состояния */
+function setState(s){
+  db.ref("users/"+userId).set({state:s,t:Date.now()});
+}
 
-var title = document.getElementById("title");
-var options = document.getElementById("options");
-var timerBar = document.getElementById("timerBar");
+/* анти повтор */
+var answered = JSON.parse(localStorage.getItem("ans")||"{}");
+function save(){ localStorage.setItem("ans",JSON.stringify(answered)); }
 
-/* загрузка CSV */
-fetch(CSV_URL)
-.then(function(r){ return r.text(); })
-.then(function(text){
+var questions=[];
 
-  var rows = text.trim().split('\n');
-  var parsed = [];
-
-  for(var i=0;i<rows.length;i++){
-    parsed.push(rows[i].split(','));
-  }
-
-  for(var i=1;i<parsed.length;i++){
-    var cols = parsed[i];
-
-    var q = {
-      text:(cols[0] || "").trim(),
-      options:[]
-    };
-
-    for(var j=1;j<cols.length;j++){
-      var val = (cols[j] || "").trim();
-      if(val) q.options.push(val);
-    }
-
+fetch("https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv&gid=0")
+.then(r=>r.text())
+.then(t=>{
+  var rows=t.trim().split('\n');
+  for(var i=1;i<rows.length;i++){
+    var c=rows[i].split(',');
+    var q={text:c[0],options:[]};
+    for(var j=1;j<c.length;j++) if(c[j]) q.options.push(c[j]);
     questions.push(q);
   }
 });
 
-/* экраны */
-function showStart(){
-  startScreen.style.display="flex";
-  waiting.style.display="none";
-  game.style.display="none";
-}
+var start=document.getElementById("start");
+var waiting=document.getElementById("waiting");
+var game=document.getElementById("game");
+var title=document.getElementById("title");
+var options=document.getElementById("options");
+var bar=document.getElementById("timerBar");
 
-function showWaiting(){
-  startScreen.style.display="none";
-  waiting.style.display="flex";
-  game.style.display="none";
-}
+function showStart(){start.style.display="flex";waiting.style.display="none";game.style.display="none";setState("start");}
+function showWaiting(){start.style.display="none";waiting.style.display="flex";game.style.display="none";setState("waiting");}
+function showGame(){start.style.display="none";waiting.style.display="none";game.style.display="flex";setState("question");}
 
-function showGame(){
-  startScreen.style.display="none";
-  waiting.style.display="none";
-  game.style.display="flex";
-}
+db.ref("currentQuestion").on("value",function(snap){
 
-/* Firebase */
-db.ref('currentQuestion').on('value', function(snap){
+  var d=snap.val();
+  if(!d) return;
 
-  var current = snap.val();
+  var i=d.index;
+  var st=d.startTime;
 
-  if(current === -1){
-    showStart();
-    return;
-  }
-
-  if(current === -999){
-    showWaiting();
-    return;
-  }
-
-  if(!questions[current]) return;
+  if(i===-1){showStart();return;}
+  if(i===-999){showWaiting();return;}
+  if(!questions[i]) return;
 
   showGame();
 
-  voted = false;
-  clearInterval(timerInterval);
+  title.innerText=questions[i].text;
+  options.innerHTML="";
 
-  var q = questions[current];
+  for(let k=0;k<questions[i].options.length;k++){
+    var li=document.createElement("li");
+    li.innerText=questions[i].options[k];
 
-  title.innerText = q.text;
-  options.innerHTML = "";
-
-  for(var i=0;i<q.options.length;i++){
-
-    (function(i){
-
-      var li = document.createElement('li');
-      li.innerText = q.options[i];
-
-      li.onclick = function(){
-
-        if(voted) return;
-
-        voted = true;
-        clearInterval(timerInterval);
-
-        db.ref('votes/'+current+'/'+i)
-          .transaction(function(v){ return (v||0)+1; });
-
-        li.classList.add('selected');
-
-        setTimeout(showWaiting, 800);
+    if(answered[i]){
+      li.style.opacity=0.5;
+      li.onclick=function(){alert("Вы уже ответили");};
+    } else {
+      li.onclick=function(){
+        answered[i]=true; save();
+        db.ref("votes/"+i+"/"+k).transaction(v=>(v||0)+1);
+        showWaiting();
       };
+    }
 
-      options.appendChild(li);
-
-    })(i);
+    options.appendChild(li);
   }
 
-  /* ПЛАВНЫЙ ТАЙМЕР */
+  var total=5000;
+  var passed=Date.now()-st;
+  if(passed<0)passed=0;
+  if(passed>total)passed=total;
 
-  timerBar.style.transition = "none";
-  timerBar.style.width = "100%";
-  timerBar.style.background = "hsl(120,100%,50%)";
-
-  timerBar.offsetHeight;
-
-  timerBar.style.transition = "width 5s linear, background 5s linear";
-
-  setTimeout(function(){
-    timerBar.style.width = "0%";
-    timerBar.style.background = "hsl(0,100%,50%)";
-  },50);
-
+  var remain=total-passed;
+  bar.style.transition="none";
+  bar.style.width=(remain/total*100)+"%";
+  bar.offsetHeight;
+  bar.style.transition="width "+remain+"ms linear";
+  setTimeout(function(){bar.style.width="0%";},50);
 });
 </script>
-
 </body>
 </html>
