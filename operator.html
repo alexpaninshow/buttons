@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Оператор</title>
+
+<style>
+html, body { height:100%; margin:0; }
+
+body {
+  font-family:Arial;
+  background:#111;
+  color:white;
+  display:flex;
+  flex-direction:column;
+  text-align:center;
+}
+
+#top { padding:20px; }
+
+h1 { font-size:5vw; margin:0; }
+#status { font-size:4vw; margin-top:10px; }
+#timer { font-size:6vw; margin-top:10px; }
+
+#buttons {
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  padding:10px;
+}
+
+button {
+  margin:6px 0;
+  font-size:4.5vw;
+  font-weight:bold;
+  border-radius:20px;
+  border:4px solid transparent;
+  color:white;
+}
+
+.next { background:#4caf50; flex:1.6; }
+.back { background:orange; flex:0.7; }
+.reset { background:red; flex:0.6; }
+
+button:active { border:4px solid white; }
+</style>
+</head>
+
+<body>
+
+<div id="top">
+  <h1>Оператор</h1>
+  <div id="status">Загрузка...</div>
+  <div id="timer">⏳ -</div>
+</div>
+
+<div id="buttons">
+  <button id="nextBtn" class="next"></button>
+  <button id="backBtn" class="back"></button>
+  <button id="resetBtn" class="reset">Полный сброс</button>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+var CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv&gid=0";
+
+firebase.initializeApp({
+  databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"
+});
+
+var db = firebase.database();
+
+var questions = [];
+var current = -1;
+
+var status = document.getElementById("status");
+var timerEl = document.getElementById("timer");
+var nextBtn = document.getElementById("nextBtn");
+var backBtn = document.getElementById("backBtn");
+
+/* CSV */
+fetch(CSV_URL)
+.then(function(r){ return r.text(); })
+.then(function(text){
+
+  var rows = text.trim().split('\n');
+
+  for(var i=1;i<rows.length;i++){
+    var cols = rows[i].split(',');
+    var q = { text:cols[0], options:[] };
+
+    for(var j=1;j<cols.length;j++){
+      if(cols[j]) q.options.push(cols[j]);
+    }
+
+    questions.push(q);
+  }
+
+  updateButtons();
+});
+
+/* установка вопроса */
+function setQuestion(i){
+  db.ref('currentQuestion').set({
+    index:i,
+    startTime:Date.now()
+  });
+}
+
+/* sync */
+db.ref('currentQuestion').on('value', function(snap){
+
+  var data = snap.val();
+
+  if(typeof data === "number"){
+    current = data;
+  } else {
+    current = data.index;
+  }
+
+  if(current >= 0 && questions[current]){
+    status.innerText = "Сейчас: " + (current+1) + ". " + questions[current].text;
+    startTimer(data.startTime);
+  }
+  else if(current === -999){
+    status.innerText = "Ожидание...";
+    timerEl.innerText = "⏳ -";
+  }
+  else{
+    status.innerText = "Старт";
+    timerEl.innerText = "⏳ -";
+  }
+
+  updateButtons();
+});
+
+function startTimer(startTime){
+  var total = 5;
+  clearInterval(window.timerInt);
+
+  function tick(){
+    var t = 5 - Math.floor((Date.now() - startTime)/1000);
+    if(t < 0) t = 0;
+    timerEl.innerText = "⏳ " + t;
+  }
+
+  tick();
+  window.timerInt = setInterval(tick, 300);
+}
+
+/* кнопки */
+nextBtn.onclick = function(){
+
+  if(current === -1){
+    setQuestion(0);
+    return;
+  }
+
+  if(current === -999){
+    setQuestion(0);
+    return;
+  }
+
+  if(current < questions.length - 1){
+    setQuestion(current + 1);
+  }
+};
+
+backBtn.onclick = function(){
+
+  if(current > 0){
+    setQuestion(current - 1);
+  }
+};
+
+/* подписи */
+function updateButtons(){
+
+  if(!questions.length) return;
+
+  if(current === -1 || current === -999){
+    nextBtn.innerText = "Начать: 1. " + questions[0].text;
+    backBtn.style.display = "none";
+    return;
+  }
+
+  if(current < questions.length - 1){
+    nextBtn.innerText = "Далее: " + (current+2) + ". " + questions[current+1].text;
+  } else {
+    nextBtn.innerText = "Конец";
+  }
+
+  backBtn.style.display = "block";
+
+  if(current >= 0){
+    backBtn.innerText = "Назад: " + (current) + ". " + (questions[current-1] ? questions[current-1].text : "—");
+  }
+}
+
+/* сброс */
+document.getElementById("resetBtn").onclick = function(){
+
+  if(!confirm("Вы уверены, что хотите полностью сбросить игру?")) return;
+
+  db.ref('votes').remove();
+  setQuestion(-1);
+};
+</script>
+
+</body>
+</html>
