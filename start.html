@@ -16,15 +16,14 @@ body {
   align-items:center;
   justify-content:center;
   font-family:Arial;
-  padding:20px;
 }
 
 #startBtn {
-  width:100%;
+  width:90%;
   max-width:600px;
   padding:40px 20px;
 
-  font-size:6vw;
+  font-size:28px;
   font-weight:bold;
 
   background:#2196f3;
@@ -48,30 +47,27 @@ body {
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
+// 🔥 ПРОСТАЯ ИНИЦИАЛИЗАЦИЯ
 firebase.initializeApp({
-  databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"
+  databaseURL: "https://buttons-panin-default-rtdb.firebaseio.com"
 });
 
-const db = firebase.database();
-const btn = document.getElementById("startBtn");
+var db = firebase.database();
+var btn = document.getElementById("startBtn");
 
-btn.onclick = async () => {
+btn.onclick = function(){
 
   btn.innerText = "Запуск...";
   btn.disabled = true;
 
-  try {
-    // только сцена
-    await db.ref('currentQuestion').set(-999);
+  // 🔥 БЕЗ async — просто подряд
+  db.ref('currentQuestion').set(-999);
+  db.ref('votes').remove();
 
-    // очистка голосов
-    await db.ref('votes').remove();
-
-  } catch(e){
-    console.log(e);
-  }
-
-  window.location.href = "operator.html";
+  // переход
+  setTimeout(function(){
+    window.location.href = "operator.html";
+  }, 300);
 };
 </script>
 
