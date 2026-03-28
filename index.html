@@ -108,7 +108,6 @@ db.ref('currentQuestion').on('value', snap => {
 
       voted=true;
 
-      // 🔥 УБИВАЕМ ТАЙМЕР СРАЗУ
       if(timerId) clearInterval(timerId);
       timer.innerText="";
 
