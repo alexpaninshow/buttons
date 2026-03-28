@@ -10,78 +10,52 @@
 html, body {
   height:100%;
   margin:0;
-  padding:0;
 }
 
 body {
-  font-family: 'Montserrat', sans-serif;
+  font-family:'Montserrat',sans-serif;
   background:#111;
   color:white;
   overflow:hidden;
 }
 
-/* ⚡ вспышка */
-#flash {
-  position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-  background:white;
-  opacity:0;
-  pointer-events:none;
-  z-index:999;
-  transition: opacity 0.2s ease;
-}
-
 /* экран ожидания */
-#waitingScreen {
+#waiting {
   position:fixed;
   width:100%;
   height:100%;
   display:flex;
   align-items:center;
   justify-content:center;
-
   font-size:6vw;
   font-weight:900;
   text-align:center;
-
-  background:#111;
-  z-index:10;
-
-  opacity:1;
-  transition: opacity 0.4s ease;
 }
 
 /* игра */
 #game {
+  display:none;
   height:100%;
-  display:flex;
   flex-direction:column;
-
-  opacity:0;
-  transition: opacity 0.4s ease;
 }
 
 h1 {
   text-align:center;
   font-size:5vw;
-  margin:15px;
+  margin:10px;
 }
 
 #timer {
   text-align:center;
   font-size:8vw;
-  font-weight:900;
-  margin:10px 0 20px 0;
+  margin-bottom:10px;
 }
 
 ul {
   flex:1;
   display:flex;
   flex-direction:column;
-  margin:0 10px 10px 10px;
+  margin:10px;
   padding:0;
 }
 
@@ -90,36 +64,25 @@ li {
   display:flex;
   align-items:center;
   justify-content:center;
-
   font-size:7vw;
   font-weight:900;
-  text-align:center;
-
   margin:8px 0;
-
   background:#333;
   border-radius:20px;
-  border:4px solid #777;
-
+  border:5px solid #777;
   cursor:pointer;
-  transition: all 0.2s ease;
 }
 
-li:hover { background:#444; }
-li:active { transform: scale(0.97); }
-
 li.selected {
-  background:#2e7d32;
   border:6px solid #00e676;
+  background:#2e7d32;
 }
 </style>
 </head>
 
 <body>
 
-<div id="flash"></div>
-
-<div id="waitingScreen">Смотрите на сцену!</div>
+<div id="waiting">Смотрите на сцену!</div>
 
 <div id="game">
   <h1 id="title"></h1>
@@ -133,26 +96,21 @@ li.selected {
 <script>
 const CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv";
 
-const firebaseConfig = {
+firebase.initializeApp({
   databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"
-};
-firebase.initializeApp(firebaseConfig);
+});
 const db = firebase.database();
 
 let questions=[];
-let timerId=null;
 let voted=false;
-let time=0;
+let timerInterval=null;
 
-const flash = document.getElementById("flash");
-const waiting = document.getElementById("waitingScreen");
+const waiting = document.getElementById("waiting");
 const game = document.getElementById("game");
-
 const title = document.getElementById("title");
 const options = document.getElementById("options");
 const timer = document.getElementById("timer");
 
-// CSV
 function parseCSV(text){
   const rows = text.trim().split('\n').map(r=>r.split(','));
   return rows.slice(1).map(cols=>({
@@ -167,57 +125,34 @@ fetch(CSV_URL)
   questions=parseCSV(text);
 });
 
-// ⚡ вспышка
-function flashEffect(){
-  flash.style.opacity = 1;
-  setTimeout(()=>{
-    flash.style.opacity = 0;
-  },200);
-}
+db.ref('/').on('value', snap => {
+  const data = snap.val() || {};
+  const current = data.currentQuestion;
+  const start = data.questionStartTime;
 
-// переход к ожиданию
-function showWaiting(){
-  flashEffect();
-
-  game.style.opacity = 0;
-
-  setTimeout(()=>{
-    waiting.style.opacity = 1;
-    waiting.style.display="flex";
-    game.style.display="none";
-  },200);
-}
-
-// переход к игре
-function showGame(){
-  flashEffect();
-
-  waiting.style.opacity = 0;
-
-  setTimeout(()=>{
-    waiting.style.display="none";
-    game.style.display="flex";
-
-    setTimeout(()=>{
-      game.style.opacity = 1;
-    },50);
-  },200);
-}
-
-db.ref('currentQuestion').on('value', snap => {
-  const current = snap.val();
-
-  clearInterval(timerId);
+  clearInterval(timerInterval);
   voted=false;
 
-  if(current===-1 || current===null){
-    showWaiting();
+  if(current===-1 || !start){
+    waiting.style.display="flex";
+    game.style.display="none";
+    return;
+  }
+
+  const now = Date.now();
+  const elapsed = Math.floor((now - start)/1000);
+  const remaining = 5 - elapsed;
+
+  if(remaining <= 0){
+    waiting.style.display="flex";
+    game.style.display="none";
     return;
   }
 
   const q = questions[current];
 
-  showGame();
+  waiting.style.display="none";
+  game.style.display="flex";
 
   title.innerText=q.text;
   options.innerHTML="";
@@ -227,7 +162,7 @@ db.ref('currentQuestion').on('value', snap => {
     li.innerText=opt;
 
     li.onclick=()=>{
-      if(voted || time<=0) return;
+      if(voted) return;
 
       voted=true;
 
@@ -236,30 +171,33 @@ db.ref('currentQuestion').on('value', snap => {
 
       li.classList.add('selected');
 
-      clearInterval(timerId);
       timer.innerText="";
+      clearInterval(timerInterval);
 
       setTimeout(()=>{
-        showWaiting();
+        waiting.style.display="flex";
+        game.style.display="none";
       },800);
     };
 
     options.appendChild(li);
   });
 
-  time=5;
-  timer.innerText="⏳ " + time;
+  timer.innerText="⏳ "+remaining;
 
-  timerId=setInterval(()=>{
-    time--;
-    if(time<=0){
-      clearInterval(timerId);
-      timer.innerText="";
-      showWaiting();
+  timerInterval=setInterval(()=>{
+    const now = Date.now();
+    const elapsed = Math.floor((now - start)/1000);
+    const remain = 5 - elapsed;
+
+    if(remain <= 0){
+      clearInterval(timerInterval);
+      waiting.style.display="flex";
+      game.style.display="none";
     } else {
-      timer.innerText="⏳ " + time;
+      timer.innerText="⏳ "+remain;
     }
-  },1000);
+  },500);
 });
 </script>
 
