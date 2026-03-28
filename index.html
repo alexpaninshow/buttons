@@ -52,7 +52,7 @@ h1 { font-size:5vw; margin:10px; }
   height:100%;
   width:100%;
   background:hsl(120,100%,50%);
-  transition: width 1s linear, background 1s linear;
+  transition: width 1s linear;
 }
 
 ul {
@@ -120,7 +120,6 @@ let ready = false;
 let voted = false;
 let timerInterval = null;
 
-/* загрузка вопросов */
 fetch(CSV_URL)
 .then(r => r.text())
 .then(text => {
@@ -134,7 +133,6 @@ fetch(CSV_URL)
   ready = true;
 });
 
-/* элементы */
 const start = document.getElementById("start");
 const waiting = document.getElementById("waiting");
 const game = document.getElementById("game");
@@ -150,7 +148,6 @@ function show(screen){
   screen.style.display="flex";
 }
 
-/* основная логика */
 db.ref("game").on("value", snap => {
 
   const data = snap.val();
