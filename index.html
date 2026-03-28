@@ -129,6 +129,7 @@ const title = document.getElementById("title");
 const options = document.getElementById("options");
 const timerBar = document.getElementById("timerBar");
 
+/* загрузка CSV */
 fetch(CSV_URL)
 .then(r => r.text())
 .then(text => {
@@ -142,15 +143,32 @@ fetch(CSV_URL)
   ready = true;
 });
 
-function showStart(){ startScreen.style.display="flex"; waiting.style.display="none"; game.style.display="none"; }
-function showWaiting(){ startScreen.style.display="none"; waiting.style.display="flex"; game.style.display="none"; }
-function showGame(){ startScreen.style.display="none"; waiting.style.display="none"; game.style.display="flex"; }
+/* экраны */
+function showStart(){
+  startScreen.style.display="flex";
+  waiting.style.display="none";
+  game.style.display="none";
+}
 
+function showWaiting(){
+  startScreen.style.display="none";
+  waiting.style.display="flex";
+  game.style.display="none";
+}
+
+function showGame(){
+  startScreen.style.display="none";
+  waiting.style.display="none";
+  game.style.display="flex";
+}
+
+/* состояние */
 db.ref('currentQuestion').on('value', snap => {
 
-  const current = snap.val();
+  const raw = snap.val();
+  const current = Number(raw);
 
-  if(current === -1 || current === null){
+  if(current === -1){
     showStart();
     return;
   }
@@ -193,6 +211,7 @@ db.ref('currentQuestion').on('value', snap => {
     options.appendChild(li);
   });
 
+  /* таймер */
   let total = 5;
   let time = total;
 
