@@ -55,52 +55,56 @@ firebase.initializeApp({
 });
 
 var db = firebase.database();
+
 var btn = document.getElementById("startBtn");
 var statusEl = document.getElementById("status");
 
 var checking = false;
 
-/* ПРИНУДИТЕЛЬНЫЙ СТАРТОВЫЙ ЭКРАН */
-function forceStartScreen(){
+/* всегда держим зрителей на старте */
+function forceStart(){
   db.ref('currentQuestion').set(-1);
 }
 
-/* ПРОВЕРКА */
+/* проверка системы */
 function checkSystem(){
 
   checking = true;
+
   btn.disabled = true;
   btn.style.opacity = "0.5";
 
   statusEl.innerText = "Проверка системы...";
 
-  Promise.all([
-    fetch("https://docs.google.com").then(()=>true).catch(()=>false),
-    db.ref('currentQuestion').once('value')
-  ])
-  .then(()=>{
-    statusEl.innerText = "✅ Система готова к работе";
+  // проверяем Firebase
+  db.ref('currentQuestion').once('value', function(){
+
+    statusEl.innerText = "✔ Система готова к работе";
+
     btn.disabled = false;
     btn.style.opacity = "1";
+
     checking = false;
-  })
-  .catch(()=>{
-    statusEl.innerText = "❌ Ошибка подключения";
+
+  }, function(){
+
+    statusEl.innerText = "Ошибка подключения";
+
     checking = false;
   });
 }
 
-/* каждые 60 сек */
-setInterval(()=>{
-  forceStartScreen();
+/* при загрузке */
+forceStart();
+checkSystem();
+
+/* каждые 60 секунд */
+setInterval(function(){
+  forceStart();
   checkSystem();
 },60000);
 
-/* при загрузке */
-forceStartScreen();
-checkSystem();
-
-/* СТАРТ */
+/* кнопка старта */
 btn.onclick = function(){
 
   if(checking) return;
@@ -108,12 +112,16 @@ btn.onclick = function(){
   btn.innerText = "Запуск...";
   btn.disabled = true;
 
-  Promise.all([
-    db.ref('votes').remove(),
-    db.ref('currentQuestion').set(-999)
-  ]).then(()=>{
+  // очищаем голоса
+  db.ref('votes').remove();
+
+  // отправляем всех в ожидание
+  db.ref('currentQuestion').set(-999);
+
+  // переход к оператору
+  setTimeout(function(){
     window.location.href = "operator.html";
-  });
+  },300);
 };
 </script>
 
