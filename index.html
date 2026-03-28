@@ -6,6 +6,7 @@
 
 <style>
 body { font-family:Arial; text-align:center; background:#333; color:white; padding:40px; }
+
 h1 { font-size:32px; margin-bottom:30px; }
 
 ul { list-style:none; padding:0; }
@@ -49,13 +50,20 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-let questions = [];
+let questions=[];
+let timerId=null;
+let voted=false;
+let time=0;
+
+const title = document.getElementById("title");
+const options = document.getElementById("options");
+const timer = document.getElementById("timer");
 
 function parseCSV(text){
   const rows = text.trim().split('\n').map(r=>r.split(','));
   return rows.slice(1).map(cols=>({
-    text: (cols[0]||"").trim(),
-    options: cols.slice(1).map(c=>c.trim()).filter(Boolean)
+    text:(cols[0]||"").trim(),
+    options:cols.slice(1).map(c=>c.trim()).filter(Boolean)
   }));
 }
 
@@ -65,37 +73,28 @@ fetch(CSV_URL)
   questions=parseCSV(text);
 });
 
-let timerId=null;
-let voted=false;
-let time=0;
-
-const title = document.getElementById("title");
-const options = document.getElementById("options");
-const timer = document.getElementById("timer");
-
-function showWaiting(){
-  title.innerText="Шоу";
-  options.innerHTML="";
-  timer.innerText="";
-}
-
 db.ref('currentQuestion').on('value', snap => {
   const current = snap.val();
 
-  if(timerId) clearInterval(timerId);
+  clearInterval(timerId);
   voted=false;
 
   if(current===-1 || current===null){
-    showWaiting();
+    title.innerText="Шоу";
+    options.innerHTML="";
+    timer.innerText="";
     return;
   }
 
-  if(!questions[current]) return;
-
-  title.innerText=questions[current].text;
+  const q = questions[current];
+  title.innerText=q.text;
   options.innerHTML="";
 
-  questions[current].options.forEach((opt,i)=>{
+  if(navigator.vibrate){
+    navigator.vibrate([100,50,100]);
+  }
+
+  q.options.forEach((opt,i)=>{
     const li=document.createElement('li');
     li.innerText=opt;
 
@@ -103,13 +102,18 @@ db.ref('currentQuestion').on('value', snap => {
       if(voted || time<=0) return;
 
       voted=true;
-      if(timerId) clearInterval(timerId);
 
       db.ref('votes/'+current+'/'+i)
         .transaction(v=>(v||0)+1);
 
       li.classList.add('selected');
-      setTimeout(showWaiting,200);
+
+      clearInterval(timerId);
+      timer.innerText="";
+      
+      // сразу в "Шоу"
+      title.innerText="Шоу";
+      options.innerHTML="";
     };
 
     options.appendChild(li);
@@ -122,7 +126,9 @@ db.ref('currentQuestion').on('value', snap => {
     time--;
     if(time<=0){
       clearInterval(timerId);
-      showWaiting();
+      timer.innerText="";
+      title.innerText="Шоу";
+      options.innerHTML="";
     } else {
       timer.innerText=time;
     }
