@@ -166,7 +166,7 @@ function showGame(){
 db.ref('currentQuestion').on('value', snap => {
 
   const val = snap.val();
-  const current = (val === null) ? -1 : Number(val);
+  const current = (val === null) ? -1 : val;
 
   if(current === -1){
     showStart();
