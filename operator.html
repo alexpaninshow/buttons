@@ -2,103 +2,48 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Шоу</title>
-
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
+<title>Оператор</title>
 
 <style>
-html, body { height:100%; margin:0; }
-
 body {
-  font-family:'Montserrat',sans-serif;
+  font-family:Arial;
   background:#111;
   color:white;
-}
-
-.screen {
-  position:fixed;
-  width:100%;
-  height:100%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  flex-direction:column;
   text-align:center;
+  padding:40px;
 }
 
-/* СТАРТ */
-#start {
-  background:#000;
-  z-index:10;
-}
-
-#start img {
-  max-width:85%;
-  border-radius:20px;
+#status {
+  font-size:28px;
   margin-bottom:20px;
 }
 
-/* остальные экраны */
-#waiting { display:none; font-size:6vw; font-weight:900; }
-#game { display:none; height:100%; flex-direction:column; }
-
-h1 { font-size:5vw; margin:10px; }
-
-#timer {
-  font-size:8vw;
-  margin-bottom:30px;
-}
-
-ul {
-  flex:1;
-  display:flex;
-  flex-direction:column;
-  margin:10px;
-  padding:0;
-}
-
-li {
-  flex:1;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:7vw;
-  font-weight:900;
-  margin:8px 0;
-  background:#333;
-  border-radius:20px;
-  border:6px solid #888;
+button {
+  width:90%;
+  font-size:24px;
+  padding:20px;
+  margin:10px auto;
+  display:block;
+  border:none;
+  border-radius:12px;
   cursor:pointer;
 }
 
-li.selected {
-  border:8px solid #00e676;
-  background:#2e7d32;
-}
+.next { background:#4caf50; color:white; }
+.back { background:orange; color:white; }
+.reset { background:red; color:white; }
 </style>
 </head>
 
 <body>
 
-<!-- СТАРТ -->
-<div id="start" class="screen">
-  <img src="https://drive.google.com/uc?export=view&id=1Z75HN4p5klgCvDHPNyzhb2SeLdln3cUg">
-  <div style="font-size:5vw;font-weight:900;">
-    Скоро начнём!
-  </div>
-</div>
+<h1>Оператор</h1>
 
-<!-- ОЖИДАНИЕ -->
-<div id="waiting" class="screen">
-  Смотрите на сцену!
-</div>
+<div id="status">Ожидание</div>
 
-<!-- ИГРА -->
-<div id="game">
-  <h1 id="title"></h1>
-  <div id="timer"></div>
-  <ul id="options"></ul>
-</div>
+<button id="nextBtn" class="next">Загрузка...</button>
+<button id="backBtn" class="back">Назад</button>
+<button id="resetBtn" class="reset">Сбросить игру</button>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -113,19 +58,13 @@ firebase.initializeApp({
 const db = firebase.database();
 
 let questions = [];
-let ready = false;
-let voted = false;
-let timerInterval = null;
+let current = -1;
 
-const startScreen = document.getElementById("start");
-const waiting = document.getElementById("waiting");
-const game = document.getElementById("game");
+const status = document.getElementById("status");
+const nextBtn = document.getElementById("nextBtn");
+const backBtn = document.getElementById("backBtn");
 
-const title = document.getElementById("title");
-const options = document.getElementById("options");
-const timer = document.getElementById("timer");
-
-/* загрузка таблицы */
+/* загрузка */
 fetch(CSV_URL)
 .then(r => r.text())
 .then(text => {
@@ -136,88 +75,52 @@ fetch(CSV_URL)
     options:cols.slice(1).map(c=>c.trim()).filter(Boolean)
   }));
 
-  ready = true;
+  updateButtons();
 });
 
-/* экраны */
-function showStart(){
-  startScreen.style.display="flex";
-  waiting.style.display="none";
-  game.style.display="none";
+function showQuestion(i){
+  current = i;
+  db.ref('currentQuestion').set(i);
+
+  status.innerText = "Сейчас: " + (i+1) + ". " + questions[i].text;
+
+  updateButtons();
 }
 
-function showWaiting(){
-  startScreen.style.display="none";
-  waiting.style.display="flex";
-  game.style.display="none";
-}
+nextBtn.onclick = ()=>{
+  if(current === -1) showQuestion(0);
+  else if(current < questions.length-1) showQuestion(current+1);
+};
 
-function showGame(){
-  startScreen.style.display="none"; // 💥 КЛЮЧЕВОЕ
-  waiting.style.display="none";
-  game.style.display="flex";
-}
+backBtn.onclick = ()=>{
+  if(current > 0) showQuestion(current-1);
+};
 
-/* Firebase */
-db.ref('currentQuestion').on('value', snap => {
-  const current = snap.val();
+document.getElementById("resetBtn").onclick = ()=>{
+  current = -1;
+  db.ref('currentQuestion').set(-1);
+  status.innerText = "Ожидание";
+  updateButtons();
+};
 
-  if(current === null || current === -1){
-    showStart();
-    return;
+function updateButtons(){
+  if(!questions.length) return;
+
+  if(current === -1){
+    nextBtn.innerText = "Начать: " + questions[0].text;
+  } else if(current < questions.length-1){
+    nextBtn.innerText = "Далее: " + questions[current+1].text;
+  } else {
+    nextBtn.style.display="none";
   }
 
-  if(!ready) return;
-  if(!questions[current]) return;
-
-  showGame();
-
-  voted = false;
-  clearInterval(timerInterval);
-
-  const q = questions[current];
-
-  title.innerText = q.text;
-  options.innerHTML = "";
-
-  q.options.forEach((opt,i)=>{
-    const li=document.createElement('li');
-    li.innerText=opt;
-
-    li.onclick=()=>{
-      if(voted) return;
-
-      voted=true;
-
-      db.ref('votes/'+current+'/'+i)
-        .transaction(v=>(v||0)+1);
-
-      li.classList.add('selected');
-
-      timer.innerText="";
-      clearInterval(timerInterval);
-
-      setTimeout(()=>{
-        showWaiting();
-      },800);
-    };
-
-    options.appendChild(li);
-  });
-
-  let time=5;
-  timer.innerText="⏳ "+time;
-
-  timerInterval=setInterval(()=>{
-    time--;
-    if(time<=0){
-      clearInterval(timerInterval);
-      showWaiting();
-    } else {
-      timer.innerText="⏳ "+time;
-    }
-  },1000);
-});
+  if(current > 0){
+    backBtn.style.display="block";
+    backBtn.innerText = "Назад: " + questions[current-1].text;
+  } else {
+    backBtn.style.display="none";
+  }
+}
 </script>
 
 </body>
