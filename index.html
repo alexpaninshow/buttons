@@ -50,25 +50,13 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 let questions = [];
-let timerId=null;
-let voted=false;
-let time=0;
-
-const title = document.getElementById("title");
-const options = document.getElementById("options");
-const timer = document.getElementById("timer");
 
 function parseCSV(text){
-  const rows = text.replace(/\r/g,'').split('\n').filter(r=>r.trim());
-  return rows.slice(1).map(row=>{
-    const cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g)||[];
-    return {
-      text:(cols[0]||"").replace(/"/g,'').trim(),
-      options:[cols[1],cols[2],cols[3]]
-        .map(c=>(c||"").replace(/"/g,'').trim())
-        .filter(Boolean)
-    };
-  });
+  const rows = text.trim().split('\n').map(r=>r.split(','));
+  return rows.slice(1).map(cols=>({
+    text: (cols[0]||"").trim(),
+    options: cols.slice(1).map(c=>c.trim()).filter(Boolean)
+  }));
 }
 
 fetch(CSV_URL)
@@ -76,6 +64,14 @@ fetch(CSV_URL)
 .then(text=>{
   questions=parseCSV(text);
 });
+
+let timerId=null;
+let voted=false;
+let time=0;
+
+const title = document.getElementById("title");
+const options = document.getElementById("options");
+const timer = document.getElementById("timer");
 
 function showWaiting(){
   title.innerText="Шоу";
@@ -107,16 +103,13 @@ db.ref('currentQuestion').on('value', snap => {
       if(voted || time<=0) return;
 
       voted=true;
-
       if(timerId) clearInterval(timerId);
-      timer.innerText="";
 
       db.ref('votes/'+current+'/'+i)
         .transaction(v=>(v||0)+1);
 
       li.classList.add('selected');
-
-      setTimeout(showWaiting, 200);
+      setTimeout(showWaiting,200);
     };
 
     options.appendChild(li);
