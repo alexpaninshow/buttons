@@ -5,7 +5,11 @@
 <title>Старт</title>
 
 <style>
-html, body { height:100%; margin:0; }
+html, body {
+  height:100%;
+  margin:0;
+}
+
 body {
   background:#111;
   display:flex;
@@ -13,6 +17,7 @@ body {
   justify-content:center;
   font-family:Arial;
 }
+
 #startBtn {
   width:90%;
   max-width:600px;
@@ -23,6 +28,7 @@ body {
   color:white;
   border:none;
   border-radius:30px;
+  cursor:pointer;
 }
 </style>
 </head>
@@ -42,17 +48,16 @@ firebase.initializeApp({
 var db = firebase.database();
 var btn = document.getElementById("startBtn");
 
-btn.onclick = function(){
+btn.onclick = function() {
 
   btn.innerText = "Запуск...";
   btn.disabled = true;
 
   db.ref('votes').remove();
 
-  // 🔥 ПРОСТО ЧИСЛО
   db.ref('currentQuestion').set(-999);
 
-  setTimeout(function(){
+  setTimeout(function() {
     window.location.href = "operator.html";
   }, 200);
 };
