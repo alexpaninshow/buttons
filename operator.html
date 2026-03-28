@@ -90,22 +90,20 @@ var backBtn = document.getElementById("backBtn");
 
 /* CSV */
 fetch(CSV_URL)
-.then(function(r){ return r.text(); })
-.then(function(text){
-  var rows = text.trim().split('\n').map(function(r){ return r.split(','); });
+.then(r => r.text())
+.then(text => {
+  var rows = text.trim().split('\n').map(r => r.split(','));
 
-  questions = rows.slice(1).map(function(c){
-    return {
-      text:(c[0] || "").trim(),
-      options:c.slice(1).map(function(x){ return x.trim(); }).filter(Boolean)
-    };
-  });
+  questions = rows.slice(1).map(c => ({
+    text:(c[0] || "").trim(),
+    options:c.slice(1).map(x => x.trim()).filter(Boolean)
+  }));
 
   updateButtons();
 });
 
 /* Firebase */
-db.ref('currentQuestion').on('value', function(snap){
+db.ref('currentQuestion').on('value', snap => {
 
   current = snap.val();
 
@@ -113,12 +111,12 @@ db.ref('currentQuestion').on('value', function(snap){
     lastQuestion = current;
   }
 
-  if(timerInterval) clearInterval(timerInterval);
+  clearInterval(timerInterval);
 
   if(current === -999){
     status.innerText = "Ожидание...";
     timerEl.innerText = "⏳ -";
-    showResult();
+    showResult(); // отдельно
   }
   else if(current >= 0 && questions[current]){
     status.innerText = "Сейчас: " + (current+1) + ". " + questions[current].text;
@@ -136,10 +134,11 @@ db.ref('currentQuestion').on('value', function(snap){
 
 /* таймер */
 function startTimer(){
+
   var t = 5;
   timerEl.innerText = "⏳ " + t;
 
-  timerInterval = setInterval(function(){
+  timerInterval = setInterval(() => {
     t--;
     timerEl.innerText = "⏳ " + t;
 
@@ -147,16 +146,15 @@ function startTimer(){
       clearInterval(timerInterval);
       db.ref('currentQuestion').set(-999);
     }
-
   },1000);
 }
 
-/* результат — полностью отдельно */
+/* результат (ПОЛНОСТЬЮ ОТДЕЛЁН) */
 function showResult(){
 
   if(lastQuestion < 0 || !questions[lastQuestion]) return;
 
-  db.ref('votes/'+lastQuestion).once('value', function(snap){
+  db.ref('votes/'+lastQuestion).once('value', snap => {
 
     var votes = snap.val() || {};
     var opts = questions[lastQuestion].options;
@@ -165,8 +163,7 @@ function showResult(){
     var countMax = 0;
     var winner = -1;
 
-    opts.forEach(function(opt,i){
-
+    opts.forEach((opt,i)=>{
       var v = votes[i] || 0;
 
       if(v > max){
@@ -181,16 +178,16 @@ function showResult(){
 
     if(max <= 0 || countMax > 1){
       resultEl.innerText = "Ничья";
-      return;
+    } else {
+      resultEl.innerText = "Победил: " + opts[winner] + " (" + max + ")";
     }
 
-    resultEl.innerText = "Победил: " + opts[winner] + " (" + max + ")";
   });
 }
 
 /* КНОПКИ */
 
-nextBtn.onclick = function(){
+nextBtn.onclick = () => {
 
   if(!questions.length) return;
 
@@ -211,9 +208,8 @@ nextBtn.onclick = function(){
   }
 };
 
-backBtn.onclick = function(){
+backBtn.onclick = () => {
 
-  // из ожидания
   if(current === -999){
     if(lastQuestion > 0){
       db.ref('currentQuestion').set(lastQuestion - 1);
@@ -221,14 +217,13 @@ backBtn.onclick = function(){
     return;
   }
 
-  // обычный режим
   if(current > 0){
     db.ref('currentQuestion').set(current - 1);
   }
 };
 
 /* сброс */
-document.getElementById("resetBtn").onclick = function(){
+document.getElementById("resetBtn").onclick = () => {
 
   if(!confirm("Вы уверены, что хотите полностью сбросить игру?")) return;
 
@@ -236,21 +231,19 @@ document.getElementById("resetBtn").onclick = function(){
   db.ref('currentQuestion').set(-1);
 };
 
-/* ПОДПИСИ — ПРОСТАЯ ЛОГИКА */
+/* подписи */
 function updateButtons(){
 
   if(!questions.length) return;
 
   var base = (current === -999) ? lastQuestion : current;
 
-  // NEXT
   if(base < questions.length - 1){
     nextBtn.innerText = "Далее: " + (base+2) + ". " + questions[base+1].text;
   } else {
     nextBtn.innerText = "Конец";
   }
 
-  // BACK
   if(base > 0){
     backBtn.style.display = "block";
     backBtn.innerText = "Назад: " + base + ". " + questions[base-1].text;
