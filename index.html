@@ -15,7 +15,6 @@ body {
   color:white;
 }
 
-/* экраны */
 .screen {
   position:fixed;
   width:100%;
@@ -27,31 +26,19 @@ body {
   text-align:center;
 }
 
-#start { background:#000; }
-#waiting { display:none; font-size:5vw; font-weight:900; }
+#start { background:#000; z-index:10; }
+#waiting { display:none; font-size:6vw; font-weight:900; }
 #game { display:none; height:100%; flex-direction:column; }
 
-/* старт */
-#start img {
-  max-width:70%;
-  border-radius:20px;
-  margin-bottom:20px;
-}
+h1 { font-size:5vw; margin:10px; }
 
-/* вопрос */
-h1 {
-  font-size:4vw;
-  margin:10px;
-}
-
-/* таймер */
 #timerBarWrap {
-  width:85%;
-  height:50px;
+  width:90%;
+  height:60px;
   background:#222;
-  border-radius:30px;
+  border-radius:40px;
   overflow:hidden;
-  margin:20px auto;
+  margin:30px auto;
 }
 
 #timerBar {
@@ -61,7 +48,6 @@ h1 {
   transition: width 1s linear, background 1s linear;
 }
 
-/* варианты */
 ul {
   flex:1;
   display:flex;
@@ -75,17 +61,17 @@ li {
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size:5vw;
+  font-size:6vw;
   font-weight:900;
   margin:6px 0;
   background:#333;
-  border-radius:15px;
-  border:4px solid #888;
+  border-radius:20px;
+  border:5px solid #888;
   cursor:pointer;
 }
 
 li.selected {
-  border:5px solid #00e676;
+  border:6px solid #00e676;
   background:#2e7d32;
 }
 </style>
@@ -94,8 +80,8 @@ li.selected {
 <body>
 
 <div id="start" class="screen">
-  <img src="start.jpg">
-  <div style="font-size:4vw;font-weight:900;">Скоро начнём!</div>
+  <img src="start.jpg" style="max-width:70%;border-radius:20px;margin-bottom:20px;">
+  <div style="font-size:5vw;font-weight:900;">Скоро начнём!</div>
 </div>
 
 <div id="waiting" class="screen">Смотрите на сцену!</div>
@@ -135,7 +121,6 @@ const title = document.getElementById("title");
 const options = document.getElementById("options");
 const timerBar = document.getElementById("timerBar");
 
-/* загрузка */
 fetch(CSV_URL)
 .then(r => r.text())
 .then(text => {
@@ -149,7 +134,6 @@ fetch(CSV_URL)
   ready = true;
 });
 
-/* экраны */
 function showStart(){
   startScreen.style.display="flex";
   waiting.style.display="none";
@@ -168,7 +152,6 @@ function showGame(){
   game.style.display="flex";
 }
 
-/* слушаем */
 db.ref('currentQuestion').on('value', snap => {
 
   const current = snap.val();
@@ -211,16 +194,19 @@ db.ref('currentQuestion').on('value', snap => {
     options.appendChild(li);
   });
 
-  /* таймер */
+  /* 🔥 ИДЕАЛЬНЫЙ ТАЙМЕР (как у тебя был изначально) */
   let total = 5;
   let time = total;
 
+  // жёсткий ресет
   timerBar.style.transition = "none";
   timerBar.style.width = "100%";
+  timerBar.style.background = "hsl(120,100%,50%)";
 
-  setTimeout(()=>{
+  // даём браузеру применить стиль
+  requestAnimationFrame(() => {
     timerBar.style.transition = "width 1s linear, background 1s linear";
-  },50);
+  });
 
   timerInterval=setInterval(()=>{
     time--;
@@ -229,7 +215,7 @@ db.ref('currentQuestion').on('value', snap => {
     timerBar.style.width = percent + "%";
 
     let progress = (total - time) / total;
-    let hue = 120 - (120 * progress);
+    let hue = 120 - (120 * progress); // 120 → 0
     timerBar.style.background = "hsl(" + hue + ",100%,50%)";
 
     if(time <= 0){
