@@ -59,6 +59,8 @@ const db = firebase.database();
 let questions = [];
 let current = -1;
 
+let lastHandled = null; // 🔥 главный фикс
+
 let timerInterval = null;
 let timeLeft = 0;
 let timerFinished = false;
@@ -87,7 +89,13 @@ fetch(CSV_URL)
 /* Firebase */
 db.ref('currentQuestion').on('value', snap => {
 
-  current = snap.val() ?? -1;
+  const newValue = snap.val() ?? -1;
+
+  // 🔥 игнор дубля
+  if(newValue === lastHandled) return;
+  lastHandled = newValue;
+
+  current = newValue;
 
   clearInterval(timerInterval);
   timerFinished = false;
@@ -150,7 +158,7 @@ nextBtn.onclick = ()=>{
   }
 };
 
-/* 🔥 назад (универсальный и правильный) */
+/* назад */
 backBtn.onclick = ()=>{
   if(!questions.length || lock) return;
 
@@ -159,10 +167,8 @@ backBtn.onclick = ()=>{
   if(c === -1) return;
 
   if(timerFinished){
-    // 🔁 ВСЕГДА повтор
-    showQuestion(c);
+    showQuestion(c); // повтор
   } else {
-    // ⬅ назад
     if(c > 0){
       showQuestion(c - 1);
     }
@@ -184,14 +190,12 @@ function updateButtons(){
     return;
   }
 
-  // зелёная
   if(current < questions.length - 1){
     nextBtn.innerText = "Далее: " + questions[current+1].text;
   } else {
     nextBtn.innerText = "Конец";
   }
 
-  // назад
   backBtn.style.display = "block";
 
   if(timerFinished){
@@ -205,3 +209,6 @@ function updateButtons(){
   }
 }
 </script>
+
+</body>
+</html>
