@@ -26,7 +26,7 @@ body {
   text-align:center;
 }
 
-/* 🔥 СТАРТ */
+/* СТАРТ */
 #start {
   background:#000;
   z-index:10;
@@ -44,7 +44,7 @@ body {
 
 h1 { font-size:5vw; margin:10px; }
 
-/* 🔥 ПОЛОСКА */
+/* ПОЛОСКА */
 #timerBarWrap {
   width:90%;
   height:70px;
@@ -92,9 +92,8 @@ li.selected {
 
 <body>
 
-<!-- 🔥 СТАРТОВЫЙ ЭКРАН -->
 <div id="start" class="screen">
-  <img src="https://drive.google.com/uc?export=view&id=1Z75HN4p5klgCvDHPNyzhb2SeLdln3cUg">
+  <img src="https://lh3.googleusercontent.com/d/1Z75HN4p5klgCvDHPNyzhb2SeLdln3cUg">
   <div style="font-size:5vw;font-weight:900;">
     Скоро начнём!
   </div>
@@ -128,6 +127,7 @@ let questions = [];
 let ready = false;
 let voted = false;
 let timerInterval = null;
+let timerStopped = false;
 
 const startScreen = document.getElementById("start");
 const waiting = document.getElementById("waiting");
@@ -187,6 +187,7 @@ db.ref('currentQuestion').on('value', snap => {
   showGame();
 
   voted = false;
+  timerStopped = false;
   clearInterval(timerInterval);
 
   const q = questions[current];
@@ -202,13 +203,15 @@ db.ref('currentQuestion').on('value', snap => {
       if(voted) return;
 
       voted=true;
+      timerStopped = true;
+
+      clearInterval(timerInterval);
 
       db.ref('votes/'+current+'/'+i)
         .transaction(v=>(v||0)+1);
 
       li.classList.add('selected');
 
-      clearInterval(timerInterval);
       setTimeout(()=> showWaiting(), 800);
     };
 
@@ -227,6 +230,8 @@ db.ref('currentQuestion').on('value', snap => {
   },50);
 
   timerInterval=setInterval(()=>{
+    if(timerStopped) return;
+
     time--;
 
     let percent = (time/total)*100;
