@@ -22,7 +22,6 @@ body {
 #startBtn {
   width:100%;
   max-width:600px;
-
   padding:40px 20px;
 
   font-size:6vw;
@@ -78,24 +77,19 @@ btn.onclick = async () => {
   btn.disabled = true;
 
   try {
-    // 🔥 запускаем экран "Смотрите на сцену"
+    // 🔥 сигнал перезагрузки зрителям
+    await db.ref('reloadSignal').set(Date.now());
+
+    // 🔥 переводим всех в "Смотрите на сцену"
     await db.ref('currentQuestion').set(-999);
 
     // чистим голоса
     await db.ref('votes').remove();
 
-    // очистка кеша
-    if ('caches' in window) {
-      caches.keys().then(names => {
-        names.forEach(name => caches.delete(name));
-      });
-    }
-
   } catch(e){
     console.log(e);
   }
 
-  // переход к оператору
   window.location.href = "operator.html";
 };
 </script>
