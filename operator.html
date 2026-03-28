@@ -5,39 +5,84 @@
 <title>Оператор</title>
 
 <style>
-body { margin:0; display:flex; font-family:Arial; background:#111; color:white; }
-
-#left { flex:1; display:flex; flex-direction:column; text-align:center; }
-
-#top { padding:20px; }
-#status { font-size:22px; }
-#timer { font-size:28px; margin-top:10px; }
-
-#buttons { flex:1; display:flex; flex-direction:column; padding:10px; }
-
-button {
-  margin:6px 0;
-  font-size:18px;
-  padding:12px;
-  border-radius:15px;
-  border:none;
+body {
+  margin:0;
+  display:flex;
+  font-family:Arial;
+  background:#111;
   color:white;
 }
 
-.next{background:#4caf50;}
-.back{background:orange;}
-.reset{background:red;}
+/* ЛЕВАЯ ЧАСТЬ */
+#left {
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  text-align:center;
+}
 
+#top {
+  padding:20px;
+}
+
+#status {
+  font-size:24px;
+  margin-bottom:10px;
+}
+
+#timer {
+  font-size:32px;
+}
+
+/* КНОПКИ */
+#buttons {
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  padding:10px;
+}
+
+button {
+  margin:6px 0;
+  padding:14px;
+  font-size:18px;
+  border:none;
+  border-radius:15px;
+  color:white;
+}
+
+.next { background:#4caf50; }
+.back { background:orange; }
+.reset { background:red; }
+
+/* МИНИ ЭКРАН */
 #viewer {
   width:300px;
   background:#000;
-  padding:10px;
   border-left:3px solid #333;
+  padding:10px;
+  display:flex;
+  flex-direction:column;
 }
 
-#vTitle { font-size:16px; margin-bottom:10px; }
-#vTimerWrap { height:8px; background:#222; border-radius:10px; overflow:hidden; }
-#vBar { height:100%; width:100%; background:lime; }
+#vTitle {
+  font-size:16px;
+  margin-bottom:10px;
+}
+
+#vTimerWrap {
+  height:10px;
+  background:#222;
+  border-radius:10px;
+  overflow:hidden;
+  margin-bottom:10px;
+}
+
+#vBar {
+  height:100%;
+  width:100%;
+  background:hsl(120,100%,50%);
+}
 
 .vOpt {
   background:#333;
@@ -52,6 +97,7 @@ button {
 <body>
 
 <div id="left">
+
 <div id="top">
 <div id="status">Загрузка...</div>
 <div id="timer">⏳ -</div>
@@ -62,10 +108,11 @@ button {
 <button id="backBtn" class="back"></button>
 <button id="resetBtn" class="reset">Полный сброс</button>
 </div>
+
 </div>
 
 <div id="viewer">
-<div id="vTitle">Подключение...</div>
+<div id="vTitle">...</div>
 <div id="vTimerWrap"><div id="vBar"></div></div>
 <div id="vOpts"></div>
 </div>
@@ -80,53 +127,51 @@ firebase.initializeApp({
 
 var db = firebase.database();
 
-var questions=[];
-var current=-1;
+var questions = [];
+var current = -1;
 
-var users = {};
-var activeUser = null;
+/* DOM */
+var statusEl = document.getElementById("status");
+var timerEl = document.getElementById("timer");
 
-/* CSV */
+var nextBtn = document.getElementById("nextBtn");
+var backBtn = document.getElementById("backBtn");
+
+var vTitle = document.getElementById("vTitle");
+var vBar = document.getElementById("vBar");
+var vOpts = document.getElementById("vOpts");
+
+/* ===== CSV ===== */
 fetch("https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv&gid=0")
 .then(r=>r.text())
 .then(t=>{
-  var rows=t.trim().split('\n');
+
+  var rows = t.trim().split('\n');
 
   for(var i=1;i<rows.length;i++){
-    var c=rows[i].split(',');
-    var q={text:c[0],options:[]};
-    for(var j=1;j<c.length;j++) if(c[j]) q.options.push(c[j]);
+    var c = rows[i].split(',');
+    var q = { text:c[0], options:[] };
+
+    for(var j=1;j<c.length;j++){
+      if(c[j]) q.options.push(c[j]);
+    }
+
     questions.push(q);
   }
 
   updateButtons();
 });
 
-/* USERS */
-db.ref("users").on("value",function(snap){
-  users = snap.val() || {};
-  pickRandomUser();
-});
-
-/* выбираем случайного */
-function pickRandomUser(){
-
-  var now = Date.now();
-  var arr = [];
-
-  for(var id in users){
-    if(now - users[id].t < 10000){
-      arr.push(id);
-    }
-  }
-
-  if(arr.length){
-    activeUser = arr[Math.floor(Math.random()*arr.length)];
-  }
+/* ===== УСТАНОВКА ВОПРОСА ===== */
+function setQ(i){
+  db.ref("currentQuestion").set({
+    index:i,
+    startTime:Date.now()
+  });
 }
 
-/* CURRENT */
-db.ref("currentQuestion").on("value",function(snap){
+/* ===== СИНХРОНИЗАЦИЯ ===== */
+db.ref("currentQuestion").on("value", function(snap){
 
   var d = snap.val();
   if(!d) return;
@@ -138,53 +183,50 @@ db.ref("currentQuestion").on("value",function(snap){
   updateButtons();
 });
 
-/* оператор */
+/* ===== ОПЕРАТОР ===== */
 function updateOperator(d){
 
-  if(current>=0 && questions[current]){
-    document.getElementById("status").innerText =
-      (current+1)+". "+questions[current].text;
-
+  if(current >= 0 && questions[current]){
+    statusEl.innerText = (current+1) + ". " + questions[current].text;
     startTimer(d.startTime);
   }
-  else if(current===-999){
-    document.getElementById("status").innerText="Ожидание...";
+  else if(current === -999){
+    statusEl.innerText = "Ожидание...";
+    timerEl.innerText = "⏳ -";
   }
   else{
-    document.getElementById("status").innerText="Старт";
+    statusEl.innerText = "Старт";
+    timerEl.innerText = "⏳ -";
   }
 }
 
-/* таймер */
-function startTimer(st){
+/* ===== ТАЙМЕР ===== */
+function startTimer(startTime){
+
   clearInterval(window.ti);
 
   function tick(){
-    var t=5-Math.floor((Date.now()-st)/1000);
-    if(t<0)t=0;
-    document.getElementById("timer").innerText="⏳ "+t;
+    var t = 5 - Math.floor((Date.now() - startTime)/1000);
+    if(t < 0) t = 0;
+    timerEl.innerText = "⏳ " + t;
   }
 
   tick();
-  window.ti=setInterval(tick,300);
+  window.ti = setInterval(tick, 200);
 }
 
-/* viewer */
+/* ===== МИНИ ЭКРАН ===== */
 function updateViewer(d){
 
-  var vTitle = document.getElementById("vTitle");
-  var vBar = document.getElementById("vBar");
-  var vOpts = document.getElementById("vOpts");
-
-  if(current===-1){
-    vTitle.innerText="Скоро начнём!";
-    vOpts.innerHTML="";
+  if(current === -1){
+    vTitle.innerText = "Скоро начнём!";
+    vOpts.innerHTML = "";
     return;
   }
 
-  if(current===-999){
-    vTitle.innerText="Смотрите на сцену!";
-    vOpts.innerHTML="";
+  if(current === -999){
+    vTitle.innerText = "Смотрите на сцену!";
+    vOpts.innerHTML = "";
     return;
   }
 
@@ -192,73 +234,77 @@ function updateViewer(d){
 
   vTitle.innerText = questions[current].text;
 
-  vOpts.innerHTML="";
+  vOpts.innerHTML = "";
 
   for(var i=0;i<questions[current].options.length;i++){
-    var d=document.createElement("div");
-    d.className="vOpt";
-    d.innerText=questions[current].options[i];
-    vOpts.appendChild(d);
+    var el = document.createElement("div");
+    el.className = "vOpt";
+    el.innerText = questions[current].options[i];
+    vOpts.appendChild(el);
   }
 
-  /* таймер */
-  var total=5000;
-  var passed=Date.now()-d.startTime;
-  if(passed<0)passed=0;
-  if(passed>total)passed=total;
+  /* СИНХРОННЫЙ БЕГУНОК */
+  var total = 5000;
+  var passed = Date.now() - d.startTime;
 
-  var remain=total-passed;
+  if(passed < 0) passed = 0;
+  if(passed > total) passed = total;
 
-  vBar.style.transition="none";
-  vBar.style.width=(remain/total*100)+"%";
+  var remain = total - passed;
+
+  vBar.style.transition = "none";
+  vBar.style.width = (remain / total * 100) + "%";
 
   vBar.offsetHeight;
 
-  vBar.style.transition="width "+remain+"ms linear";
+  vBar.style.transition = "width " + remain + "ms linear";
 
   setTimeout(function(){
-    vBar.style.width="0%";
+    vBar.style.width = "0%";
   },50);
 }
 
-/* кнопки */
-document.getElementById("nextBtn").onclick=function(){
-  if(current<0) setQ(0);
-  else if(current<questions.length-1) setQ(current+1);
+/* ===== КНОПКИ ===== */
+nextBtn.onclick = function(){
+
+  if(current === -1 || current === -999){
+    setQ(0);
+    return;
+  }
+
+  if(current < questions.length - 1){
+    setQ(current + 1);
+  }
 };
 
-document.getElementById("backBtn").onclick=function(){
-  if(current>0) setQ(current-1);
+backBtn.onclick = function(){
+
+  if(current > 0){
+    setQ(current - 1);
+  }
 };
 
-function setQ(i){
-  db.ref("currentQuestion").set({index:i,startTime:Date.now()});
-}
-
-/* подписи */
+/* ===== ПОДПИСИ ===== */
 function updateButtons(){
 
   if(!questions.length) return;
 
-  var next=document.getElementById("nextBtn");
-  var back=document.getElementById("backBtn");
-
-  if(current<=0){
-    back.style.display="none";
+  if(current <= 0){
+    backBtn.style.display = "none";
   } else {
-    back.style.display="block";
-    back.innerText="Назад: "+current;
+    backBtn.style.display = "block";
+    backBtn.innerText = "Назад: " + current;
   }
 
-  if(current<questions.length-1){
-    next.innerText="Далее: "+(current+2);
+  if(current < questions.length - 1){
+    nextBtn.innerText = "Далее: " + (current + 2);
   } else {
-    next.innerText="Конец";
+    nextBtn.innerText = "Конец";
   }
 }
 
-/* сброс */
-document.getElementById("resetBtn").onclick=function(){
+/* ===== СБРОС ===== */
+document.getElementById("resetBtn").onclick = function(){
   if(!confirm("Вы уверены, что хотите полностью сбросить игру?")) return;
   db.ref("votes").remove();
   setQ(-1);
