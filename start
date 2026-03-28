@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Старт спектакля</title>
+
+<style>
+html, body {
+  height:100%;
+  margin:0;
+}
+
+body {
+  background:#111;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-family:Arial;
+}
+
+/* КНОПКА */
+#startBtn {
+  width:80%;
+  max-width:600px;
+  height:25vh;
+
+  font-size:5vw;
+  font-weight:bold;
+
+  background:#2196f3;
+  color:white;
+
+  border:none;
+  border-radius:30px;
+
+  cursor:pointer;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  text-align:center;
+
+  transition:transform 0.1s, box-shadow 0.1s;
+}
+
+/* эффект */
+#startBtn:active {
+  transform:scale(0.97);
+  box-shadow:0 0 20px rgba(33,150,243,0.7);
+}
+</style>
+</head>
+
+<body>
+
+<button id="startBtn">
+  Начать спектакль
+</button>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+firebase.initializeApp({
+  databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"
+});
+
+const db = firebase.database();
+
+const btn = document.getElementById("startBtn");
+
+btn.onclick = async () => {
+
+  btn.innerText = "Запуск...";
+  btn.disabled = true;
+
+  try {
+    // 🔥 СБРОС СОСТОЯНИЯ
+    await db.ref('currentQuestion').set(-1);
+
+    // 🔥 ОЧИСТКА ГОЛОСОВ (опционально, но лучше да)
+    await db.ref('votes').remove();
+
+    // 🔥 ЧИСТИМ КЭШ (если браузер поддерживает)
+    if ('caches' in window) {
+      caches.keys().then(names => {
+        names.forEach(name => caches.delete(name));
+      });
+    }
+
+  } catch(e){
+    console.log(e);
+  }
+
+  // 🔥 ПЕРЕХОД К ОПЕРАТОРУ
+  window.location.href = "operator.html";
+};
+</script>
+
+</body>
+</html>
