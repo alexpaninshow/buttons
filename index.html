@@ -6,6 +6,9 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
 
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
 <style>
 html, body { height:100%; margin:0; }
 
@@ -75,22 +78,19 @@ li.selected {
   <ul id="options"></ul>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
 <script>
 const firebaseConfig = {
-  apiKey: "AIzaSyXXXX",
+  apiKey: "AIzaSyBr2DziLnevo6OM69tZL8gdJcTQhSpgeIk",
   authDomain: "buttons-panin.firebaseapp.com",
   databaseURL: "https://buttons-panin-default-rtdb.firebaseio.com",
   projectId: "buttons-panin",
-  storageBucket: "buttons-panin.appspot.com",
-  messagingSenderId: "XXXX",
-  appId: "XXXX"
+  storageBucket: "buttons-panin.firebasestorage.app",
+  messagingSenderId: "303467096491",
+  appId: "1:303467096491:web:e5aea0f0764e4ecb550aee",
+  measurementId: "G-8HYF4MWJY1"
 };
 
 firebase.initializeApp(firebaseConfig);
-
 const db = firebase.database();
 
 const CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv&gid=0";
