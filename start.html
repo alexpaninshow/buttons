@@ -5,10 +5,7 @@
 <title>Старт</title>
 
 <style>
-html, body {
-  height:100%;
-  margin:0;
-}
+html, body { height:100%; margin:0; }
 
 body {
   background:#111;
@@ -45,13 +42,8 @@ body {
   font-style:italic;
 }
 
-.status-ok {
-  color:#00e676;
-}
-
-.status-check {
-  color:#ccc;
-}
+.status-ok { color:#00e676; }
+.status-check { color:#ccc; }
 </style>
 </head>
 
@@ -69,96 +61,74 @@ firebase.initializeApp({
 });
 
 var db = firebase.database();
-
 var btn = document.getElementById("startBtn");
 var statusEl = document.getElementById("status");
-
 var checking = false;
 
-/* держим зрителей на старте */
 function forceStart(){
-  db.ref('currentQuestion').set(-1);
+  db.ref('currentQuestion').set({index:-1,startTime:Date.now()});
 }
 
-/* визуально блокируем кнопку */
-function lockButton(){
+function lock(){
   btn.classList.add("disabled");
   btn.disabled = true;
 }
 
-/* разблокируем */
-function unlockButton(){
+function unlock(){
   btn.classList.remove("disabled");
   btn.disabled = false;
 }
 
-/* ПРОВЕРКА */
-function checkSystem(callback){
-
+function checkSystem(cb){
   checking = true;
-  lockButton();
-
-  statusEl.className = "status-check";
-  statusEl.innerText = "Проверка системы...";
+  lock();
+  statusEl.className="status-check";
+  statusEl.innerText="Проверка системы...";
 
   db.ref('currentQuestion').once('value', function(){
-
-    statusEl.className = "status-ok";
-    statusEl.innerText = "✔ Система готова к работе";
-
-    unlockButton();
-    checking = false;
-
-    if(callback) callback(true);
-
+    statusEl.className="status-ok";
+    statusEl.innerText="✔ Система готова к работе";
+    checking=false;
+    unlock();
+    if(cb) cb(true);
   }, function(){
-
-    statusEl.className = "status-check";
-    statusEl.innerText = "Ошибка подключения";
-
-    checking = false;
-
-    if(callback) callback(false);
+    statusEl.innerText="Ошибка подключения";
+    checking=false;
+    if(cb) cb(false);
   });
 }
 
-/* при загрузке */
 forceStart();
 checkSystem();
 
-/* каждые 60 секунд */
 setInterval(function(){
   forceStart();
   checkSystem();
 },60000);
 
-/* НАЖАТИЕ */
-btn.onclick = function(){
-
+btn.onclick=function(){
   if(checking) return;
 
-  lockButton();
-  btn.innerText = "Проверка...";
+  lock();
+  btn.innerText="Проверка...";
 
-  /* финальная проверка */
   checkSystem(function(ok){
-
     if(!ok){
-      btn.innerText = "Начинаем спектакль";
-      unlockButton();
+      btn.innerText="Начинаем спектакль";
+      unlock();
       return;
     }
 
-    btn.innerText = "Запуск...";
-
     db.ref('votes').remove();
 
-    db.ref('currentQuestion').set(-999);
+    db.ref('currentQuestion').set({
+      index:-999,
+      startTime:Date.now()
+    });
 
     setTimeout(function(){
-      window.location.href = "operator.html";
+      window.location.href="operator.html";
     },300);
-
   });
 };
 </script>
