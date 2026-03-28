@@ -11,10 +11,10 @@ body{
   color:#fff;
   font-family:Arial;
   display:flex;
-  justify-content:center;
-  align-items:center;
-  height:100vh;
   flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  height:100vh;
 }
 
 #status{font-size:24px;margin-bottom:10px}
@@ -39,7 +39,7 @@ button{
 .back{background:orange}
 .reset{background:red}
 
-#result{margin-top:20px;font-size:20px}
+#result{margin-top:20px;font-size:22px}
 </style>
 </head>
 
@@ -65,15 +65,12 @@ firebase.initializeApp({
 });
 var db=firebase.database();
 
-var questions=[];
-var current=-1;
+var questions=[],current=-1;
 
 /* CSV */
 fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vQVLFjRWrX9DiTY9f32pSs8v0Y3MfxLSFC-G-Gi43Z37Lt75BMj-1J8nQGNzgAQdOsR2_pKUmdxU7G6/pub?gid=0&single=true&output=csv")
 .then(r=>r.text())
 .then(t=>{
-  if(t.indexOf("<!DOCTYPE")!==-1){alert("Ошибка таблицы");return;}
-
   var rows=t.trim().split('\n');
 
   for(var i=1;i<rows.length;i++){
@@ -98,17 +95,10 @@ db.ref("currentQuestion").on("value",s=>{
 
   updateStatus(d);
   updateButtons();
-  showResult();
 
+  /* результат только после таймера */
   if(current>=0){
-    setTimeout(()=>{
-      db.ref("currentQuestion").once("value",snap=>{
-        var now=snap.val();
-        if(now && now.index===current){
-          db.ref("currentQuestion").set({index:-999,startTime:Date.now()});
-        }
-      });
-    },5000);
+    setTimeout(showResult,5000);
   }
 });
 
@@ -117,6 +107,7 @@ function updateStatus(d){
   if(current>=0 && questions[current]){
     status.innerText=(current+1)+". "+questions[current].text;
     startTimer(d.startTime);
+    result.innerText="";
   }else if(current===-999){
     status.innerText="Ожидание...";
     timer.innerText="";
@@ -177,15 +168,11 @@ function updateButtons(){
 
 /* РЕЗУЛЬТАТ */
 function showResult(){
-  if(current<0) return;
 
   db.ref("votes/"+current).once("value",s=>{
     var v=s.val();
 
-    if(!v){
-      result.innerText="Ничья";
-      return;
-    }
+    if(!v){ result.innerText="Ничья"; return; }
 
     var max=0,idx=-1,tie=false;
 
@@ -200,11 +187,16 @@ function showResult(){
       result.innerText="Победитель: "+questions[current].options[idx];
     }
   });
+
+  /* после результата → ожидание */
+  setTimeout(()=>{
+    db.ref("currentQuestion").set({index:-999,startTime:Date.now()});
+  },500);
 }
 
 /* СБРОС */
 resetBtn.onclick=function(){
-  if(!confirm("Вы уверены, что хотите полностью сбросить игру?")) return;
+  if(!confirm("Вы уверены?")) return;
 
   db.ref("votes").remove();
   db.ref("currentQuestion").set({index:-1,startTime:Date.now()});
