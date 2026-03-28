@@ -26,15 +26,22 @@ body {
   text-align:center;
 }
 
+/* СТАРТ */
 #start {
   background:#000;
   z-index:10;
 }
 
+/* 🔥 АДАПТИВНАЯ КАРТИНКА */
 #start img {
-  max-width:80%;
+  max-width:90vw;
+  max-height:70vh;
+  width:auto;
+  height:auto;
+  object-fit:contain;
+
   border-radius:20px;
-  margin-bottom:30px;
+  margin-bottom:20px;
   box-shadow:0 0 40px rgba(0,0,0,0.6);
 }
 
@@ -43,6 +50,7 @@ body {
 
 h1 { font-size:5vw; margin:10px; }
 
+/* ПОЛОСКА */
 #timerBarWrap {
   width:90%;
   height:70px;
@@ -90,6 +98,7 @@ li.selected {
 
 <body>
 
+<!-- СТАРТ -->
 <div id="start" class="screen">
   <img src="start.jpg">
   <div style="font-size:5vw;font-weight:900;">
