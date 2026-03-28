@@ -52,7 +52,6 @@ h1 { font-size:5vw; margin:10px; }
   height:100%;
   width:100%;
   background:hsl(120,100%,50%);
-  transition: width 1s linear, background 1s linear;
 }
 
 ul {
@@ -119,8 +118,8 @@ const db = firebase.database();
 
 let questions = [];
 let ready = false;
-let voted = false;
 let timerInterval = null;
+let voted = false;
 
 const startScreen = document.getElementById("start");
 const waiting = document.getElementById("waiting");
@@ -163,12 +162,12 @@ function showGame(){
   game.style.display="flex";
 }
 
-/* 🔥 СОСТОЯНИЯ */
+/* состояние */
 db.ref('currentQuestion').on('value', snap => {
 
   const current = snap.val();
 
-  if(current === -1 || current === null){
+  if(current === -1){
     showStart();
     return;
   }
@@ -205,22 +204,18 @@ db.ref('currentQuestion').on('value', snap => {
 
       li.classList.add('selected');
 
-      setTimeout(()=> showWaiting(), 800);
+      setTimeout(showWaiting, 800);
     };
 
     options.appendChild(li);
   });
 
+  // таймер
   let total = 5;
   let time = total;
 
-  timerBar.style.transition = "none";
   timerBar.style.width = "100%";
   timerBar.style.background = "hsl(120,100%,50%)";
-
-  requestAnimationFrame(()=>{
-    timerBar.style.transition = "width 1s linear, background 1s linear";
-  });
 
   timerInterval=setInterval(()=>{
     time--;
@@ -228,37 +223,15 @@ db.ref('currentQuestion').on('value', snap => {
     let percent = (time/total)*100;
     timerBar.style.width = percent + "%";
 
-    let progress = (total - time) / total;
-    let hue = 120 - (120 * progress);
+    let hue = 120 - (120 * ((total-time)/total));
     timerBar.style.background = "hsl(" + hue + ",100%,50%)";
 
     if(time <= 0){
       clearInterval(timerInterval);
-
-      setTimeout(()=>{
-        showWaiting();
-      },1000);
+      setTimeout(showWaiting, 1000);
     }
 
   },1000);
-});
-
-/* 🔥 МЯГКИЙ RELOAD */
-let lastReload = localStorage.getItem('reloadSignal') || 0;
-
-db.ref('reloadSignal').on('value', snap => {
-
-  const val = snap.val();
-  if(!val) return;
-
-  if(String(val) !== String(lastReload)){
-    localStorage.setItem('reloadSignal', val);
-
-    setTimeout(()=>{
-      location.reload();
-    }, 300);
-  }
-
 });
 </script>
 
