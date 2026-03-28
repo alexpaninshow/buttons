@@ -5,10 +5,7 @@
 <title>Старт</title>
 
 <style>
-html, body {
-  height:100%;
-  margin:0;
-}
+html, body { height:100%; margin:0; }
 
 body {
   background:#111;
@@ -48,16 +45,15 @@ firebase.initializeApp({
 var db = firebase.database();
 var btn = document.getElementById("startBtn");
 
-btn.onclick = function() {
+btn.onclick = function(){
 
   btn.innerText = "Запуск...";
   btn.disabled = true;
 
   db.ref('votes').remove();
-
   db.ref('currentQuestion').set(-999);
 
-  setTimeout(function() {
+  setTimeout(function(){
     window.location.href = "operator.html";
   }, 200);
 };
