@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Старт</title>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<style>
+body{
+  background:#000;
+  color:white;
+  font-family:'Montserrat',sans-serif;
+  text-align:center;
+  margin-top:100px;
+}
+
+button{
+  font-size:24px;
+  padding:20px 40px;
+  border-radius:12px;
+  border:none;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Запуск спектакля</h1>
+<button onclick="start()">Начать спектакль</button>
+
+<script>
+firebase.initializeApp({
+  databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"
+});
+
+const db = firebase.database();
+
+function start(){
+  db.ref().set({
+    game:{
+      status:"waiting",
+      currentQuestion:0,
+      timer:5
+    },
+    votes:{}
+  });
+}
+</script>
+
+</body>
+</html>

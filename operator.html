@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Оператор</title>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<style>
+body{
+  font-family:'Montserrat',sans-serif;
+  background:#111;
+  color:white;
+  padding:20px;
+}
+
+button{
+  padding:12px 20px;
+  margin:5px;
+  font-size:16px;
+  border:none;
+  border-radius:10px;
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Оператор</h2>
+
+<button onclick="showQuestion()">Начать вопрос</button>
+<button onclick="next()">Следующий вопрос</button>
+<button onclick="pause()">Пауза</button>
+<button onclick="reset()">Сброс игры</button>
+
+<script>
+firebase.initializeApp({
+  databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"
+});
+
+const db = firebase.database();
+
+let current = 0;
+
+function showQuestion(){
+  db.ref("game").update({
+    status:"playing",
+    timer:5
+  });
+}
+
+function next(){
+  current++;
+
+  db.ref("game").set({
+    status:"playing",
+    currentQuestion:current,
+    timer:5
+  });
+}
+
+function pause(){
+  db.ref("game/status").set("pause");
+}
+
+function reset(){
+  current = 0;
+
+  db.ref().set({
+    game:{
+      status:"waiting",
+      currentQuestion:0
+    },
+    votes:{}
+  });
+}
+</script>
+
+</body>
+</html>
