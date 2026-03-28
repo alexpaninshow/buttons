@@ -6,10 +6,15 @@
 
 <style>
 body { font-family: Arial; text-align: center; background:#222; color:white; padding:40px; }
+
 #status { font-size:26px; margin-bottom:10px; }
 #timer { font-size:24px; margin-bottom:20px; color:#ffeb3b; }
 
-.buttons { display:flex; flex-direction:column; align-items:center; }
+.buttons {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
 
 button {
   width: 80%;
@@ -68,15 +73,15 @@ const timerDiv = document.getElementById("timer");
 function parseCSV(text){
   const rows = text.trim().split('\n').map(r=>r.split(','));
   return rows.slice(1).map(cols=>({
-    text: (cols[0]||"").trim(),
-    options: cols.slice(1).map(c=>c.trim()).filter(Boolean)
+    text:(cols[0]||"").trim(),
+    options:cols.slice(1).map(c=>c.trim()).filter(Boolean)
   }));
 }
 
 fetch(CSV_URL)
 .then(r=>r.text())
 .then(text=>{
-  questions = parseCSV(text);
+  questions=parseCSV(text);
   updateButtons();
 });
 
@@ -87,16 +92,16 @@ function clearAll(){
 }
 
 function startTimer(){
-  let time = 5;
-  timerDiv.innerText = "Таймер: " + time;
+  let time=5;
+  timerDiv.innerText="Таймер: "+time;
 
-  visualTimer = setInterval(()=>{
+  visualTimer=setInterval(()=>{
     time--;
     if(time<=0){
       clearInterval(visualTimer);
       timerDiv.innerText="";
     } else {
-      timerDiv.innerText="Таймер: " + time;
+      timerDiv.innerText="Таймер: "+time;
     }
   },1000);
 }
@@ -104,12 +109,12 @@ function startTimer(){
 function showQuestion(i, instant=false){
   clearAll();
 
-  current = i;
-  lastShown = i;
+  current=i;
+  lastShown=i;
 
   db.ref('currentQuestion').set(i);
 
-  status.innerText = "Сейчас: " + questions[i].text;
+  status.innerText="Сейчас: "+questions[i].text;
 
   updateButtons();
 
@@ -117,64 +122,56 @@ function showQuestion(i, instant=false){
 
   startTimer();
 
-  autoTimer = setTimeout(()=>{
+  autoTimer=setTimeout(()=>{
     db.ref('currentQuestion').set(-1);
-    status.innerText = "Сейчас: Ожидание";
-    current = -1;
+    status.innerText="Сейчас: Ожидание";
+    current=-1;
     updateButtons();
   },5000);
 }
 
 // ВПЕРЁД
-nextBtn.onclick = ()=>{
-  let next = current === -1 ? lastShown + 1 : current + 1;
-
-  if(next < questions.length){
+nextBtn.onclick=()=>{
+  let next = current===-1 ? lastShown+1 : current+1;
+  if(next<questions.length){
     showQuestion(next);
   }
 };
 
-// 🔥 НАЗАД (ФИНАЛЬНЫЙ)
-backBtn.onclick = ()=>{
-
-  let prev;
-
-  if(current === -1){
-    prev = lastShown - 1;
-  } else {
-    prev = current - 1;
-  }
-
-  if(prev >= 0){
+// 🔥 НАЗАД (С ПРАВИЛЬНЫМ ТЕКСТОМ)
+backBtn.onclick=()=>{
+  let prev = current===-1 ? lastShown-1 : current-1;
+  if(prev>=0){
     showQuestion(prev, true);
   }
 };
 
-// СБРОС
-document.getElementById("resetBtn").onclick = ()=>{
+resetBtn.onclick=()=>{
   clearAll();
-  current = -1;
-  lastShown = -1;
+  current=-1;
+  lastShown=-1;
   db.ref('currentQuestion').set(-1);
   status.innerText="Сейчас: Ожидание";
   updateButtons();
 };
 
+// 🔥 ВАЖНО: текст кнопки = реальный prev
 function updateButtons(){
   if(!questions.length) return;
 
-  let next = current === -1 ? lastShown + 1 : current + 1;
+  let next = current===-1 ? lastShown+1 : current+1;
 
-  if(next < questions.length){
-    nextBtn.innerText = "Вопрос " + (next+1) + ": " + questions[next].text;
+  if(next<questions.length){
+    nextBtn.innerText="Вопрос "+(next+1)+": "+questions[next].text;
   }
 
-  let prev = current === -1 ? lastShown - 1 : current - 1;
+  let prev = current===-1 ? lastShown-1 : current-1;
 
-  if(prev >= 0){
-    backBtn.innerText = "Назад: " + questions[prev].text;
+  if(prev>=0){
+    backBtn.innerText="Назад: "+questions[prev].text;
+    backBtn.style.display="inline-block";
   } else {
-    backBtn.innerText = "Назад";
+    backBtn.style.display="none";
   }
 }
 </script>
