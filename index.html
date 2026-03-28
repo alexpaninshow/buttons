@@ -118,7 +118,6 @@ const db = firebase.database();
 
 let questions = [];
 let ready = false;
-let lastState = null;
 let timerInterval = null;
 let voted = false;
 
@@ -130,13 +129,10 @@ const title = document.getElementById("title");
 const options = document.getElementById("options");
 const timerBar = document.getElementById("timerBar");
 
-/* =========================
-   CSV
-========================= */
+/* CSV */
 fetch(CSV_URL)
 .then(r => r.text())
 .then(text => {
-
   const rows = text.trim().split('\n').map(r => r.split(','));
 
   questions = rows.slice(1).map(cols => ({
@@ -145,16 +141,9 @@ fetch(CSV_URL)
   }));
 
   ready = true;
-
-  // если Firebase уже прислал значение
-  if(lastState !== null){
-    handleState(lastState);
-  }
 });
 
-/* =========================
-   ЭКРАНЫ
-========================= */
+/* UI */
 function showStart(){
   startScreen.style.display="flex";
   waiting.style.display="none";
@@ -173,36 +162,11 @@ function showGame(){
   game.style.display="flex";
 }
 
-/* =========================
-   FIREBASE
-========================= */
+/* Firebase */
 db.ref('currentQuestion').on('value', snap => {
 
-  let raw = snap.val();
-
-  // нормализация
-  if(raw === null){
-    raw = -1;
-  }
-
-  const current = Number(raw);
-
-  lastState = current;
-
-  if(!ready) return;
-
-  handleState(current);
-});
-
-/* =========================
-   ЛОГИКА
-========================= */
-function handleState(current){
-
-  if(timerInterval){
-    clearInterval(timerInterval);
-    timerInterval = null;
-  }
+  const val = snap.val();
+  const current = (val === null) ? -1 : Number(val);
 
   if(current === -1){
     showStart();
@@ -214,11 +178,12 @@ function handleState(current){
     return;
   }
 
-  if(!questions[current]) return;
+  if(!ready || !questions[current]) return;
 
   showGame();
 
   voted = false;
+  clearInterval(timerInterval);
 
   const q = questions[current];
 
@@ -246,14 +211,6 @@ function handleState(current){
     options.appendChild(li);
   });
 
-  startTimer();
-}
-
-/* =========================
-   ТАЙМЕР
-========================= */
-function startTimer(){
-
   let total = 5;
   let time = total;
 
@@ -261,7 +218,6 @@ function startTimer(){
   timerBar.style.background = "hsl(120,100%,50%)";
 
   timerInterval=setInterval(()=>{
-
     time--;
 
     let percent = (time/total)*100;
@@ -276,7 +232,7 @@ function startTimer(){
     }
 
   },1000);
-}
+});
 </script>
 
 </body>
