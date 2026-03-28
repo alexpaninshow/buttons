@@ -34,6 +34,11 @@ button {
   cursor:pointer;
 }
 
+button:disabled {
+  opacity:0.5;
+  cursor:not-allowed;
+}
+
 .next { background:#4caf50; color:white; }
 .back { background:orange; color:white; }
 .reset { background:red; color:white; }
@@ -44,11 +49,11 @@ button {
 
 <h1>Оператор</h1>
 
-<div id="status">Ожидание</div>
+<div id="status">Загрузка...</div>
 <div id="timer">⏳ -</div>
 
-<button id="nextBtn" class="next">Загрузка...</button>
-<button id="backBtn" class="back">Назад</button>
+<button id="nextBtn" class="next" disabled>Загрузка...</button>
+<button id="backBtn" class="back" disabled>Назад</button>
 <button id="resetBtn" class="reset">Сбросить игру</button>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -86,9 +91,15 @@ fetch(CSV_URL)
     text:(cols[0]||"").trim(),
     options:cols.slice(1).map(c=>c.trim()).filter(Boolean)
   }));
+
+  // ✅ включаем кнопки
+  nextBtn.disabled = false;
+  backBtn.disabled = false;
+
+  updateButtons();
 });
 
-/* слушаем Firebase */
+/* Firebase */
 db.ref('currentQuestion').on('value', snap => {
   current = snap.val() ?? -1;
 
@@ -134,8 +145,10 @@ function showQuestion(i){
   db.ref('currentQuestion').set(i);
 }
 
-/* 🟢 зелёная кнопка — ВСЕГДА вперёд */
+/* зелёная */
 nextBtn.onclick = ()=>{
+  if(!questions.length) return;
+
   if(current === -1){
     showQuestion(0);
     return;
@@ -146,15 +159,15 @@ nextBtn.onclick = ()=>{
   }
 };
 
-/* 🟠 назад — умная логика */
+/* назад */
 backBtn.onclick = ()=>{
+  if(!questions.length) return;
+
   if(current === -1) return;
 
   if(timerFinished){
-    // повтор текущего вопроса
-    showQuestion(current);
+    showQuestion(current); // повтор
   } else {
-    // переход на предыдущий
     if(current > 0){
       showQuestion(current - 1);
     }
@@ -166,7 +179,7 @@ resetBtn.onclick = ()=>{
   db.ref('currentQuestion').set(-1);
 };
 
-/* обновление текста кнопок */
+/* UI */
 function updateButtons(){
   if(!questions.length) return;
 
@@ -176,14 +189,14 @@ function updateButtons(){
     return;
   }
 
-  // зелёная кнопка
+  // зелёная
   if(current < questions.length - 1){
     nextBtn.innerText = "Далее: " + questions[current+1].text;
   } else {
     nextBtn.innerText = "Конец";
   }
 
-  // кнопка назад
+  // назад
   backBtn.style.display = "block";
 
   if(timerFinished){
