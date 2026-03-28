@@ -81,7 +81,7 @@ fetch(CSV_URL)
   updateButtons();
 });
 
-/* слушаем Firebase */
+/* слушаем */
 db.ref('currentQuestion').on('value', snap => {
 
   current = snap.val() ?? -1;
@@ -131,12 +131,22 @@ function startTimer(){
   },1000);
 }
 
-/* переход */
+/* ГЛАВНЫЙ ФИКС */
 function showQuestion(i){
   if(lock) return;
   lock = true;
 
-  db.ref('currentQuestion').set(i);
+  const ref = db.ref('currentQuestion');
+
+  ref.once('value').then(snap => {
+    if(snap.val() === i){
+      ref.set(null).then(()=>{
+        ref.set(i);
+      });
+    } else {
+      ref.set(i);
+    }
+  });
 
   setTimeout(()=> lock = false, 300);
 }
@@ -152,17 +162,15 @@ nextBtn.onclick = ()=>{
   }
 };
 
-/* НАЗАД — ВОТ ТУТ ГЛАВНОЕ ИСПРАВЛЕНИЕ */
+/* назад */
 backBtn.onclick = ()=>{
   if(lock || !questions.length) return;
 
   if(current === -1) return;
 
   if(timerFinished){
-    // 👉 повтор текущего вопроса
-    showQuestion(current);
+    showQuestion(current); // повтор
   } else {
-    // 👉 реально назад
     if(current > 0){
       showQuestion(current - 1);
     }
@@ -176,7 +184,7 @@ resetBtn.onclick = ()=>{
 
 /* кнопки */
 function updateButtons(){
-  if(!questions.length) return;
+  if(!questions.length || current === null) return;
 
   if(current === -1){
     nextBtn.innerText = "Начать: " + questions[0].text;
@@ -193,7 +201,7 @@ function updateButtons(){
   backBtn.style.display = "block";
 
   if(timerFinished){
-    backBtn.innerText = "Повторить вопрос";
+    backBtn.innerText = "Повтор: " + questions[current].text;
   } else {
     if(current > 0){
       backBtn.innerText = "Назад: " + questions[current-1].text;
