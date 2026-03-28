@@ -26,15 +26,25 @@ body {
   text-align:center;
 }
 
-#start { background:#000; z-index:10; }
-#start img { max-width:85%; border-radius:20px; margin-bottom:20px; }
+/* 🔥 СТАРТ */
+#start {
+  background:#000;
+  z-index:10;
+}
+
+#start img {
+  max-width:80%;
+  border-radius:20px;
+  margin-bottom:30px;
+  box-shadow:0 0 40px rgba(0,0,0,0.6);
+}
 
 #waiting { display:none; font-size:6vw; font-weight:900; }
 #game { display:none; height:100%; flex-direction:column; }
 
 h1 { font-size:5vw; margin:10px; }
 
-/* 🔥 ТОЛСТАЯ ПОЛОСА */
+/* 🔥 ПОЛОСКА */
 #timerBarWrap {
   width:90%;
   height:70px;
@@ -82,9 +92,12 @@ li.selected {
 
 <body>
 
+<!-- 🔥 СТАРТОВЫЙ ЭКРАН -->
 <div id="start" class="screen">
   <img src="https://drive.google.com/uc?export=view&id=1Z75HN4p5klgCvDHPNyzhb2SeLdln3cUg">
-  <div style="font-size:5vw;font-weight:900;">Скоро начнём!</div>
+  <div style="font-size:5vw;font-weight:900;">
+    Скоро начнём!
+  </div>
 </div>
 
 <div id="waiting" class="screen">Смотрите на сцену!</div>
@@ -205,12 +218,10 @@ db.ref('currentQuestion').on('value', snap => {
   let total = 5;
   let time = total;
 
-  // 🔥 СТАРТ: сразу зелёная и полная
   timerBar.style.transition = "none";
   timerBar.style.width = "100%";
   timerBar.style.background = "hsl(120,100%,50%)";
 
-  // даём браузеру применить старт
   setTimeout(()=>{
     timerBar.style.transition = "width 1s linear, background 1s linear";
   },50);
@@ -225,13 +236,12 @@ db.ref('currentQuestion').on('value', snap => {
     let hue = 120 - (120 * progress);
     timerBar.style.background = "hsl(" + hue + ",100%,50%)";
 
-    // 🔥 КЛЮЧ: ждём полного исчезновения
     if(time <= 0){
       clearInterval(timerInterval);
 
       setTimeout(()=>{
         showWaiting();
-      }, 1000); // ⬅ ровно время анимации исчезновения
+      },1000);
     }
 
   },1000);
