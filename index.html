@@ -34,34 +34,21 @@ body {
 
 h1 { font-size:5vw; margin:10px; }
 
-/* 🔥 ПОЛОСКА (толще) */
+/* 🔥 ЕЩЁ ТОЛЩЕ */
 #timerBarWrap {
   width:90%;
-  height:40px;
+  height:70px;
   background:#222;
-  border-radius:30px;
+  border-radius:40px;
   overflow:hidden;
-  margin:30px auto;
+  margin:40px auto;
 }
 
 #timerBar {
   height:100%;
   width:100%;
-  transition: width 1s linear;
-}
-
-/* градиент внутри полоски */
-#timerBarInner {
-  height:100%;
-  width:100%;
-  background: linear-gradient(
-    to right,
-    #00e676 0%,
-    #00e676 50%,
-    #ffeb3b 70%,
-    #ff9800 85%,
-    #ff0000 100%
-  );
+  background:hsl(120, 100%, 50%); /* старт зелёный */
+  transition: width 1s linear, background 1s linear;
 }
 
 ul {
@@ -106,9 +93,7 @@ li.selected {
   <h1 id="title"></h1>
 
   <div id="timerBarWrap">
-    <div id="timerBar">
-      <div id="timerBarInner"></div>
-    </div>
+    <div id="timerBar"></div>
   </div>
 
   <ul id="options"></ul>
@@ -217,18 +202,25 @@ db.ref('currentQuestion').on('value', snap => {
     options.appendChild(li);
   });
 
-  let time=5;
+  let total = 5;
+  let time = total;
+
   timerBar.style.width = "100%";
 
   timerInterval=setInterval(()=>{
     time--;
 
-    let percent = (time/5)*100;
+    let percent = (time/total)*100;
     timerBar.style.width = percent + "%";
+
+    // 🔥 ПЛАВНЫЙ ЦВЕТ: 120 (зелёный) → 0 (красный)
+    let progress = (total - time) / total;
+    let hue = 120 - (120 * progress); 
+    timerBar.style.background = "hsl(" + hue + ", 100%, 50%)";
 
     if(time<=0){
       clearInterval(timerInterval);
-      showWaiting(); // 🔥 только здесь теперь переход
+      showWaiting();
     }
 
   },1000);
