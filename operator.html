@@ -35,8 +35,8 @@ button{
 
 <h2>Оператор</h2>
 
-<button onclick="start()">▶️ Старт</button>
-<button onclick="next()">⏭ Вопрос</button>
+<button onclick="play()">▶️ Показать вопрос</button>
+<button onclick="next()">⏭ Следующий</button>
 <button onclick="pause()">⏸ Пауза</button>
 <button onclick="reset()">🔄 Сброс</button>
 
@@ -52,16 +52,10 @@ const db = firebase.database();
 let current = 0;
 let interval = null;
 
-function start(){
-  current = 0;
-
-  db.ref().set({
-    game:{
-      status:"playing",
-      currentQuestion:0,
-      timer:5
-    },
-    votes:{}
+function play(){
+  db.ref("game").update({
+    status:"playing",
+    timer:5
   });
 
   runTimer();
