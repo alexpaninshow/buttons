@@ -36,16 +36,41 @@ li{margin:8px 0;padding:20px;background:#333;border-radius:10px;font-size:5vw}
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-firebase.initializeApp({databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"});
+firebase.initializeApp({
+  databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"
+});
 var db=firebase.database();
 
+/* ===== USER ===== */
+var userId = localStorage.getItem("uid");
+if(!userId){
+  userId = "u"+Math.random().toString(36).substr(2,9);
+  localStorage.setItem("uid", userId);
+}
+
+function updateUser(q, selected){
+  db.ref("users/"+userId).set({
+    t: Date.now(),
+    q: q,
+    selected: selected ?? null
+  });
+}
+
+/* ===== DOM ===== */
+var startEl=document.getElementById("start");
+var waitingEl=document.getElementById("waiting");
+var gameEl=document.getElementById("game");
 var qEl=document.getElementById("q");
 var opts=document.getElementById("opts");
 var bar=document.getElementById("bar");
 
+/* ===== DATA ===== */
 var questions=[];
 var answered=JSON.parse(localStorage.getItem("ans")||"{}");
 
+function save(){localStorage.setItem("ans",JSON.stringify(answered));}
+
+/* ===== CSV ===== */
 fetch("https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv&gid=0")
 .then(r=>r.text())
 .then(t=>{
@@ -58,46 +83,72 @@ fetch("https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx
   }
 });
 
-function save(){localStorage.setItem("ans",JSON.stringify(answered));}
+/* ===== UI ===== */
+function show(screen){
+  startEl.style.display="none";
+  waitingEl.style.display="none";
+  gameEl.style.display="none";
+  document.getElementById(screen).style.display="flex";
+}
 
+/* ===== SYNC ===== */
 db.ref("currentQuestion").on("value",function(s){
 
-  var d=s.val(); if(!d) return;
+  var d=s.val();
+  if(!d) return;
+
   var i=d.index;
 
-  if(i===-1){show("start");return;}
-  if(i===-999){show("waiting");return;}
+  if(i===-1){
+    show("start");
+    updateUser(-1,null);
+    return;
+  }
+
+  if(i===-999){
+    show("waiting");
+    updateUser(-999,null);
+    return;
+  }
 
   if(!questions[i]) return;
 
   show("game");
+  updateUser(i, answered[i] ?? null);
 
   qEl.innerText=questions[i].text;
   opts.innerHTML="";
 
   for(let k=0;k<questions[i].options.length;k++){
+
     var li=document.createElement("li");
     li.innerText=questions[i].options[k];
 
-    if(answered[i]){
-      li.style.opacity=0.5;
+    if(answered[i]!==undefined){
+      if(answered[i]===k) li.classList.add("selected");
+      li.style.opacity=0.6;
     }else{
       li.onclick=function(){
-        answered[i]=k; save();
+        answered[i]=k;
+        save();
+
+        updateUser(i,k);
 
         db.ref("votes/"+i+"/"+k).transaction(v=>(v||0)+1);
 
         li.classList.add("selected");
-        setTimeout(()=>show("waiting"),500);
+
+        setTimeout(function(){
+          show("waiting");
+          updateUser(-999,null);
+        },500);
       };
     }
-
-    if(answered[i]===k) li.classList.add("selected");
 
     opts.appendChild(li);
   }
 
-  // таймер
+  /* таймер */
   var total=5000;
   var passed=Date.now()-d.startTime;
   if(passed<0)passed=0;
@@ -109,15 +160,11 @@ db.ref("currentQuestion").on("value",function(s){
   bar.style.width=(remain/total*100)+"%";
   bar.offsetHeight;
   bar.style.transition="width "+remain+"ms linear";
-  setTimeout(()=>bar.style.width="0%",50);
-});
 
-function show(s){
-  start.style.display="none";
-  waiting.style.display="none";
-  game.style.display="none";
-  document.getElementById(s).style.display="flex";
-}
+  setTimeout(function(){
+    bar.style.width="0%";
+  },50);
+});
 </script>
 </body>
 </html>
