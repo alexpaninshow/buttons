@@ -85,7 +85,6 @@ function showQuestion(i){
   status.innerText = "Сейчас: " + questions[i].text;
   updateButtons();
 
-  // 🔥 ОПЕРАТОР ЖДЁТ 5 СЕК
   autoTimer = setTimeout(()=>{
     current = -1;
     db.ref('currentQuestion').set(-1);
@@ -104,8 +103,8 @@ nextBtn.onclick = ()=>{
 };
 
 backBtn.onclick = ()=>{
-  if(current>0){
-    showQuestion(current-1);
+  if(lastQuestionIndex > 0){
+    showQuestion(lastQuestionIndex - 1);
   }
 };
 
@@ -133,7 +132,8 @@ function updateButtons(){
     nextBtn.style.display="none";
   }
 
-  backBtn.style.display = (current > 0) ? "inline-block" : "none";
+  // 🔥 теперь всегда есть со 2-го вопроса
+  backBtn.style.display = (lastQuestionIndex > 0) ? "inline-block" : "none";
 }
 </script>
 
