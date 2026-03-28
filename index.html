@@ -197,8 +197,17 @@ db.ref('currentQuestion').on('value', snap => {
       voted=true;
       clearInterval(timerInterval);
 
-      db.ref('votes/'+current+'/'+i)
-        .transaction(v=>(v||0)+1);
+      const voteRef = db.ref('votes/'+current+'/'+i);
+
+      voteRef.transaction(v => {
+        if(!v){
+          return {count:1, last:Date.now()};
+        }
+        return {
+          count:(v.count||0)+1,
+          last:Date.now()
+        };
+      });
 
       li.classList.add('selected');
 
@@ -208,7 +217,6 @@ db.ref('currentQuestion').on('value', snap => {
     options.appendChild(li);
   });
 
-  /* таймер */
   let total = 5;
   let time = total;
 
