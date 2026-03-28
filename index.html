@@ -2,48 +2,45 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Оператор</title>
+<title>Шоу</title>
 
 <style>
-body {
-  font-family:Arial;
-  background:#111;
-  color:white;
-  text-align:center;
-  padding:40px;
+body { font-family:Arial; background:#111; color:white; text-align:center; }
+
+.screen {
+  position:fixed;
+  width:100%;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
 }
 
-#status {
-  font-size:28px;
-  margin-bottom:20px;
-}
+#waiting, #game { display:none; }
 
-button {
-  width:90%;
-  font-size:24px;
+li {
+  font-size:30px;
+  margin:10px;
   padding:20px;
-  margin:10px auto;
-  display:block;
-  border:none;
-  border-radius:12px;
+  border:3px solid white;
   cursor:pointer;
 }
-
-.next { background:#4caf50; color:white; }
-.back { background:orange; color:white; }
-.reset { background:red; color:white; }
 </style>
 </head>
 
 <body>
 
-<h1>Оператор</h1>
+<div id="debug" style="position:fixed;top:10px;left:10px;font-size:14px;color:#0f0"></div>
 
-<div id="status">Ожидание</div>
+<div id="start" class="screen">Скоро начнём!</div>
+<div id="waiting" class="screen">Смотрите на сцену!</div>
 
-<button id="nextBtn" class="next">Загрузка...</button>
-<button id="backBtn" class="back">Назад</button>
-<button id="resetBtn" class="reset">Сбросить игру</button>
+<div id="game">
+  <h1 id="title"></h1>
+  <div id="timer"></div>
+  <ul id="options"></ul>
+</div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -58,65 +55,53 @@ firebase.initializeApp({
 const db = firebase.database();
 
 let questions=[];
-let current=-1;
+let timerInterval=null;
 
-const status = document.getElementById("status");
-const nextBtn = document.getElementById("nextBtn");
-const backBtn = document.getElementById("backBtn");
+const debug = document.getElementById("debug");
 
-/* загрузка вопросов */
 fetch(CSV_URL)
 .then(r=>r.text())
 .then(text=>{
   const rows = text.trim().split('\n').map(r=>r.split(','));
-  questions = rows.slice(1).map(cols=>({
-    text:(cols[0]||"").trim(),
-    options:cols.slice(1).map(c=>c.trim()).filter(Boolean)
+  questions = rows.slice(1).map(c=>({
+    text:c[0],
+    options:c.slice(1)
   }));
-  updateButtons();
 });
 
-function showQuestion(i){
-  current = i;
-  db.ref('currentQuestion').set(i);
-  status.innerText = "Сейчас: " + (i+1) + ". " + questions[i].text;
-  updateButtons();
+function show(id){
+  document.getElementById("start").style.display="none";
+  document.getElementById("waiting").style.display="none";
+  document.getElementById("game").style.display="none";
+  document.getElementById(id).style.display="flex";
 }
 
-nextBtn.onclick = ()=>{
-  if(current === -1) showQuestion(0);
-  else if(current < questions.length-1) showQuestion(current+1);
-};
+db.ref('currentQuestion').on('value', snap=>{
+  const val = snap.val();
 
-backBtn.onclick = ()=>{
-  if(current > 0) showQuestion(current-1);
-};
+  debug.innerText = "Firebase currentQuestion: " + val;
 
-document.getElementById("resetBtn").onclick = ()=>{
-  current = -1;
-  db.ref('currentQuestion').set(-1);
-  status.innerText = "Ожидание";
-  updateButtons();
-};
-
-function updateButtons(){
-  if(!questions.length) return;
-
-  if(current === -1){
-    nextBtn.innerText = "Начать: " + questions[0].text;
-  } else if(current < questions.length-1){
-    nextBtn.innerText = "Далее: " + questions[current+1].text;
-  } else {
-    nextBtn.style.display="none";
+  if(val === null || val === -1){
+    show("start");
+    return;
   }
 
-  if(current > 0){
-    backBtn.style.display="block";
-    backBtn.innerText = "Назад: " + questions[current-1].text;
-  } else {
-    backBtn.style.display="none";
-  }
-}
+  if(!questions[val]) return;
+
+  show("game");
+
+  const q = questions[val];
+  document.getElementById("title").innerText = q.text;
+
+  const ul = document.getElementById("options");
+  ul.innerHTML="";
+
+  q.options.forEach(opt=>{
+    const li=document.createElement("li");
+    li.innerText=opt;
+    ul.appendChild(li);
+  });
+});
 </script>
 
 </body>
