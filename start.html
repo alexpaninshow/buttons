@@ -28,6 +28,15 @@ body {
   border:none;
   border-radius:30px;
   cursor:pointer;
+  transition:0.3s;
+}
+
+/* 🔒 заблокированная кнопка */
+#startBtn.disabled {
+  background:#555;
+  color:#aaa;
+  cursor:not-allowed;
+  opacity:0.7;
 }
 
 #status { margin-top:20px; font-size:18px; }
@@ -40,7 +49,7 @@ body {
 
 <body>
 
-<button id="startBtn">Начинаем спектакль</button>
+<button id="startBtn" class="disabled">Начинаем спектакль</button>
 <div id="status">Проверка системы...</div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -61,6 +70,18 @@ let csvReady = false;
 let firebaseReady = false;
 let isChecking = false;
 
+/* 🔒 блок */
+function lockBtn(){
+  btn.classList.add("disabled");
+  btn.disabled = true;
+}
+
+/* 🔓 разблок */
+function unlockBtn(){
+  btn.classList.remove("disabled");
+  btn.disabled = false;
+}
+
 /* CSV */
 function checkCSV(){
   return fetch(CSV_URL)
@@ -76,12 +97,13 @@ function checkFirebase(){
   });
 }
 
-/* ОБЩАЯ ПРОВЕРКА */
+/* проверка */
 async function checkSystem(){
 
   if(isChecking) return;
 
   isChecking = true;
+  lockBtn();
 
   status.className = "checking";
   status.innerText = "Проверка системы...";
@@ -92,12 +114,17 @@ async function checkSystem(){
   if(csvReady && firebaseReady){
     status.className="ready";
     status.innerText="✔ Система готова к работе";
-  } else if(!csvReady){
+    unlockBtn();
+  } 
+  else if(!csvReady){
     status.className="error";
     status.innerText="Нет связи с таблицей";
-  } else {
+    lockBtn();
+  } 
+  else {
     status.className="error";
     status.innerText="Firebase не отвечает";
+    lockBtn();
   }
 
   isChecking = false;
@@ -106,29 +133,22 @@ async function checkSystem(){
 /* запуск */
 checkSystem();
 
-/* 🔥 теперь раз в минуту */
+/* раз в минуту */
 setInterval(checkSystem, 60000);
 
 /* кнопка */
 btn.onclick = async () => {
 
-  // ❌ если прямо сейчас идёт проверка
-  if(isChecking){
-    status.className = "checking";
-    status.innerText = "⏳ Подождите, идёт проверка...";
-    return;
-  }
+  if(btn.disabled) return;
 
   btn.innerText = "Проверка перед стартом...";
-  btn.disabled = true;
+  lockBtn();
 
-  // 🔥 финальная проверка
   await checkSystem();
 
   if(!(csvReady && firebaseReady)){
     status.className="error";
     status.innerText="⛔ Система не готова";
-    btn.disabled = false;
     btn.innerText = "Начинаем спектакль";
     return;
   }
