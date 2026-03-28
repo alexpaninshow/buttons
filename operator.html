@@ -10,40 +10,32 @@ body {
   text-align: center;
   background:#222;
   color:white;
-  padding:20px;
+  padding:40px;
 }
 
 #status {
-  font-size:30px;
-  margin-bottom:10px;
+  font-size:28px;
+  margin-bottom:20px;
 }
 
 #timer {
-  font-size:28px;
+  font-size:32px;
   margin-bottom:20px;
-  color:#ffeb3b;
-}
-
-.buttons {
-  display:flex;
-  flex-direction:column;
-  align-items:center;
 }
 
 button {
-  width: 90%;
-  max-width: 600px;
-  font-size:26px;
-  padding:25px;
+  width:90%;
+  font-size:24px;
+  padding:20px;
   margin:10px 0;
   border-radius:15px;
   border:none;
   cursor:pointer;
 }
 
-.next { background:#4caf50; }
-.back { background:orange; }
-.reset { background:red; }
+.next { background:#4caf50; color:white; }
+.back { background:orange; color:white; }
+.reset { background:red; color:white; }
 </style>
 </head>
 
@@ -51,14 +43,12 @@ button {
 
 <h1>Оператор</h1>
 
-<div id="status">Сейчас: Ожидание</div>
+<div id="status">Ожидание</div>
 <div id="timer"></div>
 
-<div class="buttons">
-  <button id="nextBtn" class="next">Загрузка...</button>
-  <button id="backBtn" class="back" style="display:none;"></button>
-  <button id="resetBtn" class="reset">Сбросить игру</button>
-</div>
+<button id="nextBtn" class="next">Загрузка...</button>
+<button id="backBtn" class="back">Назад</button>
+<button id="resetBtn" class="reset">Сбросить игру</button>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -66,24 +56,21 @@ button {
 <script>
 const CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv";
 
-const firebaseConfig = {
-  databaseURL: "https://buttons-panin-default-rtdb.firebaseio.com"
-};
-firebase.initializeApp(firebaseConfig);
+firebase.initializeApp({
+  databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"
+});
 const db = firebase.database();
 
-let questions = [];
-let current = -1;
-let lastShown = -1;
-
-let autoTimer = null;
-let visualTimer = null;
+let questions=[];
+let current=-1;
+let timerInterval=null;
 
 const status = document.getElementById("status");
+const timer = document.getElementById("timer");
 const nextBtn = document.getElementById("nextBtn");
 const backBtn = document.getElementById("backBtn");
-const timerDiv = document.getElementById("timer");
 
+// CSV
 function parseCSV(text){
   const rows = text.trim().split('\n').map(r=>r.split(','));
   return rows.slice(1).map(cols=>({
@@ -99,92 +86,76 @@ fetch(CSV_URL)
   updateButtons();
 });
 
-function clearAll(){
-  if(autoTimer) clearTimeout(autoTimer);
-  if(visualTimer) clearInterval(visualTimer);
-  timerDiv.innerText="";
-}
+function startTimer(start){
+  clearInterval(timerInterval);
 
-function startTimer(){
-  let time=5;
-  timerDiv.innerText="Таймер: "+time;
+  timerInterval=setInterval(()=>{
+    const now = Date.now();
+    const elapsed = Math.floor((now - start)/1000);
+    const remain = 5 - elapsed;
 
-  visualTimer=setInterval(()=>{
-    time--;
-    if(time<=0){
-      clearInterval(visualTimer);
-      timerDiv.innerText="";
+    if(remain <= 0){
+      clearInterval(timerInterval);
+      timer.innerText="";
+      status.innerText="Сейчас: Ожидание";
+      current=-1;
+      updateButtons();
+      db.ref('currentQuestion').set(-1);
     } else {
-      timerDiv.innerText="Таймер: "+time;
+      timer.innerText="⏳ "+remain;
     }
-  },1000);
+  },500);
 }
 
-function showQuestion(i, instant=false){
-  clearAll();
-
+function showQuestion(i){
   current=i;
-  lastShown=i;
 
-  db.ref('currentQuestion').set(i);
+  const startTime = Date.now();
+
+  db.ref('/').update({
+    currentQuestion: i,
+    questionStartTime: startTime
+  });
 
   status.innerText="Сейчас: "+(i+1)+". "+questions[i].text;
 
+  startTimer(startTime);
   updateButtons();
-
-  if(instant) return;
-
-  startTimer();
-
-  autoTimer=setTimeout(()=>{
-    db.ref('currentQuestion').set(-1);
-    status.innerText="Сейчас: Ожидание";
-    current=-1;
-    updateButtons();
-  },5000);
 }
 
 nextBtn.onclick=()=>{
-  let base = lastShown >= 0 ? lastShown : current;
-  let next = base + 1;
-
-  if(next < questions.length){
-    showQuestion(next);
-  }
+  if(current===-1) showQuestion(0);
+  else if(current<questions.length-1) showQuestion(current+1);
 };
 
 backBtn.onclick=()=>{
-  let base = lastShown >= 0 ? lastShown : current;
-  let prev = base - 1;
-
-  if(prev >= 0){
-    showQuestion(prev, true);
-  }
+  if(current>0) showQuestion(current-1);
 };
 
-resetBtn.onclick=()=>{
-  clearAll();
-  current=-1;
-  lastShown=-1;
-  db.ref('currentQuestion').set(-1);
-  status.innerText="Сейчас: Ожидание";
-  updateButtons();
+document.getElementById("resetBtn").onclick=()=>{
+  if(confirm("Сбросить игру?")){
+    current=-1;
+    db.ref('currentQuestion').set(-1);
+    status.innerText="Ожидание";
+    timer.innerText="";
+    updateButtons();
+  }
 };
 
 function updateButtons(){
   if(!questions.length) return;
 
-  let base = lastShown >= 0 ? lastShown : current;
-
-  let next = base + 1;
-  if(next < questions.length){
-    nextBtn.innerText="Вопрос "+(next+1)+": "+questions[next].text;
+  if(current===-1){
+    nextBtn.innerText="Начать: 1. "+questions[0].text;
+  } else {
+    if(current<questions.length-1){
+      nextBtn.innerText="Далее: "+(current+2)+". "+questions[current+1].text;
+    }
   }
 
-  let prev = base - 1;
-  if(prev >= 0){
-    backBtn.style.display="inline-block";
-    backBtn.innerText="Назад: "+(prev+1)+". "+questions[prev].text;
+  if(current>0){
+    backBtn.innerText="Назад: "+(current)+". "+questions[current-1].text;
+    backBtn.style.display="block";
   } else {
     backBtn.style.display="none";
   }
