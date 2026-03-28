@@ -15,6 +15,7 @@ body {
   color:white;
 }
 
+/* экраны */
 .screen {
   position:fixed;
   width:100%;
@@ -26,7 +27,7 @@ body {
   text-align:center;
 }
 
-/* СТАРТ */
+/* старт */
 #start {
   background:#000;
   z-index:10;
@@ -38,7 +39,7 @@ body {
   margin-bottom:20px;
 }
 
-/* остальные экраны */
+/* остальные */
 #waiting { display:none; font-size:6vw; font-weight:900; }
 #game { display:none; height:100%; flex-direction:column; }
 
@@ -153,7 +154,7 @@ function showWaiting(){
 }
 
 function showGame(){
-  startScreen.style.display="none"; // 💥 КЛЮЧЕВОЕ
+  startScreen.style.display="none";
   waiting.style.display="none";
   game.style.display="flex";
 }
