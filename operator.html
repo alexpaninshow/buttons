@@ -21,27 +21,41 @@ body {
 /* статус */
 #status {
   text-align:center;
-  font-size:20px;
+  font-size:28px;
+  font-weight:bold;
   padding:15px;
 }
 
-/* 🔥 контейнер кнопок как у зрителя */
+/* таймер */
+#timer {
+  text-align:center;
+  font-size:36px;
+  font-weight:bold;
+  margin-bottom:10px;
+}
+
+/* контейнер */
 .buttons {
   flex:1;
   display:flex;
   flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+
+  gap:25px;        /* расстояние между кнопками */
   padding:20px;
-  gap:20px; /* расстояние между кнопками */
 }
 
-/* 🔥 кнопки */
+/* 🔥 нормальный размер кнопок */
 button {
-  flex:1; /* РАСТЯГИВАЕТ КНОПКИ НА ВЕСЬ ЭКРАН */
+  width:90%;
+  max-width:700px;
 
-  font-size:4vw; /* адаптивный размер текста */
+  height:70px;
+  font-size:20px;
 
-  border:none;
-  border-radius:20px;
+  border-radius:16px;
+  border:5px solid transparent;
 
   display:flex;
   align-items:center;
@@ -49,12 +63,11 @@ button {
   text-align:center;
 
   cursor:pointer;
-  transition:0.2s;
 }
 
-/* эффекты */
+/* мгновенная рамка */
 button:active {
-  transform:scale(0.97);
+  border:5px solid white;
 }
 
 /* цвета */
@@ -72,6 +85,7 @@ button:disabled {
 <body>
 
 <div id="status">Ожидание</div>
+<div id="timer"></div>
 
 <div class="buttons">
   <button id="nextBtn" class="next">Загрузка...</button>
@@ -93,8 +107,11 @@ const db = firebase.database();
 
 let questions = [];
 let current = -1;
+let timerInterval = null;
 
 const status = document.getElementById("status");
+const timerDiv = document.getElementById("timer");
+
 const nextBtn = document.getElementById("nextBtn");
 const backBtn = document.getElementById("backBtn");
 
@@ -112,38 +129,73 @@ fetch(CSV_URL)
   updateButtons();
 });
 
+/* показать вопрос */
 function showQuestion(i){
   current = i;
+
   db.ref('currentQuestion').set(i);
 
   status.innerText = "Сейчас: " + (i+1) + ". " + questions[i].text;
 
+  startTimer();
   updateButtons();
 }
 
+/* таймер */
+function startTimer(){
+  clearInterval(timerInterval);
+
+  let time = 5;
+  timerDiv.innerText = "⏳ " + time;
+
+  timerInterval = setInterval(()=>{
+    time--;
+    timerDiv.innerText = "⏳ " + time;
+
+    if(time <= 0){
+      clearInterval(timerInterval);
+      timerDiv.innerText = "";
+
+      db.ref('currentQuestion').set(-999);
+    }
+  },1000);
+}
+
+/* вперёд */
 nextBtn.onclick = ()=>{
   if(current === -1) showQuestion(0);
   else if(current < questions.length-1) showQuestion(current+1);
 };
 
+/* назад */
 backBtn.onclick = ()=>{
   if(current > 0) showQuestion(current-1);
 };
 
+/* reset */
 document.getElementById("resetBtn").onclick = ()=>{
   current = -1;
+
+  clearInterval(timerInterval);
+  timerDiv.innerText = "";
+
   db.ref('currentQuestion').set(-1);
+
   status.innerText = "Ожидание";
+
   updateButtons();
 };
 
+/* обновление кнопок */
 function updateButtons(){
   if(!questions.length) return;
 
   if(current === -1){
     nextBtn.innerText = "Начать: " + questions[0].text;
+    nextBtn.style.display = "block";
   } else if(current < questions.length-1){
     nextBtn.innerText = "Далее: " + questions[current+1].text;
+    nextBtn.style.display = "block";
   } else {
     nextBtn.style.display="none";
   }
