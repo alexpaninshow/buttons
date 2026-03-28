@@ -20,14 +20,25 @@ body {
   overflow:hidden;
 }
 
-/* экран ожидания */
-#waitingScreen {
+/* ⚡ вспышка */
+#flash {
   position:fixed;
   top:0;
   left:0;
   width:100%;
   height:100%;
+  background:white;
+  opacity:0;
+  pointer-events:none;
+  z-index:999;
+  transition: opacity 0.2s ease;
+}
 
+/* экран ожидания */
+#waitingScreen {
+  position:fixed;
+  width:100%;
+  height:100%;
   display:flex;
   align-items:center;
   justify-content:center;
@@ -38,23 +49,27 @@ body {
 
   background:#111;
   z-index:10;
+
+  opacity:1;
+  transition: opacity 0.4s ease;
 }
 
-/* основной контент */
+/* игра */
 #game {
   height:100%;
   display:flex;
   flex-direction:column;
+
+  opacity:0;
+  transition: opacity 0.4s ease;
 }
 
-/* заголовок */
 h1 {
   text-align:center;
   font-size:5vw;
   margin:15px;
 }
 
-/* таймер */
 #timer {
   text-align:center;
   font-size:8vw;
@@ -62,7 +77,6 @@ h1 {
   margin:10px 0 20px 0;
 }
 
-/* кнопки */
 ul {
   flex:1;
   display:flex;
@@ -103,11 +117,11 @@ li.selected {
 
 <body>
 
-<!-- 🔥 экран ожидания -->
+<div id="flash"></div>
+
 <div id="waitingScreen">Смотрите на сцену!</div>
 
-<!-- игра -->
-<div id="game" style="display:none;">
+<div id="game">
   <h1 id="title"></h1>
   <div id="timer"></div>
   <ul id="options"></ul>
@@ -130,6 +144,7 @@ let timerId=null;
 let voted=false;
 let time=0;
 
+const flash = document.getElementById("flash");
 const waiting = document.getElementById("waitingScreen");
 const game = document.getElementById("game");
 
@@ -137,6 +152,7 @@ const title = document.getElementById("title");
 const options = document.getElementById("options");
 const timer = document.getElementById("timer");
 
+// CSV
 function parseCSV(text){
   const rows = text.trim().split('\n').map(r=>r.split(','));
   return rows.slice(1).map(cols=>({
@@ -151,16 +167,41 @@ fetch(CSV_URL)
   questions=parseCSV(text);
 });
 
-// показать экран ожидания
-function showWaiting(){
-  waiting.style.display="flex";
-  game.style.display="none";
+// ⚡ вспышка
+function flashEffect(){
+  flash.style.opacity = 1;
+  setTimeout(()=>{
+    flash.style.opacity = 0;
+  },200);
 }
 
-// показать вопрос
+// переход к ожиданию
+function showWaiting(){
+  flashEffect();
+
+  game.style.opacity = 0;
+
+  setTimeout(()=>{
+    waiting.style.opacity = 1;
+    waiting.style.display="flex";
+    game.style.display="none";
+  },200);
+}
+
+// переход к игре
 function showGame(){
-  waiting.style.display="none";
-  game.style.display="flex";
+  flashEffect();
+
+  waiting.style.opacity = 0;
+
+  setTimeout(()=>{
+    waiting.style.display="none";
+    game.style.display="flex";
+
+    setTimeout(()=>{
+      game.style.opacity = 1;
+    },50);
+  },200);
 }
 
 db.ref('currentQuestion').on('value', snap => {
