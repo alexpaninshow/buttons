@@ -15,6 +15,11 @@ body {
 
 #status {
   font-size:28px;
+  margin-bottom:10px;
+}
+
+#timer {
+  font-size:48px;
   margin-bottom:20px;
 }
 
@@ -40,6 +45,7 @@ button {
 <h1>Оператор</h1>
 
 <div id="status">Ожидание</div>
+<div id="timer">⏳ -</div>
 
 <button id="nextBtn" class="next">Загрузка...</button>
 <button id="backBtn" class="back">Назад</button>
@@ -60,7 +66,11 @@ const db = firebase.database();
 let questions = [];
 let current = -1;
 
+let timerInterval = null;
+let timeLeft = 0;
+
 const status = document.getElementById("status");
+const timerEl = document.getElementById("timer");
 const nextBtn = document.getElementById("nextBtn");
 const backBtn = document.getElementById("backBtn");
 
@@ -76,19 +86,50 @@ fetch(CSV_URL)
   }));
 });
 
-/* 🔥 СИНХРОНИЗАЦИЯ С FIREBASE */
+/* 🔥 СИНХРОНИЗАЦИЯ */
 db.ref('currentQuestion').on('value', snap => {
   current = snap.val() ?? -1;
 
+  clearInterval(timerInterval);
+
   if(current === -1){
     status.innerText = "Ожидание";
+    timerEl.innerText = "⏳ -";
   } else if(questions[current]){
     status.innerText = "Сейчас: " + (current+1) + ". " + questions[current].text;
+
+    startTimer(); // 👈 запуск таймера при каждом вопросе
   }
 
   updateButtons();
 });
 
+/* ⏱ ТАЙМЕР */
+function startTimer(){
+  timeLeft = 5; // можешь менять длительность
+
+  timerEl.innerText = "⏳ " + timeLeft;
+
+  timerInterval = setInterval(()=>{
+    timeLeft--;
+
+    if(timeLeft <= 0){
+      clearInterval(timerInterval);
+      timerEl.innerText = "⏳ 0";
+
+      // 👇 авто переход
+      if(current < questions.length - 1){
+        db.ref('currentQuestion').set(current + 1);
+      }
+
+    } else {
+      timerEl.innerText = "⏳ " + timeLeft;
+    }
+
+  },1000);
+}
+
+/* управление */
 function showQuestion(i){
   db.ref('currentQuestion').set(i);
 }
@@ -106,6 +147,7 @@ document.getElementById("resetBtn").onclick = ()=>{
   db.ref('currentQuestion').set(-1);
 };
 
+/* кнопки */
 function updateButtons(){
   if(!questions.length) return;
 
