@@ -5,115 +5,40 @@
 <title>Оператор</title>
 
 <style>
-body {
-  margin:0;
-  display:flex;
-  font-family:Arial;
-  background:#111;
-  color:white;
-}
+body{margin:0;display:flex;background:#111;color:#fff;font-family:Arial}
 
-/* ЛЕВАЯ ЧАСТЬ */
-#left {
-  flex:1;
-  display:flex;
-  flex-direction:column;
-  text-align:center;
-}
+#left{flex:1;text-align:center;padding:20px}
+#status{font-size:22px;margin-bottom:10px}
+#timer{font-size:28px}
 
-#top {
-  padding:20px;
-}
+button{margin:5px;padding:12px;font-size:16px;border:none;border-radius:10px;color:#fff}
+.next{background:#4caf50}
+.back{background:orange}
+.reset{background:red}
 
-#status {
-  font-size:24px;
-  margin-bottom:10px;
-}
-
-#timer {
-  font-size:32px;
-}
-
-/* КНОПКИ */
-#buttons {
-  flex:1;
-  display:flex;
-  flex-direction:column;
-  padding:10px;
-}
-
-button {
-  margin:6px 0;
-  padding:14px;
-  font-size:18px;
-  border:none;
-  border-radius:15px;
-  color:white;
-}
-
-.next { background:#4caf50; }
-.back { background:orange; }
-.reset { background:red; }
-
-/* МИНИ ЭКРАН */
-#viewer {
-  width:300px;
-  background:#000;
-  border-left:3px solid #333;
-  padding:10px;
-  display:flex;
-  flex-direction:column;
-}
-
-#vTitle {
-  font-size:16px;
-  margin-bottom:10px;
-}
-
-#vTimerWrap {
-  height:10px;
-  background:#222;
-  border-radius:10px;
-  overflow:hidden;
-  margin-bottom:10px;
-}
-
-#vBar {
-  height:100%;
-  width:100%;
-  background:hsl(120,100%,50%);
-}
-
-.vOpt {
-  background:#333;
-  margin:4px 0;
-  padding:6px;
-  border-radius:8px;
-  font-size:14px;
-}
+#viewer{width:300px;background:#000;padding:10px}
+#vBar{height:8px;background:lime;width:100%}
+.vOpt{background:#333;margin:4px;padding:6px;border-radius:6px}
+.sel{background:#4caf50}
 </style>
 </head>
 
 <body>
 
 <div id="left">
-
-<div id="top">
 <div id="status">Загрузка...</div>
-<div id="timer">⏳ -</div>
-</div>
+<div id="timer">⏳</div>
 
-<div id="buttons">
 <button id="nextBtn" class="next"></button>
 <button id="backBtn" class="back"></button>
 <button id="resetBtn" class="reset">Полный сброс</button>
-</div>
 
+<div id="result"></div>
 </div>
 
 <div id="viewer">
-<div id="vTitle">...</div>
-<div id="vTimerWrap"><div id="vBar"></div></div>
+<div id="vTitle"></div>
+<div id="vBar"></div>
 <div id="vOpts"></div>
 </div>
 
@@ -121,195 +46,149 @@ button {
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-firebase.initializeApp({
-  databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"
-});
+firebase.initializeApp({databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"});
+var db=firebase.database();
 
-var db = firebase.database();
+var questions=[],current=-1;
 
-var questions = [];
-var current = -1;
-
-/* DOM */
-var statusEl = document.getElementById("status");
-var timerEl = document.getElementById("timer");
-
-var nextBtn = document.getElementById("nextBtn");
-var backBtn = document.getElementById("backBtn");
-
-var vTitle = document.getElementById("vTitle");
-var vBar = document.getElementById("vBar");
-var vOpts = document.getElementById("vOpts");
-
-/* ===== CSV ===== */
 fetch("https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv&gid=0")
 .then(r=>r.text())
 .then(t=>{
-
-  var rows = t.trim().split('\n');
-
+  var rows=t.trim().split('\n');
   for(var i=1;i<rows.length;i++){
-    var c = rows[i].split(',');
-    var q = { text:c[0], options:[] };
-
-    for(var j=1;j<c.length;j++){
-      if(c[j]) q.options.push(c[j]);
-    }
-
+    var c=rows[i].split(',');
+    var q={text:c[0],options:[]};
+    for(var j=1;j<c.length;j++) if(c[j]) q.options.push(c[j]);
     questions.push(q);
   }
-
   updateButtons();
 });
 
-/* ===== УСТАНОВКА ВОПРОСА ===== */
+/* СИНХРОНИЗАЦИЯ */
+db.ref("currentQuestion").on("value",function(s){
+
+  var d=s.val(); if(!d) return;
+  current=d.index;
+
+  updateStatus(d);
+  updateViewer(d);
+  updateButtons();
+  showResult();
+});
+
+/* СТАТУС */
+function updateStatus(d){
+  if(current>=0 && questions[current]){
+    status.innerText=(current+1)+". "+questions[current].text;
+    startTimer(d.startTime);
+  } else if(current===-999){
+    status.innerText="Ожидание...";
+  } else {
+    status.innerText="Старт";
+  }
+}
+
+/* ТАЙМЕР */
+function startTimer(st){
+  clearInterval(window.ti);
+  function t(){
+    var s=5-Math.floor((Date.now()-st)/1000);
+    if(s<0)s=0;
+    timer.innerText="⏳ "+s;
+  }
+  t();
+  window.ti=setInterval(t,200);
+}
+
+/* КНОПКИ */
+nextBtn.onclick=function(){
+  if(current<0) setQ(0);
+  else if(current<questions.length-1) setQ(current+1);
+};
+
+backBtn.onclick=function(){
+  if(current>0) setQ(current-1);
+};
+
 function setQ(i){
-  db.ref("currentQuestion").set({
-    index:i,
-    startTime:Date.now()
+  db.ref("currentQuestion").set({index:i,startTime:Date.now()});
+}
+
+/* ПОДПИСИ */
+function updateButtons(){
+  if(!questions.length) return;
+
+  backBtn.style.display = current>0 ? "inline-block":"none";
+
+  if(current>=0 && current<questions.length-1){
+    nextBtn.innerText="Далее: "+(current+2)+". "+questions[current+1].text;
+  } else {
+    nextBtn.innerText="Начать";
+  }
+
+  if(current>0){
+    backBtn.innerText="Назад: "+current+". "+questions[current-1].text;
+  }
+}
+
+/* РЕЗУЛЬТАТ */
+function showResult(){
+  if(current<0) return;
+
+  db.ref("votes/"+current).once("value",function(s){
+    var v=s.val();
+    if(!v){result.innerText="Ничья";return;}
+
+    var max=0,idx=-1,tie=false;
+
+    for(var k in v){
+      if(v[k]>max){
+        max=v[k]; idx=k; tie=false;
+      } else if(v[k]===max){
+        tie=true;
+      }
+    }
+
+    if(max===0 || tie){
+      result.innerText="Ничья";
+    } else {
+      result.innerText="Победитель: "+questions[current].options[idx];
+    }
   });
 }
 
-/* ===== СИНХРОНИЗАЦИЯ ===== */
-db.ref("currentQuestion").on("value", function(snap){
-
-  var d = snap.val();
-  if(!d) return;
-
-  current = d.index;
-
-  updateOperator(d);
-  updateViewer(d);
-  updateButtons();
-});
-
-/* ===== ОПЕРАТОР ===== */
-function updateOperator(d){
-
-  if(current >= 0 && questions[current]){
-    statusEl.innerText = (current+1) + ". " + questions[current].text;
-    startTimer(d.startTime);
-  }
-  else if(current === -999){
-    statusEl.innerText = "Ожидание...";
-    timerEl.innerText = "⏳ -";
-  }
-  else{
-    statusEl.innerText = "Старт";
-    timerEl.innerText = "⏳ -";
-  }
-}
-
-/* ===== ТАЙМЕР ===== */
-function startTimer(startTime){
-
-  clearInterval(window.ti);
-
-  function tick(){
-    var t = 5 - Math.floor((Date.now() - startTime)/1000);
-    if(t < 0) t = 0;
-    timerEl.innerText = "⏳ " + t;
-  }
-
-  tick();
-  window.ti = setInterval(tick, 200);
-}
-
-/* ===== МИНИ ЭКРАН ===== */
+/* VIEWER */
 function updateViewer(d){
 
-  if(current === -1){
-    vTitle.innerText = "Скоро начнём!";
-    vOpts.innerHTML = "";
+  if(current<0 || !questions[current]){
+    vTitle.innerText="Скоро начнём!";
+    vOpts.innerHTML="";
     return;
   }
 
-  if(current === -999){
-    vTitle.innerText = "Смотрите на сцену!";
-    vOpts.innerHTML = "";
-    return;
-  }
-
-  if(!questions[current]) return;
-
-  vTitle.innerText = questions[current].text;
-
-  vOpts.innerHTML = "";
+  vTitle.innerText=questions[current].text;
+  vOpts.innerHTML="";
 
   for(var i=0;i<questions[current].options.length;i++){
-    var el = document.createElement("div");
-    el.className = "vOpt";
-    el.innerText = questions[current].options[i];
-    vOpts.appendChild(el);
+    var div=document.createElement("div");
+    div.className="vOpt";
+    div.innerText=questions[current].options[i];
+    vOpts.appendChild(div);
   }
 
-  /* СИНХРОННЫЙ БЕГУНОК */
-  var total = 5000;
-  var passed = Date.now() - d.startTime;
+  var total=5000;
+  var passed=Date.now()-d.startTime;
+  if(passed<0)passed=0;
+  if(passed>total)passed=total;
 
-  if(passed < 0) passed = 0;
-  if(passed > total) passed = total;
+  var remain=total-passed;
 
-  var remain = total - passed;
-
-  vBar.style.transition = "none";
-  vBar.style.width = (remain / total * 100) + "%";
-
+  vBar.style.transition="none";
+  vBar.style.width=(remain/total*100)+"%";
   vBar.offsetHeight;
-
-  vBar.style.transition = "width " + remain + "ms linear";
-
-  setTimeout(function(){
-    vBar.style.width = "0%";
-  },50);
+  vBar.style.transition="width "+remain+"ms linear";
+  setTimeout(()=>vBar.style.width="0%",50);
 }
-
-/* ===== КНОПКИ ===== */
-nextBtn.onclick = function(){
-
-  if(current === -1 || current === -999){
-    setQ(0);
-    return;
-  }
-
-  if(current < questions.length - 1){
-    setQ(current + 1);
-  }
-};
-
-backBtn.onclick = function(){
-
-  if(current > 0){
-    setQ(current - 1);
-  }
-};
-
-/* ===== ПОДПИСИ ===== */
-function updateButtons(){
-
-  if(!questions.length) return;
-
-  if(current <= 0){
-    backBtn.style.display = "none";
-  } else {
-    backBtn.style.display = "block";
-    backBtn.innerText = "Назад: " + current;
-  }
-
-  if(current < questions.length - 1){
-    nextBtn.innerText = "Далее: " + (current + 2);
-  } else {
-    nextBtn.innerText = "Конец";
-  }
-}
-
-/* ===== СБРОС ===== */
-document.getElementById("resetBtn").onclick = function(){
-  if(!confirm("Вы уверены, что хотите полностью сбросить игру?")) return;
-  db.ref("votes").remove();
-  setQ(-1);
-};
 </script>
-
 </body>
 </html>
