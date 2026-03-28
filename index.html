@@ -26,10 +26,7 @@ body {
   text-align:center;
 }
 
-#start {
-  background:#000;
-  z-index:10;
-}
+#start { background:#000; z-index:10; }
 
 #start img {
   max-width:80%;
@@ -164,16 +161,24 @@ function showGame(){
   game.style.display="flex";
 }
 
+/* 🔥 ГЛАВНАЯ ЛОГИКА СОСТОЯНИЙ */
 db.ref('currentQuestion').on('value', snap => {
 
   const current = snap.val();
 
-  // 🔥 ВСЕГДА старт до начала спектакля
-  if(current === null || current < 0){
+  // ✅ СБРОС → ВСЕГДА ТОЛЬКО КАРТИНКА
+  if(current === -1 || current === null){
     showStart();
     return;
   }
 
+  // ✅ СЦЕНА
+  if(current === -999){
+    showWaiting();
+    return;
+  }
+
+  // дальше только игра
   if(!ready || !questions[current]) return;
 
   showGame();
