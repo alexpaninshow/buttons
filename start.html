@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Start</title>
+<title>Старт спектакля</title>
 
 <style>
 html, body {
@@ -35,7 +35,7 @@ body {
 
 <body>
 
-<button id="startBtn">Start</button>
+<button id="startBtn">Начинаем спектакль</button>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -50,15 +50,25 @@ var btn = document.getElementById("startBtn");
 
 btn.onclick = function(){
 
-  btn.innerText = "Loading...";
+  btn.innerText = "Запуск...";
   btn.disabled = true;
 
-  db.ref('votes').remove();
-  db.ref('currentQuestion').set(-999);
+  // 🔥 ФОРС-ОБНОВЛЕНИЕ ВСЕХ ЗРИТЕЛЕЙ
+  db.ref('currentQuestion').set(-1);
+
+  setTimeout(function(){
+
+    // очистка голосов
+    db.ref('votes').remove();
+
+    // показать "Смотрите на сцену"
+    db.ref('currentQuestion').set(-999);
+
+  }, 100);
 
   setTimeout(function(){
     window.location.href = "operator.html";
-  }, 200);
+  }, 300);
 };
 </script>
 
