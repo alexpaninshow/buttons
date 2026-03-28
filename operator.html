@@ -28,7 +28,7 @@ button {
 <h1>Оператор</h1>
 <div id="status">Сейчас: Ожидание</div>
 
-<button id="nextBtn" class="next">Загрузка...</button>
+<button id="nextBtn" class="next" disabled>Загрузка...</button>
 <button id="backBtn" class="back" style="display:none;">Назад</button>
 <button id="resetBtn" class="reset">Сбросить игру</button>
 
@@ -66,13 +66,17 @@ function parseCSV(text){
   });
 }
 
+// загрузка
 fetch(CSV_URL)
 .then(r=>r.text())
 .then(text=>{
   questions=parseCSV(text);
+
+  nextBtn.disabled=false;
   updateButtons();
 });
 
+// запуск вопроса
 function showQuestion(i){
   if(autoTimer) clearTimeout(autoTimer);
 
@@ -94,10 +98,10 @@ function showQuestion(i){
 }
 
 nextBtn.onclick = ()=>{
-  if(current===-1){
-    showQuestion(lastQuestionIndex + 1);
-  } else if(current<questions.length-1){
-    showQuestion(current+1);
+  let nextIndex = current === -1 ? lastQuestionIndex + 1 : current + 1;
+
+  if(nextIndex < questions.length){
+    showQuestion(nextIndex);
   }
 };
 
@@ -119,6 +123,7 @@ document.getElementById("resetBtn").onclick = ()=>{
   updateButtons();
 };
 
+// обновление кнопок
 function updateButtons(){
   if(!questions.length) return;
 
