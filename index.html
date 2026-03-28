@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <title>Шоу</title>
 
-<!-- 🔤 красивый шрифт -->
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
 
 <style>
@@ -22,47 +21,34 @@ h1 {
   font-weight:800;
 }
 
-ul {
-  list-style:none;
-  padding:0;
-}
+ul { list-style:none; padding:0; }
 
 li {
   font-size:34px;
-  font-weight:700;
+  font-weight:800;
   padding:30px;
   margin:20px;
   background:#444;
   border-radius:18px;
-
-  border:5px solid #888; /* жирная рамка */
-
+  border:6px solid #888;
   transition: all 0.25s ease;
   cursor:pointer;
 }
 
-/* наведение */
 li:hover {
-  transform: scale(1.03);
-  border-color:#bbb;
+  transform: scale(1.05);
+  border-color:#ccc;
 }
 
-/* выбранный вариант */
 li.selected {
-  border-color:#00e676; /* ярко-зелёный */
+  border-color:#00e676;
   background:#2e7d32;
-  transform: scale(1.07);
-}
-
-/* эффект нажатия */
-li:active {
-  transform: scale(0.97);
+  transform: scale(1.08);
 }
 
 #timer {
   font-size:38px;
   margin-top:30px;
-  font-weight:700;
 }
 </style>
 </head>
@@ -142,7 +128,7 @@ db.ref('currentQuestion').on('value', snap => {
       clearInterval(timerId);
       timer.innerText="";
 
-      // ⏱ задержка 0.8 секунды
+      // 🔥 задержка 0.8 секунды
       setTimeout(()=>{
         title.innerText="Шоу";
         options.innerHTML="";
