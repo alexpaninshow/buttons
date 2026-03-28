@@ -16,16 +16,18 @@ body {
   align-items:center;
   justify-content:center;
   font-family:Arial;
+  padding:20px;
 }
 
-/* КНОПКА */
 #startBtn {
-  width:80%;
+  width:100%;
   max-width:600px;
-  height:25vh;
 
-  font-size:5vw;
+  padding:40px 20px;
+
+  font-size:6vw;
   font-weight:bold;
+  line-height:1.2;
 
   background:#2196f3;
   color:white;
@@ -38,13 +40,19 @@ body {
   display:flex;
   align-items:center;
   justify-content:center;
-
   text-align:center;
+
+  word-break:break-word;
 
   transition:transform 0.1s, box-shadow 0.1s;
 }
 
-/* эффект */
+@media (min-width:700px){
+  #startBtn {
+    font-size:32px;
+  }
+}
+
 #startBtn:active {
   transform:scale(0.97);
   box-shadow:0 0 20px rgba(33,150,243,0.7);
@@ -67,7 +75,6 @@ firebase.initializeApp({
 });
 
 const db = firebase.database();
-
 const btn = document.getElementById("startBtn");
 
 btn.onclick = async () => {
@@ -76,13 +83,11 @@ btn.onclick = async () => {
   btn.disabled = true;
 
   try {
-    // 🔥 СБРОС СОСТОЯНИЯ
+    // чистый старт
     await db.ref('currentQuestion').set(-1);
-
-    // 🔥 ОЧИСТКА ГОЛОСОВ (опционально, но лучше да)
     await db.ref('votes').remove();
 
-    // 🔥 ЧИСТИМ КЭШ (если браузер поддерживает)
+    // очистка кеша
     if ('caches' in window) {
       caches.keys().then(names => {
         names.forEach(name => caches.delete(name));
@@ -93,7 +98,6 @@ btn.onclick = async () => {
     console.log(e);
   }
 
-  // 🔥 ПЕРЕХОД К ОПЕРАТОРУ
   window.location.href = "operator.html";
 };
 </script>
