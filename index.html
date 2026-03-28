@@ -129,7 +129,7 @@ const title = document.getElementById("title");
 const options = document.getElementById("options");
 const timerBar = document.getElementById("timerBar");
 
-/* загрузка CSV */
+/* CSV */
 fetch(CSV_URL)
 .then(r => r.text())
 .then(text => {
@@ -162,10 +162,18 @@ function showGame(){
   game.style.display="flex";
 }
 
-/* состояние */
+/* 🔥 ВОТ ГЛАВНОЕ ИСПРАВЛЕНИЕ */
 db.ref('currentQuestion').on('value', snap => {
 
-  const current = snap.val();
+  const data = snap.val();
+
+  if(data === null){
+    showStart();
+    return;
+  }
+
+  // 👇 поддержка ОБЕИХ версий (число и объект)
+  const current = (typeof data === "object") ? data.state : data;
 
   if(current === -1){
     showStart();
@@ -210,7 +218,6 @@ db.ref('currentQuestion').on('value', snap => {
     options.appendChild(li);
   });
 
-  // таймер
   let total = 5;
   let time = total;
 
