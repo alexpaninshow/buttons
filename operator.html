@@ -59,8 +59,7 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 let questions = [];
-let history = []; // 🔥 ВОТ КЛЮЧ
-let canGoBack = false;
+let history = [];
 
 let autoTimer = null;
 let visualTimer = null;
@@ -112,8 +111,7 @@ function startVisualTimer(){
 function showQuestion(i){
   if(autoTimer) clearTimeout(autoTimer);
 
-  history.push(i); // 🔥 сохраняем путь
-  canGoBack = false;
+  history.push(i);
 
   db.ref('currentQuestion').set(i);
 
@@ -128,9 +126,7 @@ function showQuestion(i){
     status.innerText = "Сейчас: Ожидание";
     timerDiv.innerText = "";
 
-    canGoBack = true;
     updateButtons();
-
   }, 5000);
 }
 
@@ -143,9 +139,9 @@ nextBtn.onclick = ()=>{
 };
 
 backBtn.onclick = ()=>{
-  if(!canGoBack || history.length === 0) return;
+  if(history.length === 0) return;
 
-  history.pop(); // убрали текущий
+  history.pop();
 
   let prevIndex = history.length > 0
     ? history[history.length - 1]
@@ -159,7 +155,6 @@ document.getElementById("resetBtn").onclick = ()=>{
   if(visualTimer) clearInterval(visualTimer);
 
   history = [];
-  canGoBack = false;
 
   db.ref('currentQuestion').set(-1);
 
@@ -181,7 +176,13 @@ function updateButtons(){
     nextBtn.style.display="none";
   }
 
-  if(canGoBack && history.length > 0){
+  // 🔥 ГЛАВНАЯ ЛОГИКА
+  if(history.length === 1 && timerDiv.innerText !== ""){
+    backBtn.style.display="none";
+    return;
+  }
+
+  if(history.length > 0){
     let prevIndex = history.length > 1
       ? history[history.length - 2]
       : history[0];
