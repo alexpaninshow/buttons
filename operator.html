@@ -78,7 +78,7 @@ function parseCSV(text){
   });
 }
 
-// загрузка
+// загрузка вопросов
 fetch(CSV_URL)
 .then(r=>r.text())
 .then(text=>{
@@ -90,6 +90,7 @@ fetch(CSV_URL)
   updateButtons();
 });
 
+// показать вопрос
 function showQuestion(i){
   if(autoTimer) clearTimeout(autoTimer);
 
@@ -99,7 +100,7 @@ function showQuestion(i){
   status.innerText = "Сейчас: " + questions[i].text;
   updateButtons();
 
-  // авто-сброс через 5 сек
+  // авто-переход в ожидание через 5 сек
   autoTimer = setTimeout(()=>{
     current = -1;
     db.ref('currentQuestion').set(-1);
@@ -109,6 +110,7 @@ function showQuestion(i){
   }, 5000);
 }
 
+// кнопки
 nextBtn.onclick = ()=>{
   if(!questions.length) return;
 
@@ -130,18 +132,22 @@ document.getElementById("resetBtn").onclick = ()=>{
   updateButtons();
 };
 
+// обновление UI кнопок
 function updateButtons(){
   if(!questions.length) return;
 
   if(current===-1){
     nextBtn.innerText="Начать игру. Вопрос 1: "+questions[0].text;
+    nextBtn.style.display="inline-block";
     backBtn.style.display="none";
   } else {
     nextBtn.style.display = current<questions.length-1 ? "inline-block":"none";
+
     if(current<questions.length-1){
       nextBtn.innerText="Вопрос "+(current+2)+": "+questions[current+1].text;
     }
-    backBtn.style.display = current>0?"inline-block":"none";
+
+    backBtn.style.display = current>0 ? "inline-block":"none";
   }
 }
 </script>
