@@ -129,7 +129,6 @@ const title = document.getElementById("title");
 const options = document.getElementById("options");
 const timerBar = document.getElementById("timerBar");
 
-/* CSV */
 fetch(CSV_URL)
 .then(r => r.text())
 .then(text => {
@@ -143,39 +142,15 @@ fetch(CSV_URL)
   ready = true;
 });
 
-/* экраны */
-function showStart(){
-  startScreen.style.display="flex";
-  waiting.style.display="none";
-  game.style.display="none";
-}
+function showStart(){ startScreen.style.display="flex"; waiting.style.display="none"; game.style.display="none"; }
+function showWaiting(){ startScreen.style.display="none"; waiting.style.display="flex"; game.style.display="none"; }
+function showGame(){ startScreen.style.display="none"; waiting.style.display="none"; game.style.display="flex"; }
 
-function showWaiting(){
-  startScreen.style.display="none";
-  waiting.style.display="flex";
-  game.style.display="none";
-}
-
-function showGame(){
-  startScreen.style.display="none";
-  waiting.style.display="none";
-  game.style.display="flex";
-}
-
-/* 🔥 ВОТ ГЛАВНОЕ ИСПРАВЛЕНИЕ */
 db.ref('currentQuestion').on('value', snap => {
 
-  const data = snap.val();
+  const current = snap.val();
 
-  if(data === null){
-    showStart();
-    return;
-  }
-
-  // 👇 поддержка ОБЕИХ версий (число и объект)
-  const current = (typeof data === "object") ? data.state : data;
-
-  if(current === -1){
+  if(current === -1 || current === null){
     showStart();
     return;
   }
