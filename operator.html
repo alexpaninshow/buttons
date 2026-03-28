@@ -86,7 +86,7 @@ fetch(CSV_URL)
   }));
 });
 
-/* 🔥 СИНХРОНИЗАЦИЯ */
+/* Firebase */
 db.ref('currentQuestion').on('value', snap => {
   current = snap.val() ?? -1;
 
@@ -98,15 +98,15 @@ db.ref('currentQuestion').on('value', snap => {
   } else if(questions[current]){
     status.innerText = "Сейчас: " + (current+1) + ". " + questions[current].text;
 
-    startTimer(); // 👈 запуск таймера при каждом вопросе
+    startTimer(); // только отображение
   }
 
   updateButtons();
 });
 
-/* ⏱ ТАЙМЕР */
+/* ⏱ ТАЙМЕР БЕЗ АВТОПЕРЕХОДА */
 function startTimer(){
-  timeLeft = 5; // можешь менять длительность
+  timeLeft = 5;
 
   timerEl.innerText = "⏳ " + timeLeft;
 
@@ -116,12 +116,7 @@ function startTimer(){
     if(timeLeft <= 0){
       clearInterval(timerInterval);
       timerEl.innerText = "⏳ 0";
-
-      // 👇 авто переход
-      if(current < questions.length - 1){
-        db.ref('currentQuestion').set(current + 1);
-      }
-
+      // ❌ НЕТ перехода!
     } else {
       timerEl.innerText = "⏳ " + timeLeft;
     }
