@@ -1,98 +1,120 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Оператор</title>
+<meta charset="UTF-8">
+<title>Оператор</title>
 
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-  <style>
-    body {
-      font-family: Arial;
-      padding: 20px;
-      background: #111;
-      color: white;
-    }
+<style>
+body{
+  font-family:Arial;
+  background:#111;
+  color:white;
+  padding:20px;
+}
 
-    button {
-      padding: 10px 16px;
-      margin: 5px;
-      font-size: 14px;
-      border-radius: 8px;
-      border: none;
-    }
+button{
+  padding:10px 15px;
+  margin:5px;
+  font-size:14px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+}
 
-    #timer {
-      margin-top: 20px;
-      font-size: 20px;
-    }
-  </style>
+#timer{
+  margin-top:20px;
+  font-size:24px;
+}
+</style>
 </head>
+
 <body>
 
 <h2>Оператор</h2>
 
-<button onclick="startGame()">▶️ Начать спектакль</button>
-<button onclick="nextQuestion()">⏭ Следующий вопрос</button>
-<button onclick="resetGame()">🔄 Сброс</button>
+<button onclick="start()">▶️ Старт</button>
+<button onclick="next()">⏭ Вопрос</button>
+<button onclick="pause()">⏸ Пауза</button>
+<button onclick="reset()">🔄 Сброс</button>
 
 <div id="timer">0</div>
 
 <script>
-const firebaseConfig = {
-  // ВСТАВЬ СВОЙ CONFIG
-};
+firebase.initializeApp({
+  databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"
+});
 
-const app = firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-let timerInterval = null;
+let current = 0;
+let interval = null;
 
-function startGame() {
+function start(){
+  current = 0;
+
+  db.ref("votes").remove();
+
   db.ref("game").set({
-    status: "playing",
-    currentQuestion: 0,
-    startedAt: Date.now()
+    status:"playing",
+    currentQuestion:0,
+    timer:5
   });
 
-  startTimer();
+  runTimer();
 }
 
-function nextQuestion() {
-  db.ref("game/currentQuestion").once("value", (snap) => {
-    let q = snap.val();
-    q++;
+function next(){
+  current++;
 
-    db.ref("game/currentQuestion").set(q);
-  });
-
-  resetTimer();
-}
-
-function resetGame() {
   db.ref("game").set({
-    status: "waiting",
-    currentQuestion: null,
-    startedAt: null
+    status:"playing",
+    currentQuestion:current,
+    timer:5
   });
 
-  clearInterval(timerInterval);
-  document.getElementById("timer").innerText = "0";
+  runTimer();
 }
 
-function startTimer() {
-  clearInterval(timerInterval);
-  let t = 0;
+function pause(){
+  db.ref("game/status").set("pause");
+  stopTimer();
+}
 
-  timerInterval = setInterval(() => {
-    t++;
+function reset(){
+  db.ref("game").set({
+    status:"waiting",
+    currentQuestion:null
+  });
+
+  db.ref("votes").remove();
+
+  stopTimer();
+  document.getElementById("timer").innerText="0";
+}
+
+function runTimer(){
+  stopTimer();
+
+  let t = 5;
+  document.getElementById("timer").innerText = t;
+
+  interval = setInterval(()=>{
+    t--;
     document.getElementById("timer").innerText = t;
-  }, 1000);
+
+    if(t<=0){
+      clearInterval(interval);
+      db.ref("game/status").set("pause");
+    }
+
+  },1000);
 }
 
-function resetTimer() {
-  startTimer();
+function stopTimer(){
+  clearInterval(interval);
 }
 </script>
 
