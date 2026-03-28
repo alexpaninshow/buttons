@@ -68,7 +68,7 @@ let current = -1;
 
 let timerInterval = null;
 let timeLeft = 0;
-let timerFinished = false; // 🔥 ВАЖНО
+let timerFinished = false;
 
 const status = document.getElementById("status");
 const timerEl = document.getElementById("timer");
@@ -105,7 +105,7 @@ db.ref('currentQuestion').on('value', snap => {
   updateButtons();
 });
 
-/* ⏱ таймер */
+/* таймер */
 function startTimer(){
   timeLeft = 5;
 
@@ -118,8 +118,8 @@ function startTimer(){
       clearInterval(timerInterval);
       timerEl.innerText = "⏳ 0";
 
-      timerFinished = true; // 🔥 таймер закончился
-      updateButtons();     // 🔥 обновляем текст кнопки
+      timerFinished = true;
+      updateButtons();
 
     } else {
       timerEl.innerText = "⏳ " + timeLeft;
@@ -133,7 +133,7 @@ function showQuestion(i){
   db.ref('currentQuestion').set(i);
 }
 
-/* 🔥 ГЛАВНАЯ ЛОГИКА КНОПКИ */
+/* ✅ ГЛАВНАЯ КНОПКА */
 nextBtn.onclick = ()=>{
   if(current === -1){
     showQuestion(0);
@@ -141,12 +141,12 @@ nextBtn.onclick = ()=>{
   }
 
   if(timerFinished){
-    // 🔁 ПЕРЕЗАПУСК ТЕКУЩЕГО ВОПРОСА
+    // 🔁 повтор текущего
     showQuestion(current);
   } else {
-    // ⬅ НАЗАД
-    if(current > 0){
-      showQuestion(current - 1);
+    // 👉 ВПЕРЁД (как и должно быть)
+    if(current < questions.length - 1){
+      showQuestion(current + 1);
     }
   }
 };
@@ -159,7 +159,7 @@ document.getElementById("resetBtn").onclick = ()=>{
   db.ref('currentQuestion').set(-1);
 };
 
-/* 🔥 ОБНОВЛЕНИЕ ТЕКСТА КНОПКИ */
+/* текст кнопок */
 function updateButtons(){
   if(!questions.length) return;
 
@@ -169,18 +169,15 @@ function updateButtons(){
   }
 
   if(timerFinished){
-    // 🔁 после таймера
     nextBtn.innerText = "Повтор: " + questions[current].text;
   } else {
-    // ⬅ во время таймера
-    if(current > 0){
-      nextBtn.innerText = "Назад: " + questions[current-1].text;
+    if(current < questions.length - 1){
+      nextBtn.innerText = "Далее: " + questions[current+1].text;
     } else {
-      nextBtn.innerText = "Идёт первый вопрос";
+      nextBtn.innerText = "Последний вопрос";
     }
   }
 
-  // обычная кнопка назад (оранжевая)
   if(current > 0){
     backBtn.style.display="block";
     backBtn.innerText = "Назад: " + questions[current-1].text;
