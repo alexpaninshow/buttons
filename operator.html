@@ -80,7 +80,7 @@ const timerEl = document.getElementById("timer");
 const nextBtn = document.getElementById("nextBtn");
 const backBtn = document.getElementById("backBtn");
 
-/* CSV */
+/* загрузка CSV */
 fetch(CSV_URL)
 .then(r=>r.text())
 .then(text=>{
@@ -100,7 +100,6 @@ db.ref('currentQuestion').on('value', snap => {
   const val = snap.val();
   const newVal = (val === null) ? -1 : Number(val);
 
-  // запоминаем предыдущий вопрос
   if(newVal >= 0){
     prevQuestion = newVal;
   }
@@ -146,13 +145,22 @@ function startTimer(){
 /* управление */
 nextBtn.onclick = ()=>{
 
+  // старт
   if(current === -1){
     db.ref('currentQuestion').set(0);
+    return;
   }
-  else if(current === -999){
-    db.ref('currentQuestion').set(prevQuestion + 1);
+
+  // после таймера
+  if(current === -999){
+    if(prevQuestion < questions.length - 1){
+      db.ref('currentQuestion').set(prevQuestion + 1);
+    }
+    return;
   }
-  else{
+
+  // обычный переход
+  if(current < questions.length - 1){
     db.ref('currentQuestion').set(current + 1);
   }
 };
@@ -161,8 +169,10 @@ backBtn.onclick = ()=>{
 
   if(current === -999){
     db.ref('currentQuestion').set(prevQuestion);
+    return;
   }
-  else if(current > 0){
+
+  if(current > 0){
     db.ref('currentQuestion').set(current - 1);
   }
 };
@@ -177,30 +187,42 @@ function updateButtons(){
 
   if(!questions.length) return;
 
+  // старт
   if(current === -1){
     nextBtn.innerText = "Начать: 1. " + questions[0].text;
     backBtn.style.display = "none";
     return;
   }
 
+  // после таймера
   if(current === -999){
 
-    nextBtn.innerText = "Далее: " + (prevQuestion+2) + ". " + questions[prevQuestion+1]?.text;
-    backBtn.style.display = "block";
-
-    if(prevQuestion >= 0){
-      backBtn.innerText = "Назад: " + (prevQuestion+1) + ". " + questions[prevQuestion].text;
+    // Далее
+    if(prevQuestion < questions.length - 1){
+      nextBtn.innerText = "Далее: " + (prevQuestion+2) + ". " + questions[prevQuestion+1].text;
+    } else {
+      nextBtn.innerText = "Конец";
     }
+
+    // Назад = повтор текущего
+    backBtn.style.display = "block";
+    backBtn.innerText = "Назад: " + (prevQuestion+1) + ". " + questions[prevQuestion].text;
 
     return;
   }
 
-  nextBtn.innerText = "Далее: " + (current+2) + ". " + questions[current+1]?.text;
-
-  backBtn.style.display = current > 0 ? "block" : "none";
+  // обычный режим
+  if(current < questions.length - 1){
+    nextBtn.innerText = "Далее: " + (current+2) + ". " + questions[current+1].text;
+  } else {
+    nextBtn.innerText = "Конец";
+  }
 
   if(current > 0){
+    backBtn.style.display = "block";
     backBtn.innerText = "Назад: " + current + ". " + questions[current-1].text;
+  } else {
+    backBtn.style.display = "none";
   }
 }
 </script>
