@@ -13,6 +13,11 @@ html,body{margin:0;height:100%;font-family:Arial;background:#111;color:#fff}
   flex-direction:column;text-align:center
 }
 
+#start img{
+  max-width:80%;
+  margin-bottom:20px;
+}
+
 #waiting{display:none;font-size:6vw}
 #game{display:none;width:100%;height:100%;flex-direction:column}
 
@@ -30,7 +35,11 @@ li{
 
 <body>
 
-<div id="start" class="screen">Скоро начнём!</div>
+<div id="start" class="screen">
+<img src="start.jpg">
+<div>Скоро начнём!</div>
+</div>
+
 <div id="waiting" class="screen">Смотрите на сцену!</div>
 
 <div id="game">
@@ -48,24 +57,18 @@ firebase.initializeApp({
 });
 var db=firebase.database();
 
-/* USER */
 var uid=localStorage.getItem("uid");
 if(!uid){
   uid="u"+Math.random().toString(36).substr(2,9);
   localStorage.setItem("uid",uid);
 }
 
-/* DATA */
-var questions=[];
-var loaded=false;
+var questions=[],loaded=false;
 var answered=JSON.parse(localStorage.getItem("ans")||"{}");
 
-/* CSV */
 fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vQVLFjRWrX9DiTY9f32pSs8v0Y3MfxLSFC-G-Gi43Z37Lt75BMj-1J8nQGNzgAQdOsR2_pKUmdxU7G6/pub?gid=0&single=true&output=csv")
 .then(r=>r.text())
 .then(t=>{
-  if(t.indexOf("<!DOCTYPE")!==-1){alert("Ошибка таблицы");return;}
-
   var rows=t.trim().split('\n');
 
   for(var i=1;i<rows.length;i++){
@@ -82,7 +85,6 @@ fetch("https://docs.google.com/spreadsheets/d/e/2PACX-1vQVLFjRWrX9DiTY9f32pSs8v0
   loaded=true;
 });
 
-/* UI */
 function show(id){
   document.getElementById("start").style.display="none";
   document.getElementById("waiting").style.display="none";
@@ -90,7 +92,6 @@ function show(id){
   document.getElementById(id).style.display="flex";
 }
 
-/* SYNC */
 db.ref("currentQuestion").on("value",s=>{
 
   var d=s.val();
@@ -116,10 +117,12 @@ db.ref("currentQuestion").on("value",s=>{
     var li=document.createElement("li");
     li.innerText=q.options[k];
 
-    if(selected!==undefined){
-      if(selected===k) li.classList.add("selected");
+    if(selected!==undefined && selected===k){
+      li.classList.add("selected");
       li.style.opacity=0.6;
-    }else{
+    }
+
+    if(selected===undefined){
       li.onclick=function(){
 
         answered[i]=k;
@@ -129,9 +132,7 @@ db.ref("currentQuestion").on("value",s=>{
 
         li.classList.add("selected");
 
-        setTimeout(()=>{
-          show("waiting");
-        },300);
+        setTimeout(()=>show("waiting"),300);
       };
     }
 
@@ -140,9 +141,9 @@ db.ref("currentQuestion").on("value",s=>{
 
   document.getElementById("q").innerText=q.text;
 
-  /* таймер */
   var total=5000;
   var passed=Date.now()-d.startTime;
+
   if(passed<0)passed=0;
   if(passed>total)passed=total;
 
