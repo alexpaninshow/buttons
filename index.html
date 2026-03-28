@@ -27,33 +27,10 @@ body {
 }
 
 #start { background:#000; }
-
-#start img {
-  max-width:80%;
-  border-radius:20px;
-  margin-bottom:30px;
-}
-
 #waiting { display:none; font-size:6vw; font-weight:900; }
 #game { display:none; height:100%; flex-direction:column; }
 
 h1 { font-size:5vw; margin:10px; }
-
-#timerBarWrap {
-  width:90%;
-  height:60px;
-  background:#222;
-  border-radius:40px;
-  overflow:hidden;
-  margin:30px auto;
-}
-
-#timerBar {
-  height:100%;
-  width:100%;
-  background:hsl(120,100%,50%);
-  transition: width 1s linear;
-}
 
 ul {
   flex:1;
@@ -87,19 +64,13 @@ li.selected {
 <body>
 
 <div id="start" class="screen">
-  <img src="start.jpg">
-  <div style="font-size:5vw;font-weight:900;">Скоро начнём!</div>
+  <h1>Скоро начнём!</h1>
 </div>
 
 <div id="waiting" class="screen">Смотрите на сцену!</div>
 
 <div id="game">
   <h1 id="title"></h1>
-
-  <div id="timerBarWrap">
-    <div id="timerBar"></div>
-  </div>
-
   <ul id="options"></ul>
 </div>
 
@@ -118,7 +89,6 @@ const db = firebase.database();
 let questions = [];
 let ready = false;
 let voted = false;
-let timerInterval = null;
 
 fetch(CSV_URL)
 .then(r => r.text())
@@ -139,7 +109,6 @@ const game = document.getElementById("game");
 
 const title = document.getElementById("title");
 const options = document.getElementById("options");
-const timerBar = document.getElementById("timerBar");
 
 function show(screen){
   start.style.display="none";
@@ -173,7 +142,6 @@ db.ref("game").on("value", snap => {
     show(game);
 
     voted = false;
-    clearInterval(timerInterval);
 
     title.innerText = q.text;
     options.innerHTML = "";
@@ -194,25 +162,6 @@ db.ref("game").on("value", snap => {
 
       options.appendChild(li);
     });
-
-    let total = data.timer || 5;
-    let time = total;
-
-    timerBar.style.transition="none";
-    timerBar.style.width="100%";
-
-    requestAnimationFrame(()=>{
-      timerBar.style.transition="width 1s linear";
-    });
-
-    timerInterval = setInterval(()=>{
-      time--;
-      timerBar.style.width = (time/total*100)+"%";
-
-      if(time<=0){
-        clearInterval(timerInterval);
-      }
-    },1000);
   }
 });
 </script>
