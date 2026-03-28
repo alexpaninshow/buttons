@@ -7,10 +7,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&display=swap" rel="stylesheet">
 
 <style>
-html, body {
-  height:100%;
-  margin:0;
-}
+html, body { height:100%; margin:0; }
 
 body {
   font-family:'Montserrat',sans-serif;
@@ -19,8 +16,8 @@ body {
   overflow:hidden;
 }
 
-/* экран ожидания */
-#waiting {
+/* экраны */
+.screen {
   position:fixed;
   width:100%;
   height:100%;
@@ -31,27 +28,24 @@ body {
   text-align:center;
 }
 
-/* картинка */
-#waiting img {
+.hidden { display:none !important; }
+
+/* старт */
+#start img {
   max-width:85%;
   max-height:60%;
-  margin-bottom:30px;
-  border-radius:20px;
-}
-
-/* fallback фон */
-#fallback {
-  display:none;
-  width:80%;
-  height:40%;
-  background:linear-gradient(135deg,#444,#111);
   border-radius:20px;
   margin-bottom:30px;
 }
 
-/* текст */
-#waitingText {
+#startText {
   font-size:5vw;
+  font-weight:900;
+}
+
+/* ожидание */
+#waiting {
+  font-size:6vw;
   font-weight:900;
 }
 
@@ -105,12 +99,18 @@ li.selected {
 
 <body>
 
-<div id="waiting">
-  <img id="poster" src="https://lh3.googleusercontent.com/d/1iBnjog9xZVAkyeB3LlHv3aNWuXdYG39y">
-  <div id="fallback"></div>
-  <div id="waitingText">Смотрите на сцену!</div>
+<!-- старт -->
+<div id="start" class="screen">
+  <img src="https://lh3.googleusercontent.com/d/1iBnjog9xZVAkyeB3LlHv3aNWuXdYG39y">
+  <div id="startText">Скоро начнём!</div>
 </div>
 
+<!-- ожидание -->
+<div id="waiting" class="screen hidden">
+  Смотрите на сцену!
+</div>
+
+<!-- игра -->
 <div id="game">
   <h1 id="title"></h1>
   <div id="timer"></div>
@@ -121,15 +121,6 @@ li.selected {
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-// 👉 если картинка не загрузилась — показываем fallback
-const img = document.getElementById("poster");
-const fallback = document.getElementById("fallback");
-
-img.onerror = () => {
-  img.style.display="none";
-  fallback.style.display="block";
-};
-
 const CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv";
 
 firebase.initializeApp({
@@ -141,11 +132,31 @@ let questions=[];
 let voted=false;
 let timerInterval=null;
 
+const startScreen = document.getElementById("start");
 const waiting = document.getElementById("waiting");
 const game = document.getElementById("game");
+
 const title = document.getElementById("title");
 const options = document.getElementById("options");
 const timer = document.getElementById("timer");
+
+function showStart(){
+  startScreen.classList.remove("hidden");
+  waiting.classList.add("hidden");
+  game.style.display="none";
+}
+
+function showWaiting(){
+  startScreen.classList.add("hidden");
+  waiting.classList.remove("hidden");
+  game.style.display="none";
+}
+
+function showGame(){
+  startScreen.classList.add("hidden");
+  waiting.classList.add("hidden");
+  game.style.display="flex";
+}
 
 function parseCSV(text){
   const rows = text.trim().split('\n').map(r=>r.split(','));
@@ -161,37 +172,26 @@ fetch(CSV_URL)
   questions=parseCSV(text);
 });
 
-db.ref('/').on('value', snap => {
-  const data = snap.val() || {};
-  const current = data.currentQuestion;
-  const start = data.questionStartTime;
+db.ref('currentQuestion').on('value', snap => {
+  const current = snap.val();
 
   clearInterval(timerInterval);
   voted=false;
 
-  if(current===-1 || !start){
-    waiting.style.display="flex";
-    game.style.display="none";
+  // 👉 СТАРТ
+  if(current === -1){
+    showStart();
     return;
   }
 
-  const now = Date.now();
-  const elapsed = Math.floor((now - start)/1000);
-  const remaining = 5 - elapsed;
-
-  if(remaining <= 0){
-    waiting.style.display="flex";
-    game.style.display="none";
-    return;
-  }
-
+  // 👉 ВОПРОС
+  const startTime = Date.now();
   const q = questions[current];
 
-  waiting.style.display="none";
-  game.style.display="flex";
+  showGame();
 
-  title.innerText=q.text;
-  options.innerHTML="";
+  title.innerText = q.text;
+  options.innerHTML = "";
 
   q.options.forEach((opt,i)=>{
     const li=document.createElement('li');
@@ -211,29 +211,25 @@ db.ref('/').on('value', snap => {
       clearInterval(timerInterval);
 
       setTimeout(()=>{
-        waiting.style.display="flex";
-        game.style.display="none";
+        showWaiting();
       },800);
     };
 
     options.appendChild(li);
   });
 
-  timer.innerText="⏳ "+remaining;
+  let time = 5;
+  timer.innerText="⏳ "+time;
 
   timerInterval=setInterval(()=>{
-    const now = Date.now();
-    const elapsed = Math.floor((now - start)/1000);
-    const remain = 5 - elapsed;
-
-    if(remain <= 0){
+    time--;
+    if(time<=0){
       clearInterval(timerInterval);
-      waiting.style.display="flex";
-      game.style.display="none";
+      showWaiting();
     } else {
-      timer.innerText="⏳ "+remain;
+      timer.innerText="⏳ "+time;
     }
-  },500);
+  },1000);
 });
 </script>
 
