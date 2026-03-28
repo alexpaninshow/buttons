@@ -15,7 +15,6 @@ body {
   color:white;
 }
 
-/* экраны */
 .screen {
   position:fixed;
   width:100%;
@@ -30,13 +29,11 @@ body {
 #waiting { display:none; font-size:6vw; }
 #game { display:none; height:100%; flex-direction:column; }
 
-/* старт без картинки */
 #start {
   font-size:6vw;
   font-weight:900;
 }
 
-/* вопрос */
 h1 { font-size:5vw; }
 
 #timer {
@@ -93,7 +90,7 @@ li.selected {
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-const CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv";
+const CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv&gid=0";
 
 firebase.initializeApp({
   databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"
@@ -112,7 +109,7 @@ const title = document.getElementById("title");
 const options = document.getElementById("options");
 const timer = document.getElementById("timer");
 
-/* 👉 ЗАГРУЗКА ВОПРОСОВ (С ПРОВЕРКОЙ) */
+/* загрузка таблицы */
 fetch(CSV_URL)
 .then(r=>r.text())
 .then(text=>{
@@ -123,13 +120,13 @@ fetch(CSV_URL)
     options:cols.slice(1).map(c=>c.trim()).filter(Boolean)
   }));
 
-  console.log("Вопросы загружены:", questions);
+  console.log("ЗАГРУЖЕНО:", questions);
 })
 .catch(()=>{
   alert("Ошибка загрузки таблицы");
 });
 
-/* 👉 ЛОГИКА */
+/* логика */
 db.ref('currentQuestion').on('value', snap => {
   const current = snap.val();
 
@@ -143,10 +140,7 @@ db.ref('currentQuestion').on('value', snap => {
     return;
   }
 
-  if(!questions[current]){
-    console.log("Нет вопроса:", current);
-    return;
-  }
+  if(!questions[current]) return;
 
   startScreen.style.display="none";
   waiting.style.display="none";
