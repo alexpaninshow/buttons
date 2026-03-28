@@ -6,29 +6,29 @@
 
 <style>
 html, body {
-  height: 100%;
-  margin: 0;
+  height:100%;
+  margin:0;
 }
 
 body {
-  background: #111;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: Arial;
+  background:#111;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-family:Arial;
 }
 
 #startBtn {
-  width: 90%;
-  max-width: 600px;
-  padding: 40px 20px;
-  font-size: 28px;
-  font-weight: bold;
-  background: #2196f3;
-  color: white;
-  border: none;
-  border-radius: 30px;
-  cursor: pointer;
+  width:90%;
+  max-width:600px;
+  padding:40px 20px;
+  font-size:28px;
+  font-weight:bold;
+  background:#2196f3;
+  color:white;
+  border:none;
+  border-radius:30px;
+  cursor:pointer;
 }
 </style>
 </head>
@@ -48,14 +48,17 @@ firebase.initializeApp({
 var db = firebase.database();
 var btn = document.getElementById("startBtn");
 
-btn.onclick = function () {
+btn.onclick = function(){
+
+  btn.innerText = "Подготовка...";
   btn.disabled = true;
-  btn.innerText = "Запуск...";
 
-  db.ref("votes").remove();
-  db.ref("currentQuestion").set(-999);
+  // 🔥 ПОЛНЫЙ СБРОС
+  db.ref('votes').remove();
+  db.ref('currentQuestion').set(-1);
 
-  setTimeout(function () {
+  // небольшая пауза для стабильности
+  setTimeout(function(){
     window.location.href = "operator.html";
   }, 300);
 };
