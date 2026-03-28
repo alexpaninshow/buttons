@@ -33,10 +33,20 @@ body {
 
 /* картинка */
 #waiting img {
-  max-width:80%;
+  max-width:85%;
   max-height:60%;
   margin-bottom:30px;
   border-radius:20px;
+}
+
+/* fallback фон */
+#fallback {
+  display:none;
+  width:80%;
+  height:40%;
+  background:linear-gradient(135deg,#444,#111);
+  border-radius:20px;
+  margin-bottom:30px;
 }
 
 /* текст */
@@ -61,7 +71,7 @@ h1 {
 #timer {
   text-align:center;
   font-size:8vw;
-  margin-bottom:10px;
+  margin-bottom:20px;
 }
 
 ul {
@@ -96,7 +106,8 @@ li.selected {
 <body>
 
 <div id="waiting">
-  <img src="https://drive.google.com/uc?export=view&id=1iBnjog9xZVAkyeB3LlHv3aNWuXdYG39y">
+  <img id="poster" src="https://lh3.googleusercontent.com/d/1iBnjog9xZVAkyeB3LlHv3aNWuXdYG39y">
+  <div id="fallback"></div>
   <div id="waitingText">Смотрите на сцену!</div>
 </div>
 
@@ -110,6 +121,15 @@ li.selected {
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
+// 👉 если картинка не загрузилась — показываем fallback
+const img = document.getElementById("poster");
+const fallback = document.getElementById("fallback");
+
+img.onerror = () => {
+  img.style.display="none";
+  fallback.style.display="block";
+};
+
 const CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv";
 
 firebase.initializeApp({
