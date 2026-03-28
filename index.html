@@ -109,36 +109,38 @@ li.selected {
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-const CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv&gid=0";
+var CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv&gid=0";
 
 firebase.initializeApp({
   databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"
 });
 
-const db = firebase.database();
+var db = firebase.database();
 
-let questions = [];
-let timerInterval = null;
-let voted = false;
+var questions = [];
+var timerInterval = null;
+var voted = false;
 
-const startScreen = document.getElementById("start");
-const waiting = document.getElementById("waiting");
-const game = document.getElementById("game");
+var startScreen = document.getElementById("start");
+var waiting = document.getElementById("waiting");
+var game = document.getElementById("game");
 
-const title = document.getElementById("title");
-const options = document.getElementById("options");
-const timerBar = document.getElementById("timerBar");
+var title = document.getElementById("title");
+var options = document.getElementById("options");
+var timerBar = document.getElementById("timerBar");
 
 /* CSV */
 fetch(CSV_URL)
-.then(r => r.text())
-.then(text => {
-  const rows = text.trim().split('\n').map(r => r.split(','));
+.then(function(r){ return r.text(); })
+.then(function(text){
+  var rows = text.trim().split('\n').map(function(r){ return r.split(','); });
 
-  questions = rows.slice(1).map(cols => ({
-    text:(cols[0]||"").trim(),
-    options:cols.slice(1).map(c=>c.trim()).filter(Boolean)
-  }));
+  questions = rows.slice(1).map(function(cols){
+    return {
+      text:(cols[0] || "").trim(),
+      options:cols.slice(1).map(function(c){ return c.trim(); }).filter(Boolean)
+    };
+  });
 });
 
 /* экраны */
@@ -161,9 +163,9 @@ function showGame(){
 }
 
 /* Firebase */
-db.ref('currentQuestion').on('value', snap => {
+db.ref('currentQuestion').on('value', function(snap){
 
-  const current = snap.val();
+  var current = snap.val();
 
   if(current === -1){
     showStart();
@@ -182,29 +184,31 @@ db.ref('currentQuestion').on('value', snap => {
   voted = false;
   clearInterval(timerInterval);
 
-  const q = questions[current];
+  var q = questions[current];
 
   title.innerText = q.text;
   options.innerHTML = "";
 
-  q.options.forEach((opt,i)=>{
-    const li=document.createElement('li');
-    li.innerText=opt;
+  q.options.forEach(function(opt,i){
 
-    li.onclick=()=>{
+    var li = document.createElement('li');
+    li.innerText = opt;
+
+    li.onclick = function(){
+
       if(voted) return;
 
-      voted=true;
+      voted = true;
       clearInterval(timerInterval);
 
-      const voteRef = db.ref('votes/'+current+'/'+i);
+      var voteRef = db.ref('votes/'+current+'/'+i);
 
-      voteRef.transaction(v => {
+      voteRef.transaction(function(v){
         if(!v){
           return {count:1, last:Date.now()};
         }
         return {
-          count:(v.count||0)+1,
+          count:(v.count || 0) + 1,
           last:Date.now()
         };
       });
@@ -217,18 +221,19 @@ db.ref('currentQuestion').on('value', snap => {
     options.appendChild(li);
   });
 
-  let total = 5;
-  let time = total;
+  var total = 5;
+  var time = total;
 
   timerBar.style.width = "100%";
 
-  timerInterval=setInterval(()=>{
+  timerInterval = setInterval(function(){
+
     time--;
 
-    let percent = (time/total)*100;
+    var percent = (time/total)*100;
     timerBar.style.width = percent + "%";
 
-    let hue = 120 - (120 * ((total-time)/total));
+    var hue = 120 - (120 * ((total-time)/total));
     timerBar.style.background = "hsl(" + hue + ",100%,50%)";
 
     if(time <= 0){
