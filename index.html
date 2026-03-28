@@ -2,127 +2,250 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Старт</title>
+<title>Шоу</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
 
 <style>
-html, body {
-  height:100%;
-  margin:0;
-}
+html, body { height:100%; margin:0; }
 
 body {
+  font-family:'Montserrat',sans-serif;
   background:#111;
+  color:white;
+}
+
+.screen {
+  position:fixed;
+  width:100%;
+  height:100%;
   display:flex;
   align-items:center;
   justify-content:center;
   flex-direction:column;
-  font-family:Arial;
-  color:white;
+  text-align:center;
 }
 
-#startBtn {
+#start { background:#000; z-index:10; }
+
+#start img {
+  max-width:80%;
+  border-radius:20px;
+  margin-bottom:30px;
+}
+
+#waiting { display:none; font-size:6vw; font-weight:900; }
+#game { display:none; height:100%; flex-direction:column; }
+
+h1 { font-size:5vw; margin:10px; }
+
+#timerBarWrap {
   width:90%;
-  max-width:600px;
-  padding:40px 20px;
-  font-size:28px;
-  font-weight:bold;
-  background:#2196f3;
-  color:white;
-  border:none;
-  border-radius:30px;
+  height:70px;
+  background:#222;
+  border-radius:40px;
+  overflow:hidden;
+  margin:40px auto;
+}
+
+#timerBar {
+  height:100%;
+  width:100%;
+  background:hsl(120,100%,50%);
+}
+
+ul {
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  margin:10px;
+  padding:0;
+}
+
+li {
+  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:7vw;
+  font-weight:900;
+  margin:8px 0;
+  background:#333;
+  border-radius:20px;
+  border:6px solid #888;
   cursor:pointer;
 }
 
-#status {
-  margin-top:20px;
-  font-size:20px;
-  font-style:italic;
+li.selected {
+  border:8px solid #00e676;
+  background:#2e7d32;
 }
 </style>
 </head>
 
 <body>
 
-<button id="startBtn">Начинаем спектакль</button>
-<div id="status">Проверка системы...</div>
+<div id="start" class="screen">
+  <img src="start.jpg">
+  <div style="font-size:5vw;font-weight:900;">
+    Скоро начнём!
+  </div>
+</div>
+
+<div id="waiting" class="screen">Смотрите на сцену!</div>
+
+<div id="game">
+  <h1 id="title"></h1>
+
+  <div id="timerBarWrap">
+    <div id="timerBar"></div>
+  </div>
+
+  <ul id="options"></ul>
+</div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
+var CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv&gid=0";
+
 firebase.initializeApp({
-  databaseURL: "https://buttons-panin-default-rtdb.firebaseio.com"
+  databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"
 });
 
 var db = firebase.database();
 
-var btn = document.getElementById("startBtn");
-var statusEl = document.getElementById("status");
+var questions = [];
+var timerInterval = null;
+var voted = false;
 
-var checking = false;
+var startScreen = document.getElementById("start");
+var waiting = document.getElementById("waiting");
+var game = document.getElementById("game");
 
-/* всегда держим зрителей на старте */
-function forceStart(){
-  db.ref('currentQuestion').set(-1);
+var title = document.getElementById("title");
+var options = document.getElementById("options");
+var timerBar = document.getElementById("timerBar");
+
+/* загрузка CSV */
+fetch(CSV_URL)
+.then(function(r){ return r.text(); })
+.then(function(text){
+
+  var rows = text.trim().split('\n');
+  var parsed = [];
+
+  for(var i=0;i<rows.length;i++){
+    parsed.push(rows[i].split(','));
+  }
+
+  for(var i=1;i<parsed.length;i++){
+    var cols = parsed[i];
+
+    var q = {
+      text:(cols[0] || "").trim(),
+      options:[]
+    };
+
+    for(var j=1;j<cols.length;j++){
+      var val = (cols[j] || "").trim();
+      if(val) q.options.push(val);
+    }
+
+    questions.push(q);
+  }
+});
+
+/* экраны */
+function showStart(){
+  startScreen.style.display="flex";
+  waiting.style.display="none";
+  game.style.display="none";
 }
 
-/* проверка системы */
-function checkSystem(){
-
-  checking = true;
-
-  btn.disabled = true;
-  btn.style.opacity = "0.5";
-
-  statusEl.innerText = "Проверка системы...";
-
-  // проверяем Firebase
-  db.ref('currentQuestion').once('value', function(){
-
-    statusEl.innerText = "✔ Система готова к работе";
-
-    btn.disabled = false;
-    btn.style.opacity = "1";
-
-    checking = false;
-
-  }, function(){
-
-    statusEl.innerText = "Ошибка подключения";
-
-    checking = false;
-  });
+function showWaiting(){
+  startScreen.style.display="none";
+  waiting.style.display="flex";
+  game.style.display="none";
 }
 
-/* при загрузке */
-forceStart();
-checkSystem();
+function showGame(){
+  startScreen.style.display="none";
+  waiting.style.display="none";
+  game.style.display="flex";
+}
 
-/* каждые 60 секунд */
-setInterval(function(){
-  forceStart();
-  checkSystem();
-},60000);
+/* Firebase */
+db.ref('currentQuestion').on('value', function(snap){
 
-/* кнопка старта */
-btn.onclick = function(){
+  var current = snap.val();
 
-  if(checking) return;
+  if(current === -1){
+    showStart();
+    return;
+  }
 
-  btn.innerText = "Запуск...";
-  btn.disabled = true;
+  if(current === -999){
+    showWaiting();
+    return;
+  }
 
-  // очищаем голоса
-  db.ref('votes').remove();
+  if(!questions[current]) return;
 
-  // отправляем всех в ожидание
-  db.ref('currentQuestion').set(-999);
+  showGame();
 
-  // переход к оператору
+  voted = false;
+  clearInterval(timerInterval);
+
+  var q = questions[current];
+
+  title.innerText = q.text;
+  options.innerHTML = "";
+
+  for(var i=0;i<q.options.length;i++){
+
+    (function(i){
+
+      var li = document.createElement('li');
+      li.innerText = q.options[i];
+
+      li.onclick = function(){
+
+        if(voted) return;
+
+        voted = true;
+        clearInterval(timerInterval);
+
+        db.ref('votes/'+current+'/'+i)
+          .transaction(function(v){ return (v||0)+1; });
+
+        li.classList.add('selected');
+
+        setTimeout(showWaiting, 800);
+      };
+
+      options.appendChild(li);
+
+    })(i);
+  }
+
+  /* ПЛАВНЫЙ ТАЙМЕР */
+
+  timerBar.style.transition = "none";
+  timerBar.style.width = "100%";
+  timerBar.style.background = "hsl(120,100%,50%)";
+
+  timerBar.offsetHeight;
+
+  timerBar.style.transition = "width 5s linear, background 5s linear";
+
   setTimeout(function(){
-    window.location.href = "operator.html";
-  },300);
-};
+    timerBar.style.width = "0%";
+    timerBar.style.background = "hsl(0,100%,50%)";
+  },50);
+
+});
 </script>
 
 </body>
