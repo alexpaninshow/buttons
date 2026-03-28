@@ -40,7 +40,7 @@ h1 {
   margin-top:10px;
 }
 
-/* КНОПКИ КАК У ЗРИТЕЛЯ */
+/* КНОПКИ */
 #buttons {
   flex:1;
   display:flex;
@@ -48,12 +48,11 @@ h1 {
   padding:10px;
 }
 
-/* КНОПКА */
 button {
   flex:1;
   margin:6px 0;
 
-  font-size:5vw;
+  font-size:4.2vw;
   font-weight:bold;
 
   border-radius:20px;
@@ -65,6 +64,8 @@ button {
   display:flex;
   align-items:center;
   justify-content:center;
+  text-align:center;
+  padding:10px;
 
   -webkit-tap-highlight-color: transparent;
 }
@@ -74,7 +75,7 @@ button {
 .back { background:orange; }
 .reset { background:red; }
 
-/* эффект нажатия */
+/* эффект */
 button.pressed {
   border:6px solid white;
   transform: scale(0.97);
@@ -207,7 +208,7 @@ function showQuestion(i){
   setTimeout(()=> lock = false, 300);
 }
 
-/* вперёд */
+/* кнопки */
 nextBtn.onclick = ()=>{
   if(lock || !questions.length) return;
 
@@ -218,7 +219,6 @@ nextBtn.onclick = ()=>{
   }
 };
 
-/* назад */
 backBtn.onclick = ()=>{
   if(lock || !questions.length) return;
 
@@ -226,14 +226,11 @@ backBtn.onclick = ()=>{
 
   if(timerFinished){
     showQuestion(current);
-  } else {
-    if(current > 0){
-      showQuestion(current - 1);
-    }
+  } else if(current > 0){
+    showQuestion(current - 1);
   }
 };
 
-/* сброс */
 resetBtn.onclick = ()=>{
   db.ref('currentQuestion').set(-1);
 };
@@ -243,18 +240,29 @@ function updateButtons(){
   if(!questions.length || current === null) return;
 
   if(current === -1){
-    nextBtn.innerText = "Начать";
+    nextBtn.innerText = "Начать: " + questions[0].text;
     backBtn.style.display = "none";
     return;
   }
 
-  nextBtn.innerText = "Далее";
+  // ВПЕРЁД
+  if(current < questions.length - 1){
+    nextBtn.innerText = "Далее: " + questions[current+1].text;
+  } else {
+    nextBtn.innerText = "Конец";
+  }
+
+  // НАЗАД
   backBtn.style.display = "block";
 
   if(timerFinished){
-    backBtn.innerText = "Повтор";
+    backBtn.innerText = "Повтор: " + questions[current].text;
   } else {
-    backBtn.innerText = current > 0 ? "Назад" : "Первый вопрос";
+    if(current > 0){
+      backBtn.innerText = "Назад: " + questions[current-1].text;
+    } else {
+      backBtn.innerText = "Первый вопрос";
+    }
   }
 }
 </script>
