@@ -161,24 +161,21 @@ function showGame(){
   game.style.display="flex";
 }
 
-/* 🔥 ГЛАВНАЯ ЛОГИКА СОСТОЯНИЙ */
+/* 🔥 ЧЁТКАЯ ЛОГИКА СОСТОЯНИЙ */
 db.ref('currentQuestion').on('value', snap => {
 
   const current = snap.val();
 
-  // ✅ СБРОС → ВСЕГДА ТОЛЬКО КАРТИНКА
   if(current === -1 || current === null){
     showStart();
     return;
   }
 
-  // ✅ СЦЕНА
   if(current === -999){
     showWaiting();
     return;
   }
 
-  // дальше только игра
   if(!ready || !questions[current]) return;
 
   showGame();
