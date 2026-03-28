@@ -27,7 +27,12 @@ body {
 }
 
 #start { background:#000; }
-#start img { max-width:80%; border-radius:20px; margin-bottom:30px; }
+
+#start img {
+  max-width:80%;
+  border-radius:20px;
+  margin-bottom:30px;
+}
 
 #waiting { display:none; font-size:6vw; font-weight:900; }
 #game { display:none; height:100%; flex-direction:column; }
@@ -129,7 +134,7 @@ fetch(CSV_URL)
   ready = true;
 });
 
-/* экраны */
+/* элементы */
 const start = document.getElementById("start");
 const waiting = document.getElementById("waiting");
 const game = document.getElementById("game");
@@ -145,19 +150,28 @@ function show(screen){
   screen.style.display="flex";
 }
 
-/* 🔥 ОСНОВНАЯ ЛОГИКА */
+/* основная логика */
 db.ref("game").on("value", snap => {
 
   const data = snap.val();
-  if(!data) return show(start);
 
-  if(data.status === "waiting") return show(start);
-  if(data.status === "pause") return show(waiting);
+  if(!data){
+    show(start);
+    return;
+  }
 
-  if(data.status === "playing"){
+  const status = data.status || "waiting";
+  const current = data.currentQuestion ?? 0;
 
-    const q = questions[data.currentQuestion];
-    if(!ready || !q) return;
+  if(status === "waiting") return show(start);
+  if(status === "pause") return show(waiting);
+
+  if(status === "playing"){
+
+    if(!ready) return;
+
+    const q = questions[current];
+    if(!q) return;
 
     show(game);
 
@@ -173,10 +187,9 @@ db.ref("game").on("value", snap => {
 
       li.onclick = ()=>{
         if(voted) return;
-
         voted = true;
 
-        db.ref("votes/"+data.currentQuestion+"/"+i)
+        db.ref("votes/"+current+"/"+i)
           .transaction(v => (v||0)+1);
 
         li.classList.add("selected");
@@ -185,7 +198,6 @@ db.ref("game").on("value", snap => {
       options.appendChild(li);
     });
 
-    /* таймер */
     let total = data.timer || 5;
     let time = total;
 
@@ -193,22 +205,16 @@ db.ref("game").on("value", snap => {
     timerBar.style.width="100%";
 
     requestAnimationFrame(()=>{
-      timerBar.style.transition="width 1s linear, background 1s linear";
+      timerBar.style.transition="width 1s linear";
     });
 
     timerInterval = setInterval(()=>{
       time--;
-
-      let percent = (time/total)*100;
-      timerBar.style.width = percent+"%";
-
-      let hue = 120 - (120*((total-time)/total));
-      timerBar.style.background = "hsl("+hue+",100%,50%)";
+      timerBar.style.width = (time/total*100)+"%";
 
       if(time<=0){
         clearInterval(timerInterval);
       }
-
     },1000);
   }
 });
