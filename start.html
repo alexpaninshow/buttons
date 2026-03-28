@@ -15,7 +15,9 @@ body {
   display:flex;
   align-items:center;
   justify-content:center;
+  flex-direction:column;
   font-family:Arial;
+  color:white;
 }
 
 #startBtn {
@@ -30,34 +32,68 @@ body {
   border-radius:30px;
   cursor:pointer;
 }
+
+#status {
+  margin-top:20px;
+  font-size:18px;
+  opacity:0.8;
+}
 </style>
 </head>
 
 <body>
 
 <button id="startBtn">Начинаем спектакль</button>
+<div id="status">Проверка системы...</div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
+const CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv&gid=0";
+
 firebase.initializeApp({
   databaseURL: "https://buttons-panin-default-rtdb.firebaseio.com"
 });
 
 var db = firebase.database();
 var btn = document.getElementById("startBtn");
+var status = document.getElementById("status");
 
+let csvReady = false;
+
+/* 🔥 ПРОВЕРКА CSV ПРИ ЗАГРУЗКЕ */
+fetch(CSV_URL)
+.then(r => r.text())
+.then(text => {
+  const rows = text.trim().split('\n');
+
+  if(rows.length > 1){
+    csvReady = true;
+    status.innerText = "Система готова";
+  } else {
+    status.innerText = "Ошибка: таблица пустая";
+  }
+})
+.catch(() => {
+  status.innerText = "Ошибка загрузки таблицы";
+});
+
+/* 🔥 КНОПКА СТАРТА */
 btn.onclick = function(){
+
+  if(!csvReady){
+    status.innerText = "⛔ Нет связи с таблицей. Обновите страницу.";
+    return;
+  }
 
   btn.innerText = "Подготовка...";
   btn.disabled = true;
 
-  // 🔥 ПОЛНЫЙ СБРОС
+  // полный сброс
   db.ref('votes').remove();
   db.ref('currentQuestion').set(-1);
 
-  // небольшая пауза для стабильности
   setTimeout(function(){
     window.location.href = "operator.html";
   }, 300);
