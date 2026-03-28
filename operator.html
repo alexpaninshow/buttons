@@ -72,8 +72,7 @@ const db = firebase.database();
 
 let questions = [];
 let current = -1;
-let lastPlayed = -1;
-let lastQuestionIndex = 0;
+let prevQuestion = -1;
 let timerInterval = null;
 
 const status = document.getElementById("status");
@@ -92,8 +91,6 @@ fetch(CSV_URL)
     options:c.slice(1).filter(Boolean)
   }));
 
-  lastQuestionIndex = questions.length - 1;
-
   updateButtons();
 });
 
@@ -101,14 +98,16 @@ fetch(CSV_URL)
 db.ref('currentQuestion').on('value', snap => {
 
   const val = snap.val();
-  current = (val === null) ? -1 : Number(val);
+  const newVal = (val === null) ? -1 : Number(val);
+
+  // запоминаем предыдущий вопрос
+  if(newVal >= 0){
+    prevQuestion = newVal;
+  }
+
+  current = newVal;
 
   clearInterval(timerInterval);
-
-  // 🔥 запоминаем последний сыгранный вопрос
-  if(current >= 0){
-    lastPlayed = current;
-  }
 
   if(current === -999){
     status.innerText = "Смотрите на сцену";
@@ -138,7 +137,6 @@ function startTimer(){
 
     if(t <= 0){
       clearInterval(timerInterval);
-
       db.ref('currentQuestion').set(-999);
     }
 
@@ -150,15 +148,11 @@ nextBtn.onclick = ()=>{
 
   if(current === -1){
     db.ref('currentQuestion').set(0);
-  } 
-  else if(current === -999){
-
-    if(lastPlayed < lastQuestionIndex){
-      db.ref('currentQuestion').set(lastPlayed + 1);
-    }
-
   }
-  else if(current < lastQuestionIndex){
+  else if(current === -999){
+    db.ref('currentQuestion').set(prevQuestion + 1);
+  }
+  else{
     db.ref('currentQuestion').set(current + 1);
   }
 };
@@ -166,18 +160,16 @@ nextBtn.onclick = ()=>{
 backBtn.onclick = ()=>{
 
   if(current === -999){
-    db.ref('currentQuestion').set(lastPlayed);
-    return;
+    db.ref('currentQuestion').set(prevQuestion);
   }
-
-  if(current > 0){
+  else if(current > 0){
     db.ref('currentQuestion').set(current - 1);
   }
 };
 
 document.getElementById("resetBtn").onclick = ()=>{
   db.ref('currentQuestion').set(-1);
-  lastPlayed = -1;
+  prevQuestion = -1;
 };
 
 /* подписи */
@@ -193,42 +185,22 @@ function updateButtons(){
 
   if(current === -999){
 
-    if(lastPlayed === -1){
-      nextBtn.innerText = "Начать: 1. " + questions[0].text;
-      backBtn.style.display = "none";
-    } 
-    else {
+    nextBtn.innerText = "Далее: " + (prevQuestion+2) + ". " + questions[prevQuestion+1]?.text;
+    backBtn.style.display = "block";
 
-      if(lastPlayed < lastQuestionIndex){
-        nextBtn.innerText = "Далее: " + (lastPlayed+2) + ". " + questions[lastPlayed+1].text;
-      } else {
-        nextBtn.innerText = "Конец";
-      }
-
-      backBtn.style.display = "block";
-
-      if(lastPlayed > 0){
-        backBtn.innerText = "Назад: " + (lastPlayed) + ". " + questions[lastPlayed-1].text;
-      } else {
-        backBtn.style.display = "none";
-      }
+    if(prevQuestion >= 0){
+      backBtn.innerText = "Назад: " + (prevQuestion+1) + ". " + questions[prevQuestion].text;
     }
 
     return;
   }
 
-  if(current < lastQuestionIndex){
-    nextBtn.innerText = "Далее: " + (current+2) + ". " + questions[current+1].text;
-  } else {
-    nextBtn.innerText = "Конец";
-  }
+  nextBtn.innerText = "Далее: " + (current+2) + ". " + questions[current+1]?.text;
 
-  backBtn.style.display = "block";
+  backBtn.style.display = current > 0 ? "block" : "none";
 
   if(current > 0){
     backBtn.innerText = "Назад: " + current + ". " + questions[current-1].text;
-  } else {
-    backBtn.style.display = "none";
   }
 }
 </script>
