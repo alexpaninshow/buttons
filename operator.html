@@ -36,8 +36,6 @@ button {
   border-radius:20px;
   border:4px solid transparent;
   color:white;
-  cursor:pointer;
-  -webkit-tap-highlight-color: transparent;
 }
 
 .next { background:#4caf50; flex:1.6; }
@@ -79,10 +77,8 @@ const db = firebase.database();
 let questions = [];
 let current = -1;
 let ready = false;
-let timerInterval = null;
 
 const status = document.getElementById("status");
-const timerEl = document.getElementById("timer");
 const nextBtn = document.getElementById("nextBtn");
 const backBtn = document.getElementById("backBtn");
 
@@ -92,9 +88,9 @@ fetch(CSV_URL)
 .then(text=>{
   const rows=text.trim().split('\n').map(r=>r.split(','));
 
-  questions = rows.slice(1).map(cols => ({
-    text:(cols[0]||"").trim(),
-    options:cols.slice(1).map(c=>c.trim()).filter(Boolean)
+  questions = rows.slice(1).map(c=>({
+    text:c[0],
+    options:c.slice(1).filter(Boolean)
   }));
 
   ready = true;
@@ -104,68 +100,43 @@ fetch(CSV_URL)
 /* Firebase */
 db.ref('currentQuestion').on('value', snap => {
 
-  if(!ready) return;
-
   const val = snap.val();
-  current = (val === null) ? -1 : Number(val);
-
-  if(timerInterval){
-    clearInterval(timerInterval);
-    timerInterval = null;
-  }
+  current = (val === null) ? -1 : val;
 
   if(current >= 0 && questions[current]){
     status.innerText = "Сейчас: " + (current+1) + ". " + questions[current].text;
-    startTimer();
   } else if(current === -999){
-    status.innerText = "Сцена";
-    timerEl.innerText = "⏳ -";
+    status.innerText = "Смотрите на сцену";
   } else {
     status.innerText = "Ожидание";
-    timerEl.innerText = "⏳ -";
   }
 
   updateButtons();
 });
 
-function startTimer(){
-  let t=5;
-  timerEl.innerText="⏳ "+t;
-
-  timerInterval=setInterval(()=>{
-    t--;
-    timerEl.innerText="⏳ "+t;
-    if(t<=0) clearInterval(timerInterval);
-  },1000);
-}
-
-function setState(val){
-  db.ref('currentQuestion').set(val);
-}
-
+/* управление */
 nextBtn.onclick = ()=>{
-  if(!questions.length) return;
-
   if(current === -1 || current === -999){
-    setState(0);
-  } else if(current < questions.length-1){
-    setState(current+1);
+    db.ref('currentQuestion').set(0);
+  } else {
+    db.ref('currentQuestion').set(current+1);
   }
 };
 
 backBtn.onclick = ()=>{
   if(current > 0){
-    setState(current-1);
+    db.ref('currentQuestion').set(current-1);
   }
 };
 
 document.getElementById("resetBtn").onclick = ()=>{
-  setState(-1);
+  db.ref('currentQuestion').set(-1);
 };
 
+/* кнопки */
 function updateButtons(){
 
-  if(!questions.length) return;
+  if(!ready) return;
 
   if(current === -1 || current === -999){
     nextBtn.innerText = "Начать: 1. " + questions[0].text;
@@ -173,17 +144,8 @@ function updateButtons(){
     return;
   }
 
-  if(current < questions.length-1){
-    nextBtn.innerText = "Далее: " + (current+2) + ". " + questions[current+1].text;
-  } else {
-    nextBtn.innerText = "Конец";
-  }
-
+  nextBtn.innerText = "Далее";
   backBtn.style.display = "block";
-
-  if(current > 0){
-    backBtn.innerText = "Назад: " + current + ". " + questions[current-1].text;
-  }
 }
 </script>
 
