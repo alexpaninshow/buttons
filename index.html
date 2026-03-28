@@ -15,7 +15,6 @@ body {
   color:white;
 }
 
-/* экраны */
 .screen {
   position:fixed;
   width:100%;
@@ -27,14 +26,12 @@ body {
   text-align:center;
 }
 
-/* ожидание */
 #waiting {
   display:none;
   font-size:6vw;
   font-weight:900;
 }
 
-/* игра */
 #game {
   display:none;
   height:100%;
@@ -86,8 +83,12 @@ li.selected {
 
 <!-- старт -->
 <div id="start" class="screen">
-  <img id="startImg" src="https://lh3.googleusercontent.com/d/1iBnjog9xZVAkyeB3LlHv3aNWuXdYG39y" style="max-width:85%;border-radius:20px;">
-  <div style="font-size:5vw;font-weight:900;margin-top:20px;">Скоро начнём!</div>
+  <img id="startImg"
+       src="https://drive.google.com/uc?export=view&id=1Z75HN4p5klgCvDHPNyzhb2SeLdln3cUg"
+       style="max-width:85%;border-radius:20px;">
+  <div style="font-size:5vw;font-weight:900;margin-top:20px;">
+    Скоро начнём!
+  </div>
 </div>
 
 <!-- ожидание -->
@@ -138,12 +139,6 @@ function showWaiting(){
 }
 
 function showGame(){
-  // 💥 УДАЛЯЕМ КАРТИНКУ НАВСЕГДА
-  const img = document.getElementById("startImg");
-  if(img){
-    img.remove();
-  }
-
   startScreen.style.display="none";
   waiting.style.display="none";
   game.style.display="flex";
