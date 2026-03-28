@@ -5,7 +5,10 @@
 <title>Старт</title>
 
 <style>
-html, body { height:100%; margin:0; }
+html, body {
+  height:100%;
+  margin:0;
+}
 
 body {
   background:#111;
@@ -28,129 +31,89 @@ body {
   border:none;
   border-radius:30px;
   cursor:pointer;
-  transition:0.3s;
 }
 
-#startBtn.disabled {
-  background:#555;
-  color:#aaa;
-  cursor:not-allowed;
-  opacity:0.7;
+#status {
+  margin-top:20px;
+  font-size:20px;
+  font-style:italic;
 }
-
-#status { margin-top:20px; font-size:18px; }
-
-.ready { color:#00e676; font-style:italic; }
-.error { color:#ff5252; }
-.checking { color:#ccc; font-style:italic; }
 </style>
 </head>
 
 <body>
 
-<button id="startBtn" class="disabled">Начинаем спектакль</button>
+<button id="startBtn">Начинаем спектакль</button>
 <div id="status">Проверка системы...</div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-const CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv&gid=0";
-
 firebase.initializeApp({
-  databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"
+  databaseURL: "https://buttons-panin-default-rtdb.firebaseio.com"
 });
 
-const db = firebase.database();
-const status = document.getElementById("status");
-const btn = document.getElementById("startBtn");
+var db = firebase.database();
+var btn = document.getElementById("startBtn");
+var statusEl = document.getElementById("status");
 
-let csvReady = false;
-let firebaseReady = false;
-let isChecking = false;
+var checking = false;
 
-function lockBtn(){
-  btn.classList.add("disabled");
+/* ПРИНУДИТЕЛЬНЫЙ СТАРТОВЫЙ ЭКРАН */
+function forceStartScreen(){
+  db.ref('currentQuestion').set(-1);
+}
+
+/* ПРОВЕРКА */
+function checkSystem(){
+
+  checking = true;
   btn.disabled = true;
-}
+  btn.style.opacity = "0.5";
 
-function unlockBtn(){
-  btn.classList.remove("disabled");
-  btn.disabled = false;
-}
+  statusEl.innerText = "Проверка системы...";
 
-function checkCSV(){
-  return fetch(CSV_URL)
-    .then(r=>r.text())
-    .then(t=>t.split('\n').length>1)
-    .catch(()=>false);
-}
-
-function checkFirebase(){
-  return new Promise(res=>{
-    db.ref('ping').set(Date.now(), e=>res(!e));
+  Promise.all([
+    fetch("https://docs.google.com").then(()=>true).catch(()=>false),
+    db.ref('currentQuestion').once('value')
+  ])
+  .then(()=>{
+    statusEl.innerText = "✅ Система готова к работе";
+    btn.disabled = false;
+    btn.style.opacity = "1";
+    checking = false;
+  })
+  .catch(()=>{
+    statusEl.innerText = "❌ Ошибка подключения";
+    checking = false;
   });
 }
 
-async function checkSystem(){
+/* каждые 60 сек */
+setInterval(()=>{
+  forceStartScreen();
+  checkSystem();
+},60000);
 
-  if(isChecking) return;
-
-  isChecking = true;
-  lockBtn();
-
-  status.className = "checking";
-  status.innerText = "Проверка системы...";
-
-  csvReady = await checkCSV();
-  firebaseReady = await checkFirebase();
-
-  if(csvReady && firebaseReady){
-    status.className="ready";
-    status.innerText="✔ Система готова к работе";
-    unlockBtn();
-  } 
-  else if(!csvReady){
-    status.className="error";
-    status.innerText="Нет связи с таблицей";
-  } 
-  else {
-    status.className="error";
-    status.innerText="Firebase не отвечает";
-  }
-
-  isChecking = false;
-}
-
+/* при загрузке */
+forceStartScreen();
 checkSystem();
-setInterval(checkSystem, 60000);
 
-btn.onclick = async () => {
+/* СТАРТ */
+btn.onclick = function(){
 
-  if(btn.disabled) return;
-
-  btn.innerText = "Проверка перед стартом...";
-  lockBtn();
-
-  await checkSystem();
-
-  if(!(csvReady && firebaseReady)){
-    status.className="error";
-    status.innerText="⛔ Система не готова";
-    btn.innerText = "Начинаем спектакль";
-    return;
-  }
+  if(checking) return;
 
   btn.innerText = "Запуск...";
+  btn.disabled = true;
 
-  db.ref('votes').remove();
-
-  // 🔥 ВОТ ГЛАВНОЕ ИЗМЕНЕНИЕ
-  db.ref('currentQuestion').set(-999);
-
-  setTimeout(()=>{
-    window.location.href="operator.html";
-  },300);
+  Promise.all([
+    db.ref('votes').remove(),
+    db.ref('currentQuestion').set(-999)
+  ]).then(()=>{
+    window.location.href = "operator.html";
+  });
 };
 </script>
 
