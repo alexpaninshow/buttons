@@ -14,7 +14,6 @@ body {
   font-family:Arial;
   background:#111;
   color:white;
-
   display:flex;
   flex-direction:column;
   text-align:center;
@@ -52,13 +51,10 @@ button {
   margin:6px 0;
   font-size:4.5vw;
   font-weight:bold;
-
   border-radius:20px;
   border:4px solid transparent;
-
   color:white;
   cursor:pointer;
-
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -66,7 +62,6 @@ button {
 .back { background:orange; flex:0.7; margin-top:15px; }
 .reset { background:red; flex:0.6; }
 
-/* мгновенная рамка */
 button:active {
   border:4px solid white;
   transform:scale(0.97);
@@ -113,7 +108,7 @@ const backBtn = document.getElementById("backBtn");
 const resetBtn = document.getElementById("resetBtn");
 
 /* =========================
-   1. СНАЧАЛА ГРУЗИМ CSV
+   1. ЗАГРУЗКА CSV
 ========================= */
 fetch(CSV_URL)
 .then(r => r.text())
@@ -126,7 +121,6 @@ fetch(CSV_URL)
   }));
 
   ready = true;
-
   status.innerText = "Готово";
   updateButtons();
 })
@@ -135,7 +129,7 @@ fetch(CSV_URL)
 });
 
 /* =========================
-   2. СЛУШАЕМ FIREBASE
+   2. FIREBASE (100% sync)
 ========================= */
 db.ref('currentQuestion').on('value', snap => {
 
@@ -144,8 +138,13 @@ db.ref('currentQuestion').on('value', snap => {
     return;
   }
 
-  current = snap.val();
-  if(current === null) current = -1;
+  const data = snap.val();
+
+  if(!data){
+    current = -1;
+  } else {
+    current = data.state;
+  }
 
   timerFinished = false;
 
@@ -193,10 +192,13 @@ function startTimer(){
 }
 
 /* =========================
-   ПЕРЕХОДЫ
+   ПЕРЕХОДЫ (100% sync)
 ========================= */
-function showQuestion(i){
-  db.ref('currentQuestion').set(i);
+function setState(val){
+  db.ref('currentQuestion').set({
+    state: val,
+    t: Date.now()
+  });
 }
 
 /* вперед */
@@ -204,10 +206,10 @@ nextBtn.onclick = ()=>{
   if(!questions.length) return;
 
   if(current === -1 || current === -999){
-    showQuestion(0);
+    setState(0);
   }
   else if(current < questions.length - 1){
-    showQuestion(current + 1);
+    setState(current + 1);
   }
 };
 
@@ -218,15 +220,15 @@ backBtn.onclick = ()=>{
   if(current <= 0) return;
 
   if(timerFinished){
-    showQuestion(current); // повтор
+    setState(current); // повтор
   } else {
-    showQuestion(current - 1);
+    setState(current - 1);
   }
 };
 
 /* сброс */
 resetBtn.onclick = ()=>{
-  db.ref('currentQuestion').set(-1);
+  setState(-1);
 };
 
 /* =========================
