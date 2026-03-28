@@ -5,46 +5,68 @@
 <title>Оператор</title>
 
 <style>
+html, body {
+  height:100%;
+  margin:0;
+}
+
 body {
   font-family:Arial;
   background:#111;
   color:white;
+
+  display:flex;
+  flex-direction:column;
   text-align:center;
-  padding:20px;
 }
 
-#status { font-size:26px; margin-bottom:10px; }
-#timer { font-size:44px; margin-bottom:20px; }
+/* ВЕРХ */
+#top {
+  padding:20px 10px;
+}
 
-/* 🔥 СИЛЬНО УВЕЛИЧЕННЫЕ КНОПКИ */
+h1 {
+  font-size:5vw;
+  margin:0;
+}
+
+#status {
+  font-size:4vw;
+  margin-top:10px;
+}
+
+#timer {
+  font-size:6vw;
+  margin-top:10px;
+}
+
+/* КНОПКИ КАК У ЗРИТЕЛЯ */
+#buttons {
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  padding:10px;
+}
+
+/* КНОПКА */
 button {
-  width:95% !important;
-  font-size:26px !important;
-  padding:22px !important;
-  margin:16px auto !important;
-  display:block;
-  border-radius:18px !important;
+  flex:1;
+  margin:6px 0;
 
-  min-height:80px !important;
+  font-size:5vw;
+  font-weight:bold;
 
-  border:5px solid transparent !important;
-  outline:none;
-  appearance:none;
-  -webkit-appearance:none;
+  border-radius:20px;
+  border:6px solid transparent;
 
-  color:white !important;
+  color:white;
+  cursor:pointer;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
   -webkit-tap-highlight-color: transparent;
-
-  transition: transform 0.05s, border 0.05s;
-}
-
-/* 📱 ещё больше на телефоне */
-@media (max-width: 600px){
-  button {
-    font-size:28px !important;
-    padding:24px !important;
-    min-height:90px !important;
-  }
 }
 
 /* цвета */
@@ -54,22 +76,25 @@ button {
 
 /* эффект нажатия */
 button.pressed {
-  transform: scale(0.96);
-  border:5px solid white !important;
+  border:6px solid white;
+  transform: scale(0.97);
 }
 </style>
 </head>
 
 <body>
 
-<h1>Оператор</h1>
+<div id="top">
+  <h1>Оператор</h1>
+  <div id="status">Загрузка...</div>
+  <div id="timer">⏳ -</div>
+</div>
 
-<div id="status">Загрузка...</div>
-<div id="timer">⏳ -</div>
-
-<button id="nextBtn" class="next"></button>
-<button id="backBtn" class="back"></button>
-<button id="resetBtn" class="reset">Сброс</button>
+<div id="buttons">
+  <button id="nextBtn" class="next"></button>
+  <button id="backBtn" class="back"></button>
+  <button id="resetBtn" class="reset">Сброс</button>
+</div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -147,10 +172,6 @@ db.ref('currentQuestion').on('value', snap => {
 
 /* таймер */
 function startTimer(){
-  if(timerInterval){
-    clearInterval(timerInterval);
-  }
-
   let t = 5;
   timerEl.innerText = "⏳ " + t;
 
@@ -159,15 +180,12 @@ function startTimer(){
 
     if(t <= 0){
       clearInterval(timerInterval);
-      timerInterval = null;
-
       timerEl.innerText = "⏳ 0";
       timerFinished = true;
       updateButtons();
     } else {
       timerEl.innerText = "⏳ " + t;
     }
-
   },1000);
 }
 
@@ -220,32 +238,23 @@ resetBtn.onclick = ()=>{
   db.ref('currentQuestion').set(-1);
 };
 
-/* кнопки */
+/* подписи */
 function updateButtons(){
   if(!questions.length || current === null) return;
 
   if(current === -1){
-    nextBtn.innerText = "Начать: " + questions[0].text;
+    nextBtn.innerText = "Начать";
     backBtn.style.display = "none";
     return;
   }
 
-  if(current < questions.length - 1){
-    nextBtn.innerText = "Далее: " + questions[current+1].text;
-  } else {
-    nextBtn.innerText = "Конец";
-  }
-
+  nextBtn.innerText = "Далее";
   backBtn.style.display = "block";
 
   if(timerFinished){
-    backBtn.innerText = "Повтор: " + questions[current].text;
+    backBtn.innerText = "Повтор";
   } else {
-    if(current > 0){
-      backBtn.innerText = "Назад: " + questions[current-1].text;
-    } else {
-      backBtn.innerText = "Первый вопрос";
-    }
+    backBtn.innerText = current > 0 ? "Назад" : "Первый вопрос";
   }
 }
 </script>
