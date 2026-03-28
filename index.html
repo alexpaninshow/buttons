@@ -17,29 +17,17 @@ body {
   font-family: 'Montserrat', sans-serif;
   background:#111;
   color:white;
-  display:flex;
-  flex-direction:column;
+  overflow:hidden;
 }
 
-h1 {
-  text-align:center;
-  font-size:5vw;
-  margin:10px;
-  font-weight:900;
-}
+/* экран ожидания */
+#waitingScreen {
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
 
-/* контейнер кнопок */
-ul {
-  flex:1;
-  display:flex;
-  flex-direction:column;
-  padding:0;
-  margin:0;
-}
-
-/* кнопки = занимают экран */
-li {
-  flex:1;
   display:flex;
   align-items:center;
   justify-content:center;
@@ -48,48 +36,82 @@ li {
   font-weight:900;
   text-align:center;
 
-  background:#333;
-  border-top:4px solid #777;
-
-  cursor:pointer;
-  transition: all 0.2s ease;
+  background:#111;
+  z-index:10;
 }
 
-li:first-child {
-  border-top:none;
+/* основной контент */
+#game {
+  height:100%;
+  display:flex;
+  flex-direction:column;
 }
 
-/* наведение */
-li:hover {
-  background:#444;
-}
-
-/* нажатие */
-li:active {
-  transform: scale(0.97);
-}
-
-/* выбор */
-li.selected {
-  background:#2e7d32;
-  border:6px solid #00e676;
+/* заголовок */
+h1 {
+  text-align:center;
+  font-size:5vw;
+  margin:15px;
 }
 
 /* таймер */
 #timer {
   text-align:center;
-  font-size:6vw;
+  font-size:8vw;
   font-weight:900;
-  padding:10px;
+  margin:10px 0 20px 0;
+}
+
+/* кнопки */
+ul {
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  margin:0 10px 10px 10px;
+  padding:0;
+}
+
+li {
+  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  font-size:7vw;
+  font-weight:900;
+  text-align:center;
+
+  margin:8px 0;
+
+  background:#333;
+  border-radius:20px;
+  border:4px solid #777;
+
+  cursor:pointer;
+  transition: all 0.2s ease;
+}
+
+li:hover { background:#444; }
+li:active { transform: scale(0.97); }
+
+li.selected {
+  background:#2e7d32;
+  border:6px solid #00e676;
 }
 </style>
 </head>
 
 <body>
 
-<h1 id="title">Шоу</h1>
-<ul id="options"></ul>
-<div id="timer"></div>
+<!-- 🔥 экран ожидания -->
+<div id="waitingScreen">Смотрите на сцену!</div>
+
+<!-- игра -->
+<div id="game" style="display:none;">
+  <h1 id="title"></h1>
+  <div id="timer"></div>
+  <ul id="options"></ul>
+</div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -107,6 +129,9 @@ let questions=[];
 let timerId=null;
 let voted=false;
 let time=0;
+
+const waiting = document.getElementById("waitingScreen");
+const game = document.getElementById("game");
 
 const title = document.getElementById("title");
 const options = document.getElementById("options");
@@ -126,6 +151,18 @@ fetch(CSV_URL)
   questions=parseCSV(text);
 });
 
+// показать экран ожидания
+function showWaiting(){
+  waiting.style.display="flex";
+  game.style.display="none";
+}
+
+// показать вопрос
+function showGame(){
+  waiting.style.display="none";
+  game.style.display="flex";
+}
+
 db.ref('currentQuestion').on('value', snap => {
   const current = snap.val();
 
@@ -133,13 +170,14 @@ db.ref('currentQuestion').on('value', snap => {
   voted=false;
 
   if(current===-1 || current===null){
-    title.innerText="Шоу";
-    options.innerHTML="";
-    timer.innerText="";
+    showWaiting();
     return;
   }
 
   const q = questions[current];
+
+  showGame();
+
   title.innerText=q.text;
   options.innerHTML="";
 
@@ -160,10 +198,8 @@ db.ref('currentQuestion').on('value', snap => {
       clearInterval(timerId);
       timer.innerText="";
 
-      // задержка перед "Шоу"
       setTimeout(()=>{
-        title.innerText="Шоу";
-        options.innerHTML="";
+        showWaiting();
       },800);
     };
 
@@ -171,17 +207,16 @@ db.ref('currentQuestion').on('value', snap => {
   });
 
   time=5;
-  timer.innerText=time;
+  timer.innerText="⏳ " + time;
 
   timerId=setInterval(()=>{
     time--;
     if(time<=0){
       clearInterval(timerId);
       timer.innerText="";
-      title.innerText="Шоу";
-      options.innerHTML="";
+      showWaiting();
     } else {
-      timer.innerText=time;
+      timer.innerText="⏳ " + time;
     }
   },1000);
 });
