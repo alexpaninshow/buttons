@@ -71,14 +71,18 @@ function parseCSV(text){
   });
 }
 
-// загрузка
 fetch(CSV_URL)
 .then(r=>r.text())
 .then(text=>{
   questions=parseCSV(text);
 });
 
-// слушаем
+function showWaiting(){
+  title.innerText="Шоу";
+  options.innerHTML="";
+  timer.innerText="";
+}
+
 db.ref('currentQuestion').on('value', snap => {
   const current = snap.val();
 
@@ -86,13 +90,11 @@ db.ref('currentQuestion').on('value', snap => {
   voted=false;
 
   if(current===-1 || current===null){
-    title.innerText="Шоу";
-    options.innerHTML="";
-    timer.innerText="";
+    showWaiting();
     return;
   }
 
-  if(!questions[current]) return; // защита
+  if(!questions[current]) return;
 
   title.innerText=questions[current].text;
   options.innerHTML="";
@@ -110,6 +112,9 @@ db.ref('currentQuestion').on('value', snap => {
         .transaction(v=>(v||0)+1);
 
       li.classList.add('selected');
+
+      // 🔥 СРАЗУ В ОЖИДАНИЕ
+      setTimeout(showWaiting, 300);
     };
 
     options.appendChild(li);
@@ -122,7 +127,7 @@ db.ref('currentQuestion').on('value', snap => {
     time--;
     if(time<=0){
       clearInterval(timerId);
-      timer.innerText="";
+      showWaiting(); // 🔥 авто-переход
     } else {
       timer.innerText=time;
     }
