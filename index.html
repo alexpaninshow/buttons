@@ -7,16 +7,12 @@
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&display=swap" rel="stylesheet">
 
 <style>
-html, body {
-  height:100%;
-  margin:0;
-}
+html, body { height:100%; margin:0; }
 
 body {
   font-family:'Montserrat',sans-serif;
   background:#111;
   color:white;
-  overflow:hidden;
 }
 
 /* экраны */
@@ -29,41 +25,19 @@ body {
   align-items:center;
   justify-content:center;
   text-align:center;
-
-  transition: opacity 0.3s ease;
-}
-
-/* 👇 ВАЖНО */
-.hidden {
-  opacity:0;
-  pointer-events:none;
-}
-
-/* старт */
-#start img {
-  max-width:85%;
-  max-height:60%;
-  border-radius:20px;
-  margin-bottom:30px;
-}
-
-#startText {
-  font-size:5vw;
-  font-weight:900;
 }
 
 /* ожидание */
 #waiting {
+  display:none;
   font-size:6vw;
   font-weight:900;
 }
 
 /* игра */
 #game {
-  position:absolute;
-  width:100%;
+  display:none;
   height:100%;
-  display:flex;
   flex-direction:column;
 }
 
@@ -112,12 +86,12 @@ li.selected {
 
 <!-- старт -->
 <div id="start" class="screen">
-  <img src="https://lh3.googleusercontent.com/d/1iBnjog9xZVAkyeB3LlHv3aNWuXdYG39y">
-  <div id="startText">Скоро начнём!</div>
+  <img id="startImg" src="https://lh3.googleusercontent.com/d/1iBnjog9xZVAkyeB3LlHv3aNWuXdYG39y" style="max-width:85%;border-radius:20px;">
+  <div style="font-size:5vw;font-weight:900;margin-top:20px;">Скоро начнём!</div>
 </div>
 
 <!-- ожидание -->
-<div id="waiting" class="screen hidden">
+<div id="waiting" class="screen">
   Смотрите на сцену!
 </div>
 
@@ -152,18 +126,27 @@ const options = document.getElementById("options");
 const timer = document.getElementById("timer");
 
 function showStart(){
-  startScreen.classList.remove("hidden");
-  waiting.classList.add("hidden");
+  startScreen.style.display="flex";
+  waiting.style.display="none";
+  game.style.display="none";
 }
 
 function showWaiting(){
-  startScreen.classList.add("hidden");
-  waiting.classList.remove("hidden");
+  startScreen.style.display="none";
+  waiting.style.display="flex";
+  game.style.display="none";
 }
 
 function showGame(){
-  startScreen.classList.add("hidden");
-  waiting.classList.add("hidden");
+  // 💥 УДАЛЯЕМ КАРТИНКУ НАВСЕГДА
+  const img = document.getElementById("startImg");
+  if(img){
+    img.remove();
+  }
+
+  startScreen.style.display="none";
+  waiting.style.display="none";
+  game.style.display="flex";
 }
 
 function parseCSV(text){
@@ -186,7 +169,6 @@ db.ref('currentQuestion').on('value', snap => {
   clearInterval(timerInterval);
   voted=false;
 
-  // старт
   if(current === -1){
     showStart();
     return;
@@ -196,8 +178,8 @@ db.ref('currentQuestion').on('value', snap => {
 
   showGame();
 
-  title.innerText = q.text;
-  options.innerHTML = "";
+  title.innerText=q.text;
+  options.innerHTML="";
 
   q.options.forEach((opt,i)=>{
     const li=document.createElement('li');
@@ -224,7 +206,7 @@ db.ref('currentQuestion').on('value', snap => {
     options.appendChild(li);
   });
 
-  let time = 5;
+  let time=5;
   timer.innerText="⏳ "+time;
 
   timerInterval=setInterval(()=>{
