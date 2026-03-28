@@ -15,7 +15,6 @@ body {
   color:white;
 }
 
-/* экраны */
 .screen {
   position:fixed;
   width:100%;
@@ -27,11 +26,7 @@ body {
   text-align:center;
 }
 
-/* старт */
-#start {
-  background:#000;
-  z-index:10;
-}
+#start { background:#000; z-index:10; }
 
 #start img {
   max-width:85%;
@@ -39,7 +34,6 @@ body {
   margin-bottom:20px;
 }
 
-/* остальные */
 #waiting { display:none; font-size:6vw; font-weight:900; }
 #game { display:none; height:100%; flex-direction:column; }
 
@@ -81,7 +75,6 @@ li.selected {
 
 <body>
 
-<!-- СТАРТ -->
 <div id="start" class="screen">
   <img src="https://drive.google.com/uc?export=view&id=1Z75HN4p5klgCvDHPNyzhb2SeLdln3cUg">
   <div style="font-size:5vw;font-weight:900;">
@@ -89,12 +82,10 @@ li.selected {
   </div>
 </div>
 
-<!-- ОЖИДАНИЕ -->
 <div id="waiting" class="screen">
   Смотрите на сцену!
 </div>
 
-<!-- ИГРА -->
 <div id="game">
   <h1 id="title"></h1>
   <div id="timer"></div>
@@ -126,7 +117,6 @@ const title = document.getElementById("title");
 const options = document.getElementById("options");
 const timer = document.getElementById("timer");
 
-/* загрузка таблицы */
 fetch(CSV_URL)
 .then(r => r.text())
 .then(text => {
@@ -140,7 +130,6 @@ fetch(CSV_URL)
   ready = true;
 });
 
-/* экраны */
 function showStart(){
   startScreen.style.display="flex";
   waiting.style.display="none";
@@ -159,12 +148,12 @@ function showGame(){
   game.style.display="flex";
 }
 
-/* Firebase */
+/* 🔥 ГЛАВНОЕ ИСПРАВЛЕНИЕ */
 db.ref('currentQuestion').on('value', snap => {
   const current = snap.val();
 
   if(current === null || current === -1){
-    showStart();
+    showStart(); // всегда стартовый экран
     return;
   }
 
