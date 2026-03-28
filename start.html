@@ -36,7 +36,17 @@ body {
 #status {
   margin-top:20px;
   font-size:18px;
-  opacity:0.8;
+}
+
+/* ✅ готово */
+.ready {
+  color:#00e676;
+  font-style:italic;
+}
+
+/* ❌ ошибка */
+.error {
+  color:#ff5252;
 }
 </style>
 </head>
@@ -62,35 +72,51 @@ var status = document.getElementById("status");
 
 let csvReady = false;
 
-/* 🔥 ПРОВЕРКА CSV ПРИ ЗАГРУЗКЕ */
-fetch(CSV_URL)
-.then(r => r.text())
-.then(text => {
-  const rows = text.trim().split('\n');
+/* 🔁 ПРОВЕРКА */
+function checkSystem(){
 
-  if(rows.length > 1){
-    csvReady = true;
-    status.innerText = "Система готова";
-  } else {
-    status.innerText = "Ошибка: таблица пустая";
-  }
-})
-.catch(() => {
-  status.innerText = "Ошибка загрузки таблицы";
-});
+  fetch(CSV_URL)
+  .then(r => r.text())
+  .then(text => {
 
-/* 🔥 КНОПКА СТАРТА */
+    const rows = text.trim().split('\n');
+
+    if(rows.length > 1){
+      csvReady = true;
+      status.className = "ready";
+      status.innerText = "✔ Система готова к работе";
+    } else {
+      csvReady = false;
+      status.className = "error";
+      status.innerText = "Ошибка: таблица пустая";
+    }
+
+  })
+  .catch(() => {
+    csvReady = false;
+    status.className = "error";
+    status.innerText = "Нет связи с таблицей";
+  });
+}
+
+/* первый запуск */
+checkSystem();
+
+/* 🔁 каждые 5 секунд */
+setInterval(checkSystem, 5000);
+
+/* 🔥 КНОПКА */
 btn.onclick = function(){
 
   if(!csvReady){
-    status.innerText = "⛔ Нет связи с таблицей. Обновите страницу.";
+    status.className = "error";
+    status.innerText = "⛔ Система не готова";
     return;
   }
 
   btn.innerText = "Подготовка...";
   btn.disabled = true;
 
-  // полный сброс
   db.ref('votes').remove();
   db.ref('currentQuestion').set(-1);
 
