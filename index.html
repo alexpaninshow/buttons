@@ -128,16 +128,33 @@ var title = document.getElementById("title");
 var options = document.getElementById("options");
 var timerBar = document.getElementById("timerBar");
 
-/* CSV */
+/* загрузка CSV */
 fetch(CSV_URL)
-.then(r=>r.text())
-.then(text=>{
-  var rows = text.trim().split('\n').map(r=>r.split(','));
+.then(function(r){ return r.text(); })
+.then(function(text){
 
-  questions = rows.slice(1).map(cols=>({
-    text:(cols[0]||"").trim(),
-    options:cols.slice(1).map(c=>c.trim()).filter(Boolean)
-  }));
+  var rows = text.trim().split('\n');
+  var parsed = [];
+
+  for(var i=0;i<rows.length;i++){
+    parsed.push(rows[i].split(','));
+  }
+
+  for(var i=1;i<parsed.length;i++){
+    var cols = parsed[i];
+
+    var q = {
+      text:(cols[0] || "").trim(),
+      options:[]
+    };
+
+    for(var j=1;j<cols.length;j++){
+      var val = (cols[j] || "").trim();
+      if(val) q.options.push(val);
+    }
+
+    questions.push(q);
+  }
 });
 
 /* экраны */
@@ -160,7 +177,7 @@ function showGame(){
 }
 
 /* Firebase */
-db.ref('currentQuestion').on('value', snap=>{
+db.ref('currentQuestion').on('value', function(snap){
 
   var current = snap.val();
 
@@ -186,29 +203,34 @@ db.ref('currentQuestion').on('value', snap=>{
   title.innerText = q.text;
   options.innerHTML = "";
 
-  q.options.forEach((opt,i)=>{
+  for(var i=0;i<q.options.length;i++){
 
-    var li = document.createElement('li');
-    li.innerText = opt;
+    (function(i){
 
-    li.onclick = ()=>{
-      if(voted) return;
+      var li = document.createElement('li');
+      li.innerText = q.options[i];
 
-      voted = true;
-      clearInterval(timerInterval);
+      li.onclick = function(){
 
-      db.ref('votes/'+current+'/'+i)
-        .transaction(v=>(v||0)+1);
+        if(voted) return;
 
-      li.classList.add('selected');
+        voted = true;
+        clearInterval(timerInterval);
 
-      setTimeout(showWaiting, 800);
-    };
+        db.ref('votes/'+current+'/'+i)
+          .transaction(function(v){ return (v||0)+1; });
 
-    options.appendChild(li);
-  });
+        li.classList.add('selected');
 
-  /* ПРАВИЛЬНЫЙ ПЛАВНЫЙ ТАЙМЕР */
+        setTimeout(showWaiting, 800);
+      };
+
+      options.appendChild(li);
+
+    })(i);
+  }
+
+  /* ПЛАВНЫЙ ТАЙМЕР */
 
   timerBar.style.transition = "none";
   timerBar.style.width = "100%";
@@ -218,7 +240,7 @@ db.ref('currentQuestion').on('value', snap=>{
 
   timerBar.style.transition = "width 5s linear, background 5s linear";
 
-  setTimeout(()=>{
+  setTimeout(function(){
     timerBar.style.width = "0%";
     timerBar.style.background = "hsl(0,100%,50%)";
   },50);
