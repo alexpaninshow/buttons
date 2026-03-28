@@ -38,10 +38,6 @@ button {
 <script>
 const CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv";
 
-const FALLBACK_QUESTIONS = [
-  { text:"Тест вопрос?", options:["Да","Нет"] }
-];
-
 const firebaseConfig = {
   databaseURL: "https://buttons-panin-default-rtdb.firebaseio.com"
 };
@@ -56,41 +52,28 @@ const status = document.getElementById("status");
 const nextBtn = document.getElementById("nextBtn");
 const backBtn = document.getElementById("backBtn");
 
-// CSV парсер
+// CSV
 function parseCSV(text){
-  const rows = text
-    .replace(/\r/g, '')
-    .split('\n')
-    .filter(r => r.trim() !== '');
-
-  return rows.slice(1).map(row => {
-    const cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g) || [];
-
+  const rows = text.replace(/\r/g,'').split('\n').filter(r=>r.trim());
+  return rows.slice(1).map(row=>{
+    const cols = row.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g)||[];
     return {
-      text: (cols[0] || "").replace(/"/g, '').trim(),
-      options: [
-        cols[1],
-        cols[2],
-        cols[3]
-      ].map(c => (c || "").replace(/"/g, '').trim())
-       .filter(Boolean)
+      text:(cols[0]||"").replace(/"/g,'').trim(),
+      options:[cols[1],cols[2],cols[3]]
+        .map(c=>(c||"").replace(/"/g,'').trim())
+        .filter(Boolean)
     };
   });
 }
 
-// загрузка вопросов
 fetch(CSV_URL)
 .then(r=>r.text())
 .then(text=>{
-  questions = parseCSV(text);
-  updateButtons();
-})
-.catch(()=>{
-  questions = FALLBACK_QUESTIONS;
+  questions=parseCSV(text);
   updateButtons();
 });
 
-// показать вопрос
+// 🔥 ЕДИНСТВЕННАЯ ТОЧКА УПРАВЛЕНИЯ
 function showQuestion(i){
   if(autoTimer) clearTimeout(autoTimer);
 
@@ -100,7 +83,6 @@ function showQuestion(i){
   status.innerText = "Сейчас: " + questions[i].text;
   updateButtons();
 
-  // авто-переход в ожидание через 5 сек
   autoTimer = setTimeout(()=>{
     current = -1;
     db.ref('currentQuestion').set(-1);
@@ -110,10 +92,7 @@ function showQuestion(i){
   }, 5000);
 }
 
-// кнопки
 nextBtn.onclick = ()=>{
-  if(!questions.length) return;
-
   if(current===-1) showQuestion(0);
   else if(current<questions.length-1) showQuestion(current+1);
 };
@@ -132,7 +111,6 @@ document.getElementById("resetBtn").onclick = ()=>{
   updateButtons();
 };
 
-// обновление UI кнопок
 function updateButtons(){
   if(!questions.length) return;
 
