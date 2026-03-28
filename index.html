@@ -118,6 +118,7 @@ const db = firebase.database();
 
 let questions = [];
 let ready = false;
+let lastState = null;
 let timerInterval = null;
 let voted = false;
 
@@ -129,10 +130,13 @@ const title = document.getElementById("title");
 const options = document.getElementById("options");
 const timerBar = document.getElementById("timerBar");
 
-/* загрузка CSV */
+/* =========================
+   CSV
+========================= */
 fetch(CSV_URL)
 .then(r => r.text())
 .then(text => {
+
   const rows = text.trim().split('\n').map(r => r.split(','));
 
   questions = rows.slice(1).map(cols => ({
@@ -141,9 +145,16 @@ fetch(CSV_URL)
   }));
 
   ready = true;
+
+  // если Firebase уже прислал значение
+  if(lastState !== null){
+    handleState(lastState);
+  }
 });
 
-/* экраны */
+/* =========================
+   ЭКРАНЫ
+========================= */
 function showStart(){
   startScreen.style.display="flex";
   waiting.style.display="none";
@@ -162,11 +173,36 @@ function showGame(){
   game.style.display="flex";
 }
 
-/* состояние */
+/* =========================
+   FIREBASE
+========================= */
 db.ref('currentQuestion').on('value', snap => {
 
-  const raw = snap.val();
+  let raw = snap.val();
+
+  // нормализация
+  if(raw === null){
+    raw = -1;
+  }
+
   const current = Number(raw);
+
+  lastState = current;
+
+  if(!ready) return;
+
+  handleState(current);
+});
+
+/* =========================
+   ЛОГИКА
+========================= */
+function handleState(current){
+
+  if(timerInterval){
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
 
   if(current === -1){
     showStart();
@@ -178,12 +214,11 @@ db.ref('currentQuestion').on('value', snap => {
     return;
   }
 
-  if(!ready || !questions[current]) return;
+  if(!questions[current]) return;
 
   showGame();
 
   voted = false;
-  clearInterval(timerInterval);
 
   const q = questions[current];
 
@@ -211,7 +246,14 @@ db.ref('currentQuestion').on('value', snap => {
     options.appendChild(li);
   });
 
-  /* таймер */
+  startTimer();
+}
+
+/* =========================
+   ТАЙМЕР
+========================= */
+function startTimer(){
+
   let total = 5;
   let time = total;
 
@@ -219,6 +261,7 @@ db.ref('currentQuestion').on('value', snap => {
   timerBar.style.background = "hsl(120,100%,50%)";
 
   timerInterval=setInterval(()=>{
+
     time--;
 
     let percent = (time/total)*100;
@@ -233,7 +276,7 @@ db.ref('currentQuestion').on('value', snap => {
     }
 
   },1000);
-});
+}
 </script>
 
 </body>
