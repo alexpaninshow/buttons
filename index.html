@@ -6,15 +6,12 @@
 
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
 <style>
 html, body { height:100%; margin:0; }
 
 body {
   font-family:'Montserrat',sans-serif;
-  background:#000;
+  background:#111;
   color:white;
 }
 
@@ -29,6 +26,8 @@ body {
   text-align:center;
 }
 
+#start { background:#000; z-index:10; }
+
 #start img {
   max-width:80%;
   border-radius:20px;
@@ -38,25 +37,48 @@ body {
 #waiting { display:none; font-size:6vw; font-weight:900; }
 #game { display:none; height:100%; flex-direction:column; }
 
-h1 { font-size:5vw; }
+h1 { font-size:5vw; margin:10px; }
+
+#timerBarWrap {
+  width:90%;
+  height:70px;
+  background:#222;
+  border-radius:40px;
+  overflow:hidden;
+  margin:40px auto;
+}
+
+#timerBar {
+  height:100%;
+  width:100%;
+  background:hsl(120,100%,50%);
+  transition: width 1s linear, background 1s linear;
+}
 
 ul {
-  width:100%;
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  margin:10px;
   padding:0;
 }
 
 li {
-  list-style:none;
-  margin:10px;
-  padding:20px;
+  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:7vw;
+  font-weight:900;
+  margin:8px 0;
   background:#333;
   border-radius:20px;
-  text-align:center;
-  font-size:5vw;
+  border:6px solid #888;
   cursor:pointer;
 }
 
 li.selected {
+  border:8px solid #00e676;
   background:#2e7d32;
 }
 </style>
@@ -66,38 +88,37 @@ li.selected {
 
 <div id="start" class="screen">
   <img src="start.jpg">
-  <h1>Скоро начнём!</h1>
+  <div style="font-size:5vw;font-weight:900;">Скоро начнём!</div>
 </div>
 
-<div id="waiting" class="screen">
-  <h1>Смотрите на сцену!</h1>
-</div>
+<div id="waiting" class="screen">Смотрите на сцену!</div>
 
-<div id="game" class="screen">
+<div id="game">
   <h1 id="title"></h1>
+
+  <div id="timerBarWrap">
+    <div id="timerBar"></div>
+  </div>
+
   <ul id="options"></ul>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
 <script>
-const firebaseConfig = {
-  apiKey: "AIzaSyBr2DziLnevo6OM69tZL8gdJcTQhSpgeIk",
-  authDomain: "buttons-panin.firebaseapp.com",
-  databaseURL: "https://buttons-panin-default-rtdb.firebaseio.com",
-  projectId: "buttons-panin",
-  storageBucket: "buttons-panin.firebasestorage.app",
-  messagingSenderId: "303467096491",
-  appId: "1:303467096491:web:e5aea0f0764e4ecb550aee",
-  measurementId: "G-8HYF4MWJY1"
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
 const CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv&gid=0";
+
+firebase.initializeApp({
+  databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"
+});
+
+const db = firebase.database();
 
 let questions = [];
 let ready = false;
 let voted = false;
+let timerInterval = null;
 
 fetch(CSV_URL)
 .then(r => r.text())
@@ -105,8 +126,8 @@ fetch(CSV_URL)
   const rows = text.trim().split('\n').map(r => r.split(','));
 
   questions = rows.slice(1).map(cols => ({
-    text:cols[0],
-    options:cols.slice(1).filter(Boolean)
+    text:(cols[0]||"").trim(),
+    options:cols.slice(1).map(c=>c.trim()).filter(Boolean)
   }));
 
   ready = true;
@@ -118,22 +139,26 @@ const game = document.getElementById("game");
 
 const title = document.getElementById("title");
 const options = document.getElementById("options");
+const timerBar = document.getElementById("timerBar");
 
-function show(s){
+function show(screen){
   start.style.display="none";
   waiting.style.display="none";
   game.style.display="none";
-  s.style.display="flex";
+  screen.style.display="flex";
 }
 
 db.ref("game").on("value", snap => {
 
   const data = snap.val();
 
-  if(!data) return show(start);
+  if(!data){
+    show(start);
+    return;
+  }
 
   if(data.status === "waiting") return show(start);
-  if(data.status === "ready") return show(waiting);
+  if(data.status === "pause") return show(waiting);
 
   if(data.status === "playing"){
 
@@ -145,6 +170,8 @@ db.ref("game").on("value", snap => {
     show(game);
 
     voted = false;
+    clearInterval(timerInterval);
+
     title.innerText = q.text;
     options.innerHTML = "";
 
@@ -164,6 +191,18 @@ db.ref("game").on("value", snap => {
 
       options.appendChild(li);
     });
+
+    let total = data.timer || 5;
+    let time = total;
+
+    timerInterval = setInterval(()=>{
+      time--;
+      timerBar.style.width = (time/total*100)+"%";
+
+      if(time<=0){
+        clearInterval(timerInterval);
+      }
+    },1000);
   }
 });
 </script>
