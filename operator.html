@@ -61,6 +61,7 @@ const db = firebase.database();
 let questions = [];
 let current = -1;
 let lastAskedIndex = -1;
+let canGoBack = false; // 🔥 НОВЫЙ ФЛАГ
 
 let autoTimer = null;
 let visualTimer = null;
@@ -114,6 +115,7 @@ function showQuestion(i){
 
   current = i;
   lastAskedIndex = i;
+  canGoBack = false; // 🔥 блокируем назад
 
   db.ref('currentQuestion').set(i);
 
@@ -129,7 +131,9 @@ function showQuestion(i){
     status.innerText = "Сейчас: Ожидание";
     timerDiv.innerText = "";
 
+    canGoBack = true; // 🔥 теперь можно назад
     updateButtons();
+
   }, 5000);
 }
 
@@ -142,7 +146,7 @@ nextBtn.onclick = ()=>{
 };
 
 backBtn.onclick = ()=>{
-  if(lastAskedIndex >= 0){
+  if(canGoBack && lastAskedIndex >= 0){
     let prevIndex = lastAskedIndex === 0 ? 0 : lastAskedIndex - 1;
     showQuestion(prevIndex);
   }
@@ -154,6 +158,7 @@ document.getElementById("resetBtn").onclick = ()=>{
 
   current = -1;
   lastAskedIndex = -1;
+  canGoBack = false;
 
   db.ref('currentQuestion').set(-1);
 
@@ -166,9 +171,7 @@ document.getElementById("resetBtn").onclick = ()=>{
 function updateButtons(){
   if(!questions.length) return;
 
-  let nextIndex = lastAskedIndex + 1;
-
-  if(lastAskedIndex === -1) nextIndex = 0;
+  let nextIndex = lastAskedIndex === -1 ? 0 : lastAskedIndex + 1;
 
   if(nextIndex < questions.length){
     nextBtn.innerText="Вопрос "+(nextIndex+1)+": "+questions[nextIndex].text;
@@ -177,7 +180,7 @@ function updateButtons(){
     nextBtn.style.display="none";
   }
 
-  if(lastAskedIndex >= 0){
+  if(canGoBack && lastAskedIndex >= 0){
     let prevIndex = lastAskedIndex === 0 ? 0 : lastAskedIndex - 1;
     backBtn.innerText = "Назад: " + questions[prevIndex].text;
     backBtn.style.display="inline-block";
