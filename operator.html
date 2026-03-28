@@ -123,12 +123,13 @@ function startTimer(){
 function showQuestion(i, instant=false){
   clearAll();
 
-  current=i;
-  lastShown=i;
+  current = i;
+  lastShown = i;
 
   db.ref('currentQuestion').set(i);
 
-  status.innerText="Сейчас: "+questions[i].text;
+  // 🔥 НОВЫЙ ФОРМАТ
+  status.innerText = "Сейчас: " + (i+1) + ". " + questions[i].text;
 
   updateButtons();
 
@@ -146,15 +147,19 @@ function showQuestion(i, instant=false){
 
 // ВПЕРЁД
 nextBtn.onclick=()=>{
-  let next = (current === -1 ? lastShown : current) + 1;
+  let base = (current === -1 ? lastShown : current);
+  let next = base + 1;
+
   if(next < questions.length){
     showQuestion(next);
   }
 };
 
-// 🔥 НАЗАД (ФИКС)
+// 🔥 НАЗАД
 backBtn.onclick=()=>{
-  let prev = (current === -1 ? lastShown : current) - 1;
+  let base = (current === -1 ? lastShown : current);
+  let prev = base - 1;
+
   if(prev >= 0){
     showQuestion(prev, true);
   }
@@ -169,6 +174,7 @@ resetBtn.onclick=()=>{
   updateButtons();
 };
 
+// 🔥 ОБНОВЛЕНИЕ КНОПОК
 function updateButtons(){
   if(!questions.length) return;
 
@@ -176,12 +182,12 @@ function updateButtons(){
 
   let next = base + 1;
   if(next < questions.length){
-    nextBtn.innerText="Вопрос "+(next+1)+": "+questions[next].text;
+    nextBtn.innerText = "Вопрос " + (next+1) + ": " + questions[next].text;
   }
 
   let prev = base - 1;
   if(prev >= 0){
-    backBtn.innerText="Назад: "+questions[prev].text;
+    backBtn.innerText = "Назад: " + (prev+1) + ". " + questions[prev].text;
     backBtn.style.display="inline-block";
   } else {
     backBtn.style.display="none";
