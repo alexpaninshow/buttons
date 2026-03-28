@@ -5,18 +5,11 @@
 <title>Оператор</title>
 
 <style>
-body { 
-  font-family: Arial; 
-  text-align: center; 
-  background:#222; 
-  color:white; 
-  padding:40px; 
-}
+body { font-family: Arial; text-align: center; background:#222; color:white; padding:40px; }
 
 #status { font-size:26px; margin-bottom:10px; }
 #timer { font-size:24px; margin-bottom:20px; color:#ffeb3b; }
 
-/* 🔥 ВЕРТИКАЛЬНЫЕ КНОПКИ */
 .buttons {
   display:flex;
   flex-direction:column;
@@ -140,21 +133,18 @@ function showQuestion(i){
   }, 5000);
 }
 
-// 👉 ВПЕРЁД
 nextBtn.onclick = ()=>{
-  let nextIndex = lastAskedIndex + 1;
-
-  if(lastAskedIndex === -1) nextIndex = 0;
+  let nextIndex = lastAskedIndex === -1 ? 0 : lastAskedIndex + 1;
 
   if(nextIndex < questions.length){
     showQuestion(nextIndex);
   }
 };
 
-// 👉 НАЗАД (предыдущий вопрос)
 backBtn.onclick = ()=>{
-  if(lastAskedIndex > 0){
-    showQuestion(lastAskedIndex - 1);
+  if(lastAskedIndex >= 0){
+    let prevIndex = lastAskedIndex === 0 ? 0 : lastAskedIndex - 1;
+    showQuestion(prevIndex);
   }
 };
 
@@ -176,8 +166,9 @@ document.getElementById("resetBtn").onclick = ()=>{
 function updateButtons(){
   if(!questions.length) return;
 
-  // 👉 ВПЕРЁД
   let nextIndex = lastAskedIndex + 1;
+
+  if(lastAskedIndex === -1) nextIndex = 0;
 
   if(nextIndex < questions.length){
     nextBtn.innerText="Вопрос "+(nextIndex+1)+": "+questions[nextIndex].text;
@@ -186,9 +177,9 @@ function updateButtons(){
     nextBtn.style.display="none";
   }
 
-  // 👉 НАЗАД С ТЕКСТОМ
-  if(lastAskedIndex > 0){
-    backBtn.innerText = "Назад: " + questions[lastAskedIndex - 1].text;
+  if(lastAskedIndex >= 0){
+    let prevIndex = lastAskedIndex === 0 ? 0 : lastAskedIndex - 1;
+    backBtn.innerText = "Назад: " + questions[prevIndex].text;
     backBtn.style.display="inline-block";
   } else {
     backBtn.style.display="none";
