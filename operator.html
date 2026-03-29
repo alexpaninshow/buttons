@@ -192,7 +192,6 @@ function updateWinner(qIdx, force){
     }
     
     let winnerText = '';
-    // Если никто не голосовал (max === 0) ИЛИ ничья (winners.length > 1)
     if(max === 0 || winners.length > 1){
       const randomIndex = Math.floor(Math.random() * questions[qIdx].options.length);
       winnerText = questions[qIdx].options[randomIndex];
@@ -319,7 +318,7 @@ db.ref('currentQuestion').on('value', snap=>{
     updateButtons();
   } else if(questions[current]){
     statusEl.style.opacity = '1';
-    statusEl.innerText = '❓ Вопрос '+(current+1)+': '+questions[current].text;
+    statusEl.innerText = '⚡ СЕЙЧАС: Вопрос '+(current+1)+': '+questions[current].text;
     startTimerDelay(data.startTime);
     subscribeVotes(current);
     updateWinner(current,false);
