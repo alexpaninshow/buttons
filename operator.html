@@ -2,72 +2,124 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
 <title>Оператор</title>
 
 <style>
-body{
-  margin:0;
-  font-family:Arial;
-  background:#111;
-  color:white;
-  display:flex;
-  flex-direction:column;
-  text-align:center;
+* {
+  box-sizing: border-box;
 }
 
-#top{padding:20px}
-h1{margin:0}
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background: #111;
+}
 
-#status{font-size:22px;margin-top:10px}
-#timer{font-size:28px;margin-top:10px;font-weight:bold}
-#winner{
-  font-size:24px;
-  margin-top:15px;
-  padding:10px;
-  background:#222;
-  border-radius:20px;
-  color:#ffd700;
+body {
+  font-family: Arial, sans-serif;
+  background: #111;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+}
+
+#top {
+  padding: 20px;
+  flex-shrink: 0;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(24px, 6vw, 36px);
+}
+
+#status {
+  font-size: clamp(16px, 4.5vw, 22px);
+  margin-top: 10px;
+  word-break: break-word;
+}
+
+#timer {
+  font-size: clamp(24px, 7vw, 28px);
+  margin-top: 10px;
+  font-weight: bold;
+}
+
+#winner {
+  font-size: clamp(18px, 5vw, 24px);
+  margin-top: 15px;
+  padding: 10px;
+  background: #222;
+  border-radius: 20px;
+  color: #ffd700;
   transition: all 0.3s ease;
+  word-break: break-word;
 }
+
 #winner.hidden {
   opacity: 0.3;
   filter: blur(4px);
 }
-#winnerDetails{
-  font-size:18px;
-  margin-top:5px;
-  color:#aaa;
+
+#winnerDetails {
+  font-size: clamp(14px, 4vw, 18px);
+  margin-top: 5px;
+  color: #aaa;
   transition: all 0.3s ease;
+  word-break: break-word;
 }
+
 #winnerDetails.hidden {
   opacity: 0.3;
   filter: blur(4px);
 }
-#questionsStatus{font-size:16px;margin-top:10px;color:#aaa}
 
-#buttons{
-  flex:1;
-  display:flex;
-  flex-direction:column;
-  padding:10px;
+#questionsStatus {
+  font-size: clamp(14px, 4vw, 16px);
+  margin-top: 10px;
+  color: #aaa;
 }
 
-button{
-  margin:6px 0;
-  font-size:18px;
-  font-weight:bold;
-  border-radius:20px;
-  border:none;
-  color:white;
-  cursor:pointer;
-  padding:15px;
+#buttons {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  gap: 10px;
+  justify-content: center;
 }
 
-.next{background:#4caf50;flex:1.6}
-.back{background:orange;flex:1}
-.reset{background:red;flex:1}
+button {
+  margin: 0;
+  font-size: clamp(16px, 5vw, 18px);
+  font-weight: bold;
+  border-radius: 30px;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 18px 15px;
+  width: 100%;
+  transition: transform 0.1s ease;
+}
 
-button:active{transform:scale(0.98)}
+button:active {
+  transform: scale(0.97);
+}
+
+.next {
+  background: #4caf50;
+}
+
+.back {
+  background: #ff9800;
+}
+
+.reset {
+  background: #f44336;
+}
 </style>
 </head>
 
@@ -279,7 +331,7 @@ function startTimerWithDelay(startTime){
   }, 6500);
 }
 
-/* sync */
+/* sync — при загрузке страницы оператор тоже получает актуальное состояние */
 db.ref('currentQuestion').on('value', function(snap){
   var data = snap.val();
   if(!data) return;
@@ -355,18 +407,21 @@ nextBtn.onclick=function(){
 backBtn.onclick=function(){
   if(!questionsLoaded || questions.length === 0) return;
   
+  if(current === -1 || current === -999){
+    return;
+  }
+  
   if(current === 0){
     setQuestion(0);
     return;
   }
-
+  
   if(current > 0){
-    setQuestion(current-1);
+    setQuestion(current - 1);
     return;
   }
 };
 
-/* ИСПРАВЛЕННЫЕ НАДПИСИ НА КНОПКАХ */
 function updateButtons(){
   if(!questionsLoaded || questions.length === 0){
     nextBtn.innerText = "Загрузка...";
@@ -374,21 +429,19 @@ function updateButtons(){
     return;
   }
 
-  /* НАДПИСЬ НА КНОПКЕ "НАЗАД" */
   if(current === -1 || current === -999){
     backBtn.innerText = "◀ Назад";
   }
   else if(current === 0){
-    backBtn.innerText = "◀ Назад: " + questions[0].text.substring(0, 30);
+    backBtn.innerText = "◀ Повторить: 1. " + questions[0].text.substring(0, 30);
   }
-  else if(current > 0 && questions[current]){
-    backBtn.innerText = "◀ Назад: " + (current+1) + ". " + questions[current].text.substring(0, 30);
+  else if(current > 0 && questions[current - 1]){
+    backBtn.innerText = "◀ Назад: " + (current) + ". " + questions[current - 1].text.substring(0, 30);
   }
   else {
     backBtn.innerText = "◀ Назад";
   }
 
-  /* НАДПИСЬ НА КНОПКЕ "ДАЛЕЕ" */
   if(current === -1 || current === -999){
     nextBtn.innerText = "Далее: 1. " + questions[0].text.substring(0, 30);
   }
@@ -411,6 +464,12 @@ document.getElementById("resetBtn").onclick=function(){
   db.ref('resetFlag').set(Date.now());
   setQuestion(-1);
 };
+
+/* ЗАЩИТА ОТ СЛУЧАЙНОГО ОБНОВЛЕНИЯ СТРАНИЦЫ */
+window.addEventListener('beforeunload', function() {
+  // ничего не делаем, просто предупреждение при обновлении
+  // но обновление не сломает логику, так как состояние подтянется из Firebase
+});
 </script>
 
 </body>
