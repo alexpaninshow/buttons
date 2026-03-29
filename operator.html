@@ -15,7 +15,9 @@ h1{margin:0;font-size:clamp(24px,6vw,36px)}
 #winner.hidden{opacity:0.3;filter:blur(4px)}
 #winnerDetails{font-size:clamp(14px,4vw,18px);margin-top:5px;color:#aaa}
 #winnerDetails.hidden{opacity:0.3;filter:blur(4px)}
-#questionsStatus{font-size:clamp(14px,4vw,16px);margin-top:10px;color:#aaa}
+#questionsStatus{font-size:clamp(14px,4vw,16px);margin-top:10px;color:#aaa;display:flex;align-items:center;justify-content:center;gap:6px}
+#questionsStatus .ok{color:#00e676;font-size:18px}
+#questionsStatus .error{color:#f44336;font-size:18px}
 #buttons{flex:1;display:flex;flex-direction:column;padding:10px;gap:10px;justify-content:center}
 button{margin:0;font-size:clamp(16px,5vw,18px);font-weight:bold;border-radius:30px;border:none;color:#fff;cursor:pointer;padding:18px;transition:transform .1s}
 button:active{transform:scale(.97)}
@@ -39,7 +41,6 @@ let current = -1;
 let loaded = false;
 let votesListener = null;
 let timerInt = null, timerOut = null;
-let isTimerActive = false;
 
 const statusEl = document.getElementById('status');
 const timerEl = document.getElementById('timer');
@@ -65,9 +66,21 @@ fetch(CSV_URL).then(r=>r.text()).then(text=>{
     if(q.text && q.options.length) questions.push(q);
   }
   loaded = true;
-  qStatusEl.innerText = '📋 Загружено вопросов: '+questions.length;
+  
+  // Декоративное отображение статуса загрузки вопросов
+  if(questions.length > 0){
+    qStatusEl.innerHTML = '<span class="ok">✅</span> Все вопросы загружены ('+questions.length+')';
+  } else {
+    qStatusEl.innerHTML = '<span class="error">❌</span> Ошибка загрузки вопросов';
+  }
+  
   statusEl.innerText = questions.length ? '✅ Готов. Ожидание команды...' : '❌ Нет вопросов';
   updateButtons();
+}).catch(()=>{
+  // Ошибка загрузки CSV
+  qStatusEl.innerHTML = '<span class="error">❌</span> Ошибка загрузки вопросов';
+  statusEl.innerText = '❌ Ошибка подключения к таблице';
+  loaded = false;
 });
 
 function setQuestion(idx){
@@ -112,14 +125,12 @@ function subscribeVotes(qIdx){
 function startTimerDelay(start){
   clearInterval(timerInt); clearTimeout(timerOut);
   hideWinner();
-  isTimerActive = true;
   const tick = () => {
     const elapsed = (Date.now()-start)/1000;
     const rem = Math.max(0,6-elapsed);
     timerEl.innerText = '⏳ '+Math.ceil(rem)+' сек';
     if(rem<=0){
       clearInterval(timerInt); clearTimeout(timerOut);
-      isTimerActive = false;
       timerEl.innerText = '⏳ 0 сек';
       showWinner();
       if(current>=0 && questions[current]) updateWinner(current,true);
@@ -129,8 +140,7 @@ function startTimerDelay(start){
   tick();
   timerInt = setInterval(tick,100);
   timerOut = setTimeout(()=>{
-    if(isTimerActive){
-      isTimerActive = false;
+    if(true){
       showWinner();
       if(current>=0 && questions[current]) updateWinner(current,true);
       updateButtons();
@@ -152,7 +162,6 @@ db.ref('currentQuestion').on('value', snap=>{
     winnerDetailEl.innerText = '';
     if(votesListener) votesListener.off();
     clearTimeout(timerOut); clearInterval(timerInt);
-    isTimerActive = false;
     updateButtons();
   } else if(current === -999){
     statusEl.innerText = '⏸️ Ожидание...';
@@ -162,10 +171,10 @@ db.ref('currentQuestion').on('value', snap=>{
     winnerDetailEl.innerText = '';
     if(votesListener) votesListener.off();
     clearTimeout(timerOut); clearInterval(timerInt);
-    isTimerActive = false;
     updateButtons();
   } else if(questions[current]){
-    statusEl.innerText = '❓ Вопрос '+(current+1)+' из '+questions.length+': '+questions[current].text;
+    // Убираем "из M" — оставляем только "Вопрос N"
+    statusEl.innerText = '❓ Вопрос '+(current+1)+': '+questions[current].text;
     startTimerDelay(data.startTime);
     subscribeVotes(current);
     updateWinner(current,false);
@@ -186,10 +195,6 @@ nextBtn.onclick = ()=>{
 
 backBtn.onclick = ()=>{
   if(!loaded || !questions.length) return;
-  
-  // Если таймер активен (вопрос ещё идёт) → повторяем текущий вопрос
-  // Если таймер НЕ активен (вопрос завершён) → повторяем текущий вопрос
-  // В обоих случаях повторяем текущий вопрос
   setQuestion(current);
 };
 
@@ -200,7 +205,6 @@ function updateButtons(){
     return;
   }
   
-  // Кнопка "Далее"
   if(current === -1 || current === -999){
     nextBtn.innerText = 'Далее: 1. '+questions[0].text.substring(0,30);
   } else if(current === questions.length - 1){
@@ -211,7 +215,6 @@ function updateButtons(){
     nextBtn.innerText = 'Далее';
   }
   
-  // Кнопка "Назад" — всегда повторяет ТЕКУЩИЙ вопрос
   if(current >= 0 && questions[current]){
     backBtn.innerText = '◀ Повторить: '+(current+1)+'. '+questions[current].text.substring(0,30);
   } else {
