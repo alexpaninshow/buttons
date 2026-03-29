@@ -123,7 +123,7 @@ button:active {
 <body>
 <div id="top"><h1>Управление игрой</h1><div id="status">⏳ Загрузка...</div><div id="timer">⏳ -</div><div id="winner" class="hidden">🏆 Победитель: ???</div><div id="winnerDetails" class="hidden"></div><div id="questionsStatus"></div></div>
 <div id="buttons"><button id="nextBtn" class="next">--</button><button id="backBtn" class="back">--</button><button id="resetBtn" class="reset">Полный сброс</button></div>
-<div id="instagramBtn"><img src="https://upload.wikimedia.org/wikipedia/commons/9/95/Instagram_logo_2022.svg" alt="Instagram"></div>
+<div id="instagramBtn"><img src="https://upload.wikimedia.org/wikipedia/commons/9/95/Instagram_logo_2022.svg"></div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -135,27 +135,12 @@ const db = firebase.database();
 let questions = [];
 let current = -1;
 let loaded = false;
-let votesListener = null;
-let timerInt = null, timerOut = null;
-let isTimerActive = false;
-let pendingWaitingTimeout = null;
-let pendingWinnerBlurTimeout = null;
+let timerInt = null;
 
 const statusEl = document.getElementById('status');
 const timerEl = document.getElementById('timer');
-const winnerEl = document.getElementById('winner');
-const winnerDetailEl = document.getElementById('winnerDetails');
-const qStatusEl = document.getElementById('questionsStatus');
-const nextBtn = document.getElementById('nextBtn');
-const backBtn = document.getElementById('backBtn');
 const instagramBtn = document.getElementById('instagramBtn');
 
-function hideWinner(){ winnerEl.classList.add('hidden'); winnerDetailEl.classList.add('hidden'); }
-function showWinner(){ winnerEl.classList.remove('hidden'); winnerDetailEl.classList.remove('hidden'); }
-function clearPendingTimeouts(){
-  if(pendingWaitingTimeout){ clearTimeout(pendingWaitingTimeout); pendingWaitingTimeout = null; }
-  if(pendingWinnerBlurTimeout){ clearTimeout(pendingWinnerBlurTimeout); pendingWinnerBlurTimeout = null; }
-}
 function showInstagramButton(){ instagramBtn.style.opacity = '1'; }
 function hideInstagramButton(){ instagramBtn.style.opacity = '0'; }
 
@@ -163,259 +148,77 @@ fetch(CSV_URL).then(r=>r.text()).then(text=>{
   const rows = text.trim().split('\n');
   for(let i=1;i<rows.length;i++){
     const cols = rows[i].split(',');
-    if(!cols[0]||cols[0].trim()==='') continue;
+    if(!cols[0]) continue;
     const q = { text:cols[0].trim(), options:[] };
     for(let j=1;j<cols.length;j++){
-      const val = cols[j].trim();
-      if(val) q.options.push(val);
+      if(cols[j].trim()) q.options.push(cols[j].trim());
     }
     if(q.text && q.options.length) questions.push(q);
   }
   loaded = true;
-  
-  if(questions.length > 0){
-    qStatusEl.innerHTML = '<span class="ok">✅</span> Все вопросы загружены ('+questions.length+')';
-  } else {
-    qStatusEl.innerHTML = '<span class="error">❌</span> Ошибка загрузки вопросов';
-  }
-  
-  statusEl.innerText = questions.length ? '✅ Готов. Ожидание команды...' : '❌ Нет вопросов';
-  updateButtons();
-}).catch(()=>{
-  qStatusEl.innerHTML = '<span class="error">❌</span> Ошибка загрузки вопросов';
-  statusEl.innerText = '❌ Ошибка подключения к таблице';
-  loaded = false;
 });
 
 function setQuestion(idx){
-  clearPendingTimeouts();
   hideInstagramButton();
   db.ref('currentQuestion').set({ index:idx, startTime:Date.now() });
 }
 
-function updateWinner(qIdx, force){
-  if(qIdx<0 || !questions[qIdx]){ 
-    winnerEl.innerText='🏆 Победитель: ???'; 
-    winnerDetailEl.innerText=''; 
-    return; 
-  }
-  db.ref('votes/'+qIdx).once('value', snap=>{
-    const votes = snap.val()||{};
-    let max=-1, winners=[], parts=[];
-    
-    for(let i=0;i<questions[qIdx].options.length;i++){
-      const c = votes[i]||0;
-      parts.push(questions[qIdx].options[i]+': '+c);
-      if(c > max){
-        max = c;
-        winners = [i];
-      } else if(c === max){
-        winners.push(i);
-      }
-    }
-    
-    let winnerText = '';
-    if(max === 0 || winners.length > 1){
-      const randomIndex = Math.floor(Math.random() * questions[qIdx].options.length);
-      winnerText = questions[qIdx].options[randomIndex];
-    } else {
-      winnerText = questions[qIdx].options[winners[0]];
-    }
-    
-    winnerEl.innerText = '🏆 ПОБЕДИТЕЛЬ: '+winnerText;
-    winnerDetailEl.innerText = 'Голосов: '+max+' | '+parts.join(' | ');
-    if(force) showWinner();
-  });
-}
+function startTimer(start){
+  clearInterval(timerInt);
 
-function subscribeVotes(qIdx){
-  if(votesListener) votesListener.off();
-  if(qIdx<0 || !questions[qIdx]) return;
-  votesListener = db.ref('votes/'+qIdx);
-  votesListener.on('value', snap=>{
-    const votes = snap.val()||{};
-    let max=-1, winners=[], parts=[];
-    
-    for(let i=0;i<questions[qIdx].options.length;i++){
-      const c = votes[i]||0;
-      parts.push(questions[qIdx].options[i]+': '+c);
-      if(c > max){
-        max = c;
-        winners = [i];
-      } else if(c === max){
-        winners.push(i);
-      }
-    }
-    
-    let winnerText = '';
-    if(max === 0 || winners.length > 1){
-      const randomIndex = Math.floor(Math.random() * questions[qIdx].options.length);
-      winnerText = questions[qIdx].options[randomIndex];
-    } else {
-      winnerText = questions[qIdx].options[winners[0]];
-    }
-    
-    winnerEl.innerText = '🏆 ПОБЕДИТЕЛЬ: '+winnerText;
-    winnerDetailEl.innerText = 'Голосов: '+max+' | '+parts.join(' | ');
-  });
-}
-
-function startTimerDelay(start){
-  clearInterval(timerInt); clearTimeout(timerOut);
-  hideWinner();
-  isTimerActive = true;
-  
   const tick = () => {
     const elapsed = (Date.now()-start)/1000;
     const rem = Math.max(0,6-elapsed);
     timerEl.innerText = '⏳ '+Math.ceil(rem)+' сек';
-    if(rem<=0){
-      clearInterval(timerInt); clearTimeout(timerOut);
-      isTimerActive = false;
+
+    if(rem <= 0){
+      clearInterval(timerInt);
       timerEl.innerText = '⏳ 0 сек';
-      showWinner();
-      if(current>=0 && questions[current]) updateWinner(current,true);
-      updateButtons();
-      
-      clearPendingTimeouts();
-      pendingWaitingTimeout = setTimeout(() => {
-        if(!isTimerActive && current !== -1 && current !== -999){
-          statusEl.style.opacity = '0';
-          setTimeout(() => {
-            if(!isTimerActive && current !== -1 && current !== -999){
-              statusEl.innerText = '⏸️ Ожидание...';
-              statusEl.style.opacity = '1';
-            }
-          }, 500);
-        }
-        pendingWaitingTimeout = null;
-      }, 5000);
-      
-      pendingWinnerBlurTimeout = setTimeout(() => {
-        if(!isTimerActive && current !== -1 && current !== -999){
-          hideWinner();
-        }
-        pendingWinnerBlurTimeout = null;
-      }, 30000);
+
+      // 👉 ПОЯВЛЕНИЕ INSTAGRAM ТОЛЬКО В КОНЦЕ ПОСЛЕДНЕГО ВОПРОСА
+      if(current === questions.length - 1){
+        setTimeout(() => {
+          showInstagramButton();
+        }, 1000);
+      }
     }
   };
+
   tick();
   timerInt = setInterval(tick,100);
-  timerOut = setTimeout(()=>{
-    if(isTimerActive){
-      isTimerActive = false;
-      showWinner();
-      if(current>=0 && questions[current]) updateWinner(current,true);
-      updateButtons();
-    }
-  },6500);
 }
 
 db.ref('currentQuestion').on('value', snap=>{
   const data = snap.val();
   if(!data) return;
+
   current = data.index;
-  if(!loaded){
-    statusEl.innerText = '⏳ Загрузка...';
-  } else if(current === -1){
-    statusEl.innerText = '⏸️ Ожидание...';
-    timerEl.innerText = '⏳ -';
-    hideWinner();
-    winnerEl.innerText = '🏆 Победитель: ???';
-    winnerDetailEl.innerText = '';
-    if(votesListener) votesListener.off();
-    clearTimeout(timerOut); clearInterval(timerInt);
-    isTimerActive = false;
-    clearPendingTimeouts();
+
+  if(current >= 0 && questions[current]){
+    statusEl.innerText = 'Вопрос: ' + questions[current].text;
+    startTimer(data.startTime);
     hideInstagramButton();
-    updateButtons();
-  } else if(current === -999){
-    statusEl.innerText = '⏸️ Ожидание...';
-    timerEl.innerText = '⏳ -';
-    hideWinner();
-    winnerEl.innerText = '🏆 Победитель: ???';
-    winnerDetailEl.innerText = '';
-    if(votesListener) votesListener.off();
-    clearTimeout(timerOut); clearInterval(timerInt);
-    isTimerActive = false;
-    clearPendingTimeouts();
-    hideInstagramButton();
-    updateButtons();
-  } else if(questions[current]){
-    statusEl.style.opacity = '1';
-    statusEl.innerText = '⚡ СЕЙЧАС: Вопрос '+(current+1)+': '+questions[current].text;
-    startTimerDelay(data.startTime);
-    subscribeVotes(current);
-    updateWinner(current,false);
-    hideInstagramButton();
-    updateButtons();
-  } else if(current >= questions.length){
-    statusEl.innerText = '🏁 Спектакль завершён!';
-    timerEl.innerText = '⏳ -';
-    showInstagramButton();
-    updateButtons();
   }
 });
-
-nextBtn.onclick = ()=>{
-  if(!loaded || !questions.length){ alert('Загрузка...'); return; }
-  clearPendingTimeouts();
-  if(current === -1 || current === -999){ setQuestion(0); return; }
-  if(current < questions.length-1) setQuestion(current+1);
-  else if(current === questions.length-1) statusEl.innerText = '🏁 Последний вопрос';
-};
-
-backBtn.onclick = ()=>{
-  if(!loaded || !questions.length) return;
-  clearPendingTimeouts();
-  if(current === 0){
-    setQuestion(0);
-  } else if(isTimerActive){
-    setQuestion(current - 1);
-  } else {
-    setQuestion(current);
-  }
-};
-
-function updateButtons(){
-  if(!loaded || !questions.length){
-    nextBtn.innerText = 'Загрузка...';
-    backBtn.innerText = 'Загрузка...';
-    return;
-  }
-  
-  if(current === -1 || current === -999){
-    nextBtn.innerText = 'Далее: 1. '+questions[0].text.substring(0,30);
-  } else if(current === questions.length - 1){
-    nextBtn.innerText = '🏁 ФИНАЛ';
-  } else if(current >= 0 && current < questions.length - 1){
-    nextBtn.innerText = 'Далее: '+(current+2)+'. '+questions[current+1].text.substring(0,30);
-  } else {
-    nextBtn.innerText = 'Далее';
-  }
-  
-  if(current >= 0 && questions[current]){
-    if(current === 0){
-      backBtn.innerText = '◀ Повторить: 1. '+questions[0].text.substring(0,30);
-    } else if(isTimerActive){
-      backBtn.innerText = '◀ Повторить: '+(current)+'. '+questions[current-1].text.substring(0,30);
-    } else {
-      backBtn.innerText = '◀ Повторить: '+(current+1)+'. '+questions[current].text.substring(0,30);
-    }
-  } else {
-    backBtn.innerText = '◀ Назад';
-  }
-}
 
 instagramBtn.onclick = () => {
   db.ref('showInstagram').set(Date.now());
 };
 
+document.getElementById('nextBtn').onclick = ()=>{
+  if(current < questions.length - 1){
+    setQuestion(current + 1);
+  }
+};
+
+document.getElementById('backBtn').onclick = ()=>{
+  if(current > 0){
+    setQuestion(current - 1);
+  }
+};
+
 document.getElementById('resetBtn').onclick = ()=>{
-  if(!confirm('Полный сброс игры?')) return;
-  clearPendingTimeouts();
   db.ref('votes').remove();
-  db.ref('resetFlag').set(Date.now());
   db.ref('showInstagram').remove();
   setQuestion(-1);
 };
