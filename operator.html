@@ -333,7 +333,7 @@ db.ref('currentQuestion').on('value', function(snap){
   updateButtons();
 });
 
-/* КНОПКИ — ИСПРАВЛЕНА ЛОГИКА ВОЗВРАТА НА ПЕРВЫЙ ВОПРОС */
+/* КНОПКИ */
 nextBtn.onclick=function(){
   if(!questionsLoaded || questions.length === 0){
     alert("Вопросы ещё не загружены. Подождите...");
@@ -355,22 +355,18 @@ nextBtn.onclick=function(){
 backBtn.onclick=function(){
   if(!questionsLoaded || questions.length === 0) return;
   
-  /* Если мы на первом вопросе (current === 0) — возвращаемся на ТОТ ЖЕ ПЕРВЫЙ ВОПРОС */
   if(current === 0){
-    setQuestion(0);  /* ← повторный запуск первого вопроса */
+    setQuestion(0);
     return;
   }
 
-  /* Если текущий вопрос больше 0 — возвращаемся к предыдущему */
   if(current > 0){
     setQuestion(current-1);
     return;
   }
-  
-  /* Если current === -1 или -999 — ничего не делаем */
 };
 
-/* подписи кнопок */
+/* ИСПРАВЛЕННЫЕ НАДПИСИ НА КНОПКАХ */
 function updateButtons(){
   if(!questionsLoaded || questions.length === 0){
     nextBtn.innerText = "Загрузка...";
@@ -378,24 +374,31 @@ function updateButtons(){
     return;
   }
 
-  if(current >= 0 && questions[current]){
-    backBtn.innerText = "◀ Назад к вопросу " + (current+1) + ": " + questions[current].text.substring(0, 30);
-  } else if(current === 0){
-    backBtn.innerText = "◀ Назад к вопросу 1";
-  } else {
+  /* НАДПИСЬ НА КНОПКЕ "НАЗАД" */
+  if(current === -1 || current === -999){
+    backBtn.innerText = "◀ Назад";
+  }
+  else if(current === 0){
+    backBtn.innerText = "◀ Назад: " + questions[0].text.substring(0, 30);
+  }
+  else if(current > 0 && questions[current]){
+    backBtn.innerText = "◀ Назад: " + (current+1) + ". " + questions[current].text.substring(0, 30);
+  }
+  else {
     backBtn.innerText = "◀ Назад";
   }
 
+  /* НАДПИСЬ НА КНОПКЕ "ДАЛЕЕ" */
   if(current === -1 || current === -999){
     nextBtn.innerText = "Далее: 1. " + questions[0].text.substring(0, 30);
   }
-  else if(current < questions.length-1){
-    nextBtn.innerText = "Далее: " + (current+2) + ". " + questions[current+1].text.substring(0, 30);
-  }
-  else if(current === questions.length-1){
+  else if(current === questions.length - 1){
     nextBtn.innerText = "🏁 ФИНАЛ";
   }
-  else{
+  else if(current >= 0 && current < questions.length - 1 && questions[current + 1]){
+    nextBtn.innerText = "Далее: " + (current+2) + ". " + questions[current+1].text.substring(0, 30);
+  }
+  else {
     nextBtn.innerText = "Далее";
   }
 }
