@@ -146,6 +146,7 @@ var questions = [];
 var timerInterval = null;
 var votedInCurrentQuestion = false;
 var currentQuestionIndex = -1;
+var timerEnded = false;
 
 var startScreen = document.getElementById("start");
 var waiting = document.getElementById("waiting");
@@ -195,6 +196,7 @@ function showStart(){
 }
 
 function showWaiting(){
+  console.log("showWaiting вызван");
   startScreen.style.display="none";
   waiting.style.display="flex";
   game.style.display="none";
@@ -226,9 +228,10 @@ function markUserVotedForQuestion(questionIndex){
   localStorage.setItem(votedKey, 'true');
 }
 
-/* запуск синхронизированного таймера — 6 секунд, только полоска */
+/* запуск синхронизированного таймера — 6 секунд */
 function startSyncedTimer(startTime){
   if(timerInterval) clearInterval(timerInterval);
+  timerEnded = false;
   
   function updateTimer(){
     var elapsed = (Date.now() - startTime) / 1000;
@@ -237,7 +240,6 @@ function startSyncedTimer(startTime){
     
     timerBar.style.width = percent + "%";
     
-    /* плавное изменение цвета: зелёный → жёлтый → красный */
     if(remaining > 4){
       timerBar.style.backgroundColor = "#00e676";
     } else if(remaining > 2){
@@ -246,13 +248,15 @@ function startSyncedTimer(startTime){
       timerBar.style.backgroundColor = "#ff5722";
     }
     
-    if(remaining <= 0){
+    if(remaining <= 0 && !timerEnded){
+      timerEnded = true;
       if(timerInterval) clearInterval(timerInterval);
       timerInterval = null;
       timerBar.style.width = "0%";
       timerBar.style.backgroundColor = "#ff5722";
       
-      /* ТАЙМЕР ЗАКОНЧИЛСЯ — ВСЕГДА ПОКАЗЫВАЕМ "СМОТРИТЕ НА СЦЕНУ!" */
+      /* ПРИНУДИТЕЛЬНО ПОКАЗЫВАЕМ ЭКРАН ОЖИДАНИЯ */
+      console.log("Таймер закончился, вызываем showWaiting()");
       showWaiting();
     }
   }
@@ -292,12 +296,10 @@ db.ref('currentQuestion').on('value', function(snap){
   }
   
   /* если не голосовал — показываем вопрос */
-  if(current !== currentQuestionIndex){
-    votedInCurrentQuestion = false;
-    votedMessage.style.display = "none";
-  }
-  
   currentQuestionIndex = current;
+  votedInCurrentQuestion = false;
+  votedMessage.style.display = "none";
+  timerEnded = false;
   
   showGame();
   
@@ -314,6 +316,7 @@ db.ref('currentQuestion').on('value', function(snap){
       
       li.onclick = function(){
         if(votedInCurrentQuestion) return;
+        if(timerEnded) return;
         
         votedInCurrentQuestion = true;
         if(timerInterval) clearInterval(timerInterval);
@@ -326,7 +329,9 @@ db.ref('currentQuestion').on('value', function(snap){
         
         votedMessage.style.display = "block";
         
-        setTimeout(showWaiting, 800);
+        setTimeout(function(){
+          showWaiting();
+        }, 800);
       };
       
       options.appendChild(li);
@@ -349,6 +354,7 @@ db.ref('resetFlag').on('value', function(snap){
     }
     votedInCurrentQuestion = false;
     currentQuestionIndex = -1;
+    timerEnded = false;
   }
 });
 </script>
