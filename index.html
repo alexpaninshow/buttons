@@ -17,7 +17,7 @@ body{font-family:'Montserrat',sans-serif;background:#111;color:#fff}
 #alreadyVoted{display:none;font-size:clamp(24px,7vw,44px);font-weight:900;color:#ff9800}
 h1{font-size:clamp(20px,6vw,40px);margin:10px 0}
 #timerBarWrap{width:100%;max-width:600px;height:70px;background:#222;border-radius:40px;overflow:hidden;margin:20px auto}
-#timerBar{height:100%;width:100%;transition:width 0.05s linear;background:linear-gradient(90deg,#00e676,#ff9800,#d32f2f)}
+#timerBar{height:100%;width:100%;transition:width 0.05s linear, background-color 0.05s linear}
 ul{flex:1;display:flex;flex-direction:column;gap:12px;margin:0;padding:0}
 li{display:flex;align-items:center;justify-content:center;font-size:clamp(18px,6vw,36px);font-weight:900;padding:20px;background:#333;border-radius:20px;border:4px solid #888;cursor:pointer}
 li.selected{border-color:#00e676;background:#2e7d32}
@@ -70,6 +70,20 @@ function stopTimers(){
   timerInterval = globalCheck = null;
 }
 
+// Плавное изменение цвета: зелёный (0%) -> жёлтый (50%) -> красный (100%)
+function updateTimerColor(percent){
+  // percent от 100 до 0
+  let hue;
+  if(percent > 50){
+    // от зелёного (120) до жёлтого (60)
+    hue = 120 - (120 - 60) * ((100 - percent) / 50);
+  } else {
+    // от жёлтого (60) до красного (0)
+    hue = 60 - 60 * ((50 - percent) / 50);
+  }
+  timerBar.style.backgroundColor = 'hsl(' + hue + ', 100%, 50%)';
+}
+
 function startTimer(startTime, qIdx){
   if(timerInterval) clearInterval(timerInterval);
   const update = () => {
@@ -78,10 +92,12 @@ function startTimer(startTime, qIdx){
     const remain = Math.max(0, 6 - elapsed);
     const percent = (remain/6)*100;
     timerBar.style.width = percent+'%';
+    updateTimerColor(percent);
     if(remain <= 0){
       clearInterval(timerInterval);
       timerInterval = null;
       timerBar.style.width = '0%';
+      updateTimerColor(0);
       showWaiting();
     }
   };
