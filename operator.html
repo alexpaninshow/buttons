@@ -236,6 +236,7 @@ function subscribeToVotes(questionIndex){
   });
 }
 
+/* таймер 6 секунд */
 function startTimerWithDelay(startTime){
   clearInterval(window.timerInt);
   if(timerEndTimeout) clearTimeout(timerEndTimeout);
@@ -245,7 +246,7 @@ function startTimerWithDelay(startTime){
   
   function tick(){
     var elapsed = (Date.now() - startTime) / 1000;
-    var remaining = Math.max(0, 5 - elapsed);
+    var remaining = Math.max(0, 6 - elapsed);
     timerEl.innerText="⏳ " + Math.ceil(remaining) + " сек";
     
     if(remaining <= 0){
@@ -259,7 +260,6 @@ function startTimerWithDelay(startTime){
         updateWinnerData(current, true);
       }
       
-      /* ОБНОВЛЯЕМ КНОПКУ "НАЗАД" ПОСЛЕ ТАЙМЕРА */
       updateButtons();
     }
   }
@@ -276,7 +276,7 @@ function startTimerWithDelay(startTime){
       }
       updateButtons();
     }
-  }, 5500);
+  }, 6500);
 }
 
 /* sync */
@@ -355,22 +355,18 @@ nextBtn.onclick=function(){
 backBtn.onclick=function(){
   if(!questionsLoaded || questions.length === 0) return;
   
-  /* Если мы на первом вопросе — возвращаемся на старт */
   if(current === 0){
     setQuestion(-1);
     return;
   }
 
-  /* Если текущий вопрос валидный — возвращаемся к предыдущему */
   if(current > 0){
     setQuestion(current-1);
     return;
   }
-  
-  /* Если current === -1 или -999 — ничего не делаем */
 };
 
-/* подписи кнопок — теперь "Назад" всегда показывает ТЕКУЩИЙ вопрос после таймера */
+/* подписи кнопок */
 function updateButtons(){
   if(!questionsLoaded || questions.length === 0){
     nextBtn.innerText = "Загрузка...";
@@ -378,7 +374,6 @@ function updateButtons(){
     return;
   }
 
-  /* КНОПКА НАЗАД — показывает текущий вопрос (если он есть) */
   if(current >= 0 && questions[current]){
     backBtn.innerText = "◀ Назад к вопросу " + (current+1) + ": " + questions[current].text.substring(0, 30);
   } else if(current === 0){
@@ -387,7 +382,6 @@ function updateButtons(){
     backBtn.innerText = "◀ Назад";
   }
 
-  /* КНОПКА ДАЛЕЕ */
   if(current === -1 || current === -999){
     nextBtn.innerText = "Далее: 1. " + questions[0].text.substring(0, 30);
   }
