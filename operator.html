@@ -22,7 +22,6 @@ button:active{transform:scale(.97)}
 .next{background:#4caf50}
 .back{background:#ff9800}
 .reset{background:#f44336}
-.back:disabled{opacity:0.4;transform:none;cursor:not-allowed}
 </style>
 </head>
 <body>
@@ -40,7 +39,7 @@ let current = -1;
 let loaded = false;
 let votesListener = null;
 let timerInt = null, timerOut = null;
-let isTimerActive = false; // активен ли таймер (вопрос ещё идёт)
+let isTimerActive = false;
 
 const statusEl = document.getElementById('status');
 const timerEl = document.getElementById('timer');
@@ -124,7 +123,7 @@ function startTimerDelay(start){
       timerEl.innerText = '⏳ 0 сек';
       showWinner();
       if(current>=0 && questions[current]) updateWinner(current,true);
-      updateButtons(); // важно: обновляем кнопку "Назад" после окончания таймера
+      updateButtons();
     }
   };
   tick();
@@ -188,15 +187,18 @@ nextBtn.onclick = ()=>{
 backBtn.onclick = ()=>{
   if(!loaded || !questions.length) return;
   
-  // На первом вопросе кнопка неактивна
-  if(current <= 0) return;
+  // Первый вопрос: всегда повторяем первый вопрос
+  if(current === 0){
+    setQuestion(0);
+    return;
+  }
   
-  // Если таймер активен (вопрос ещё идёт) → возврат на предыдущий вопрос
+  // Для всех остальных вопросов:
+  // - Если таймер активен (вопрос идёт) → возврат на предыдущий вопрос (последний завершённый)
+  // - Если таймер НЕ активен (вопрос завершён) → повтор текущего вопроса
   if(isTimerActive){
     setQuestion(current - 1);
-  } 
-  // Если таймер НЕ активен (вопрос завершён) → повтор текущего вопроса
-  else {
+  } else {
     setQuestion(current);
   }
 };
@@ -205,39 +207,32 @@ function updateButtons(){
   if(!loaded || !questions.length){
     nextBtn.innerText = 'Загрузка...';
     backBtn.innerText = 'Загрузка...';
-    backBtn.disabled = true;
     return;
   }
   
   // Кнопка "Далее"
   if(current === -1 || current === -999){
     nextBtn.innerText = 'Далее: 1. '+questions[0].text.substring(0,30);
-    nextBtn.disabled = false;
   } else if(current === questions.length - 1){
     nextBtn.innerText = '🏁 ФИНАЛ';
-    nextBtn.disabled = false;
   } else if(current >= 0 && current < questions.length - 1){
     nextBtn.innerText = 'Далее: '+(current+2)+'. '+questions[current+1].text.substring(0,30);
-    nextBtn.disabled = false;
   } else {
     nextBtn.innerText = 'Далее';
-    nextBtn.disabled = false;
   }
   
-  // Кнопка "Назад" (жёлтая)
-  if(current <= 0){
-    backBtn.innerText = '◀ Назад';
-    backBtn.disabled = true;
-  } 
+  // Кнопка "Назад"
+  if(current === 0){
+    // Первый вопрос: всегда "Повторить первый вопрос"
+    backBtn.innerText = '◀ Повторить: 1. '+questions[0].text.substring(0,30);
+  }
   else if(isTimerActive){
-    // Таймер активен → показываем предыдущий вопрос (последний завершённый)
+    // Таймер активен → показываем предыдущий вопрос
     backBtn.innerText = '◀ Повторить: '+(current)+'. '+questions[current-1].text.substring(0,30);
-    backBtn.disabled = false;
   } 
   else {
-    // Таймер НЕ активен (вопрос завершён) → показываем текущий вопрос для повтора
+    // Таймер НЕ активен (вопрос завершён) → показываем текущий вопрос
     backBtn.innerText = '◀ Повторить: '+(current+1)+'. '+questions[current].text.substring(0,30);
-    backBtn.disabled = false;
   }
 }
 
