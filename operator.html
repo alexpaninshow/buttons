@@ -133,17 +133,37 @@ function setQuestion(idx){
 }
 
 function updateWinner(qIdx, force){
-  if(qIdx<0 || !questions[qIdx]){ winnerEl.innerText='🏆 Победитель: ???'; winnerDetailEl.innerText=''; return; }
+  if(qIdx<0 || !questions[qIdx]){ 
+    winnerEl.innerText='🏆 Победитель: ???'; 
+    winnerDetailEl.innerText=''; 
+    return; 
+  }
   db.ref('votes/'+qIdx).once('value', snap=>{
     const votes = snap.val()||{};
-    let max=-1, win=-1, parts=[];
+    let max=-1, winners=[], parts=[];
+    
     for(let i=0;i<questions[qIdx].options.length;i++){
       const c = votes[i]||0;
       parts.push(questions[qIdx].options[i]+': '+c);
-      if(c>max){ max=c; win=i; }
+      if(c > max){
+        max = c;
+        winners = [i];
+      } else if(c === max){
+        winners.push(i);
+      }
     }
-    const wText = win!==-1 ? questions[qIdx].options[win] : '—';
-    winnerEl.innerText = '🏆 ПОБЕДИТЕЛЬ: '+wText;
+    
+    let winnerText = '';
+    if(max <= 0){
+      winnerText = '—';
+    } else if(winners.length > 1){
+      const randomIndex = Math.floor(Math.random() * winners.length);
+      winnerText = questions[qIdx].options[winners[randomIndex]];
+    } else {
+      winnerText = questions[qIdx].options[winners[0]];
+    }
+    
+    winnerEl.innerText = '🏆 ПОБЕДИТЕЛЬ: '+winnerText;
     winnerDetailEl.innerText = 'Голосов: '+max+' | '+parts.join(' | ');
     if(force) showWinner();
   });
@@ -155,14 +175,30 @@ function subscribeVotes(qIdx){
   votesListener = db.ref('votes/'+qIdx);
   votesListener.on('value', snap=>{
     const votes = snap.val()||{};
-    let max=-1, win=-1, parts=[];
+    let max=-1, winners=[], parts=[];
+    
     for(let i=0;i<questions[qIdx].options.length;i++){
       const c = votes[i]||0;
       parts.push(questions[qIdx].options[i]+': '+c);
-      if(c>max){ max=c; win=i; }
+      if(c > max){
+        max = c;
+        winners = [i];
+      } else if(c === max){
+        winners.push(i);
+      }
     }
-    const wText = win!==-1 ? questions[qIdx].options[win] : '—';
-    winnerEl.innerText = '🏆 ПОБЕДИТЕЛЬ: '+wText;
+    
+    let winnerText = '';
+    if(max <= 0){
+      winnerText = '—';
+    } else if(winners.length > 1){
+      const randomIndex = Math.floor(Math.random() * winners.length);
+      winnerText = questions[qIdx].options[winners[randomIndex]];
+    } else {
+      winnerText = questions[qIdx].options[winners[0]];
+    }
+    
+    winnerEl.innerText = '🏆 ПОБЕДИТЕЛЬ: '+winnerText;
     winnerDetailEl.innerText = 'Голосов: '+max+' | '+parts.join(' | ');
   });
 }
@@ -184,7 +220,6 @@ function startTimerDelay(start){
       if(current>=0 && questions[current]) updateWinner(current,true);
       updateButtons();
       
-      // Через 5 секунд плавно убираем текст вопроса и показываем "Ожидание..."
       clearPendingTimeouts();
       pendingWaitingTimeout = setTimeout(() => {
         if(!isTimerActive && current !== -1 && current !== -999){
@@ -199,7 +234,6 @@ function startTimerDelay(start){
         pendingWaitingTimeout = null;
       }, 5000);
       
-      // Через 30 секунд плавно убираем победителя (blur + opacity)
       pendingWinnerBlurTimeout = setTimeout(() => {
         if(!isTimerActive && current !== -1 && current !== -999){
           hideWinner();
