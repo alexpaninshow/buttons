@@ -191,7 +191,6 @@ function markUserVoted(questionIndex){
   localStorage.setItem(votedKey, 'true');
 }
 
-/* ПОЛНАЯ ОСТАНОВКА ВСЕХ ТАЙМЕРОВ */
 function stopAllTimers(){
   if(timerInterval){
     clearInterval(timerInterval);
@@ -203,7 +202,6 @@ function stopAllTimers(){
   }
 }
 
-/* ЗАПУСК ГЛОБАЛЬНОГО ЧЕКЕРА */
 function startGlobalTimerCheck(questionIndex, startTime){
   if(globalTimerCheck) clearInterval(globalTimerCheck);
   
@@ -218,7 +216,6 @@ function startGlobalTimerCheck(questionIndex, startTime){
   }, 500);
 }
 
-/* ЛОКАЛЬНЫЙ ТАЙМЕР ДЛЯ ПОЛОСКИ */
 function startTimer(startTime, questionIndex){
   if(timerInterval) clearInterval(timerInterval);
   
@@ -253,7 +250,9 @@ db.ref('currentQuestion').on('value', snap=>{
   var current = data.index;
   var startTime = data.startTime;
   
-  /* ОСТАНАВЛИВАЕМ ВСЕ ТАЙМЕРЫ ПРИ ЛЮБОМ ПЕРЕКЛЮЧЕНИИ */
+  console.log("Получен вопрос:", current, "startTime:", startTime, "текущий вопрос:", currentQuestionIndex);
+  
+  /* Останавливаем всё при любом обновлении */
   stopAllTimers();
   
   if(current === -1){ 
@@ -273,14 +272,15 @@ db.ref('currentQuestion').on('value', snap=>{
   currentQuestionIndex = current;
   currentStartTime = startTime;
   
-  /* если таймер уже истёк */
+  /* Если таймер уже истёк */
   if(startTime && (Date.now()-startTime)/1000 >= 6){
     showWaiting();
     return;
   }
   
-  /* проверяем голосование */
+  /* КЛЮЧЕВОЕ: проверяем, голосовал ли пользователь за ЭТОТ КОНКРЕТНЫЙ вопрос */
   var hasVoted = checkUserVoted(current);
+  console.log("Вопрос", current, "голосовал?", hasVoted);
   
   if(hasVoted){
     showAlreadyVoted();
@@ -288,7 +288,7 @@ db.ref('currentQuestion').on('value', snap=>{
     return;
   }
   
-  /* не голосовал — показываем вопрос */
+  /* НЕ ГОЛОСОВАЛ — показываем вопрос с таймером */
   votedMessage.style.display = "none";
   showGame();
   
@@ -301,6 +301,7 @@ db.ref('currentQuestion').on('value', snap=>{
       var li = document.createElement('li');
       li.innerText = q.options[idx];
       li.onclick = function(){
+        console.log("Клик на вариант", idx, "для вопроса", current);
         if(currentQuestionIndex !== current) return;
         
         stopAllTimers();
