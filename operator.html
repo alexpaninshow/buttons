@@ -261,7 +261,7 @@ db.ref('currentQuestion').on('value', snap=>{
   if(!loaded){
     statusEl.innerText = '⏳ Загрузка...';
   } else if(current === -1){
-    statusEl.innerText = '🎭 Старт. Нажмите "Далее"';
+    statusEl.innerText = '⏸️ Ожидание...';
     timerEl.innerText = '⏳ -';
     hideWinner();
     winnerEl.innerText = '🏆 Победитель: ???';
