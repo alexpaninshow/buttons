@@ -214,18 +214,27 @@ li.selected {
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-// ПОЛНОЭКРАННЫЙ РЕЖИМ
+// ПОЛНОЭКРАННЫЙ РЕЖИМ ДЛЯ ТЕЛЕФОНОВ И КОМПЬЮТЕРОВ
 var fullscreenBtn = document.getElementById('fullscreenBtn');
 var hint = document.getElementById('hint');
 
 function toggleFullscreen() {
-  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+  var docEl = document.documentElement;
+  
+  // Проверяем, находимся ли в полноэкранном режиме
+  var isFullscreen = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
+  
+  if (!isFullscreen) {
     // Вход в полноэкранный режим
-    var docEl = document.documentElement;
     if (docEl.requestFullscreen) {
       docEl.requestFullscreen();
     } else if (docEl.webkitRequestFullscreen) {
+      // Для Safari и старых Chrome
       docEl.webkitRequestFullscreen();
+    } else if (docEl.mozRequestFullScreen) {
+      docEl.mozRequestFullScreen();
+    } else if (docEl.msRequestFullscreen) {
+      docEl.msRequestFullscreen();
     }
     fullscreenBtn.textContent = '✕ Выйти';
   } else {
@@ -234,10 +243,31 @@ function toggleFullscreen() {
       document.exitFullscreen();
     } else if (document.webkitExitFullscreen) {
       document.webkitExitFullscreen();
+    } else if (document.mozCancelFullScreen) {
+      document.mozCancelFullScreen();
+    } else if (document.msExitFullscreen) {
+      document.msExitFullscreen();
     }
     fullscreenBtn.textContent = '⛶ На весь экран';
   }
 }
+
+// Обновляем текст кнопки при изменении полноэкранного режима
+document.addEventListener('fullscreenchange', function() {
+  if (document.fullscreenElement || document.webkitFullscreenElement) {
+    fullscreenBtn.textContent = '✕ Выйти';
+  } else {
+    fullscreenBtn.textContent = '⛶ На весь экран';
+  }
+});
+
+document.addEventListener('webkitfullscreenchange', function() {
+  if (document.webkitFullscreenElement) {
+    fullscreenBtn.textContent = '✕ Выйти';
+  } else {
+    fullscreenBtn.textContent = '⛶ На весь экран';
+  }
+});
 
 fullscreenBtn.addEventListener('click', toggleFullscreen);
 
