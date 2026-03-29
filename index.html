@@ -97,8 +97,8 @@ h1 {
   height: 100%;
   width: 100%;
   transition: width 0.05s linear;
+  /* Градиент будет меняться динамически через JS */
   background: linear-gradient(90deg, #00e676, #ff9800, #d32f2f);
-  background-size: 100% 100%;
 }
 
 ul {
@@ -185,6 +185,7 @@ var timerInterval = null;
 var currentQuestionIndex = -1;
 var currentStartTime = null;
 var globalTimerCheck = null;
+var isFirstLoad = true;
 
 var startScreen = document.getElementById("start");
 var waiting = document.getElementById("waiting");
@@ -276,15 +277,34 @@ function startGlobalTimerCheck(questionIndex, startTime){
   }, 500);
 }
 
+/* Плавное изменение градиента в зависимости от остатка времени */
+function updateTimerGradient(percent){
+  // percent от 100 до 0
+  if(percent > 66){
+    // зелёный диапазон
+    timerBar.style.background = "linear-gradient(90deg, #00e676, #00e676, #ff9800)";
+  } else if(percent > 33){
+    // оранжевый диапазон
+    timerBar.style.background = "linear-gradient(90deg, #ff9800, #ff9800, #d32f2f)";
+  } else {
+    // красный диапазон
+    timerBar.style.background = "linear-gradient(90deg, #d32f2f, #d32f2f, #d32f2f)";
+  }
+}
+
 function startTimer(startTime, questionIndex){
   if(timerInterval) clearInterval(timerInterval);
   
   function update(){
     if(currentQuestionIndex !== questionIndex) return;
     
-    var remaining = Math.max(0, 6 - (Date.now()-startTime)/1000);
-    var percent = (remaining/6)*100;
+    var elapsed = (Date.now() - startTime) / 1000;
+    var remaining = Math.max(0, 6 - elapsed);
+    var percent = (remaining / 6) * 100;
     timerBar.style.width = percent + "%";
+    
+    // обновляем цвет градиента
+    updateTimerGradient(percent);
     
     if(remaining <= 0){
       if(timerInterval){
@@ -292,6 +312,7 @@ function startTimer(startTime, questionIndex){
         timerInterval = null;
       }
       timerBar.style.width = "0%";
+      timerBar.style.background = "linear-gradient(90deg, #d32f2f, #d32f2f, #d32f2f)";
     }
   }
   
@@ -366,8 +387,6 @@ function applyState(current, startTime){
   startTimer(startTime, current);
   startGlobalTimerCheck(current, startTime);
 }
-
-var isFirstLoad = true;
 
 function applyCurrentState(){
   if(!questions.length) return;
