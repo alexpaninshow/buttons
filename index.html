@@ -48,7 +48,6 @@ h1 { font-size:5vw; margin:10px; }
   height:100%;
   width:100%;
   transition: width 0.05s linear;
-  /* Градиент: зелёный → оранжевый → тёмно-красный */
   background: linear-gradient(90deg, #00e676, #ff9800, #d32f2f);
   background-size: 100% 100%;
 }
@@ -130,7 +129,6 @@ var timerInterval = null;
 var currentQuestionIndex = -1;
 var currentStartTime = null;
 var globalTimerCheck = null;
-var isInitialLoad = true;
 
 var startScreen = document.getElementById("start");
 var waiting = document.getElementById("waiting");
@@ -154,6 +152,8 @@ fetch(CSV_URL).then(r=>r.text()).then(text=>{
     }
     if(q.text && q.options.length>0) questions.push(q);
   }
+  // после загрузки вопросов применяем текущее состояние
+  applyCurrentState();
 });
 
 function showStart(){
@@ -219,7 +219,6 @@ function startGlobalTimerCheck(questionIndex, startTime){
   }, 500);
 }
 
-/* Таймер только управляет шириной — цвет уже задан градиентом в CSS */
 function startTimer(startTime, questionIndex){
   if(timerInterval) clearInterval(timerInterval);
   
@@ -243,18 +242,20 @@ function startTimer(startTime, questionIndex){
   timerInterval = setInterval(update, 100);
 }
 
-/* ОСНОВНАЯ ЛОГИКА */
-function processQuestion(current, startTime){
+/* ОСНОВНАЯ ЛОГИКА ПРИМЕНЕНИЯ СОСТОЯНИЯ */
+function applyState(current, startTime){
   if(current === -1){ 
     showStart(); 
     currentQuestionIndex = -1;
     currentStartTime = null;
+    stopAllTimers();
     return; 
   }
   if(current === -999){ 
     showWaiting(); 
     currentQuestionIndex = -1;
     currentStartTime = null;
+    stopAllTimers();
     return; 
   }
   if(!questions[current]) return;
@@ -268,6 +269,7 @@ function processQuestion(current, startTime){
   /* если таймер уже истёк */
   if(remaining <= 0){
     showWaiting();
+    stopAllTimers();
     return;
   }
   
@@ -312,24 +314,30 @@ function processQuestion(current, startTime){
   startGlobalTimerCheck(current, startTime);
 }
 
-/* ПЕРВИЧНАЯ ЗАГРУЗКА */
-db.ref('currentQuestion').once('value', function(snap){
-  var data = snap.val();
-  if(data && data.index !== undefined){
-    processQuestion(data.index, data.startTime);
-  }
-  isInitialLoad = false;
-});
+/* ПОЛУЧАЕМ ТЕКУЩЕЕ СОСТОЯНИЕ ИЗ FIREBASE */
+var isFirstLoad = true;
 
-/* СЛУШАЕМ ИЗМЕНЕНИЯ */
+function applyCurrentState(){
+  if(!questions.length) return;
+  
+  db.ref('currentQuestion').once('value', function(snap){
+    var data = snap.val();
+    if(data && data.index !== undefined){
+      applyState(data.index, data.startTime);
+    }
+    isFirstLoad = false;
+  });
+}
+
+/* СЛУШАЕМ ИЗМЕНЕНИЯ ПОСЛЕ ПЕРВОЙ ЗАГРУЗКИ */
 db.ref('currentQuestion').on('value', function(snap){
+  if(isFirstLoad) return;  // пропускаем, уже обработали в once
+  
   var data = snap.val();
   if(!data || data.index===undefined) return;
   
-  if(isInitialLoad) return;
-  
   stopAllTimers();
-  processQuestion(data.index, data.startTime);
+  applyState(data.index, data.startTime);
 });
 
 /* СБРОС */
@@ -349,12 +357,7 @@ db.ref('resetFlag').on('value', function(snap){
     currentQuestionIndex = -1;
     currentStartTime = null;
     
-    db.ref('currentQuestion').once('value', function(snap){
-      var data = snap.val();
-      if(data && data.index !== undefined){
-        processQuestion(data.index, data.startTime);
-      }
-    });
+    applyCurrentState();
   }
 });
 </script>
