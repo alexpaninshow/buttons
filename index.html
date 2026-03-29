@@ -196,7 +196,6 @@ function showStart(){
 }
 
 function showWaiting(){
-  console.log("showWaiting вызван");
   startScreen.style.display="none";
   waiting.style.display="flex";
   game.style.display="none";
@@ -256,7 +255,6 @@ function startSyncedTimer(startTime){
       timerBar.style.backgroundColor = "#ff5722";
       
       /* ПРИНУДИТЕЛЬНО ПОКАЗЫВАЕМ ЭКРАН ОЖИДАНИЯ */
-      console.log("Таймер закончился, вызываем showWaiting()");
       showWaiting();
     }
   }
@@ -321,6 +319,7 @@ db.ref('currentQuestion').on('value', function(snap){
         votedInCurrentQuestion = true;
         if(timerInterval) clearInterval(timerInterval);
         
+        /* ГОЛОС СУММИРУЕТСЯ — каждый раз прибавляется +1 */
         db.ref('votes/'+current+'/'+optIndex)
           .transaction(function(v){ return (v||0)+1; });
         
