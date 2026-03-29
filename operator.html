@@ -187,20 +187,10 @@ nextBtn.onclick = ()=>{
 backBtn.onclick = ()=>{
   if(!loaded || !questions.length) return;
   
-  // Первый вопрос: всегда повторяем первый вопрос
-  if(current === 0){
-    setQuestion(0);
-    return;
-  }
-  
-  // Для всех остальных вопросов:
-  // - Если таймер активен (вопрос идёт) → возврат на предыдущий вопрос (последний завершённый)
-  // - Если таймер НЕ активен (вопрос завершён) → повтор текущего вопроса
-  if(isTimerActive){
-    setQuestion(current - 1);
-  } else {
-    setQuestion(current);
-  }
+  // Если таймер активен (вопрос ещё идёт) → повторяем текущий вопрос
+  // Если таймер НЕ активен (вопрос завершён) → повторяем текущий вопрос
+  // В обоих случаях повторяем текущий вопрос
+  setQuestion(current);
 };
 
 function updateButtons(){
@@ -221,18 +211,11 @@ function updateButtons(){
     nextBtn.innerText = 'Далее';
   }
   
-  // Кнопка "Назад"
-  if(current === 0){
-    // Первый вопрос: всегда "Повторить первый вопрос"
-    backBtn.innerText = '◀ Повторить: 1. '+questions[0].text.substring(0,30);
-  }
-  else if(isTimerActive){
-    // Таймер активен → показываем предыдущий вопрос
-    backBtn.innerText = '◀ Повторить: '+(current)+'. '+questions[current-1].text.substring(0,30);
-  } 
-  else {
-    // Таймер НЕ активен (вопрос завершён) → показываем текущий вопрос
+  // Кнопка "Назад" — всегда повторяет ТЕКУЩИЙ вопрос
+  if(current >= 0 && questions[current]){
     backBtn.innerText = '◀ Повторить: '+(current+1)+'. '+questions[current].text.substring(0,30);
+  } else {
+    backBtn.innerText = '◀ Назад';
   }
 }
 
