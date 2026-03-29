@@ -257,7 +257,6 @@ function startSyncedTimer(questionIndex, startTime){
       timerBar.style.width = "0%";
       timerBar.style.background = "hsl(0,100%,50%)";
       
-      /* таймер закончился — если не голосовали, показываем ожидание */
       if(!voted && !checkUserVoted(questionIndex)){
         setTimeout(showWaiting, 300);
       }
@@ -291,7 +290,6 @@ db.ref('currentQuestion').on('value', function(snap){
   
   if(!questions[current]) return;
   
-  /* проверяем, голосовал ли пользователь за этот вопрос */
   var hasVoted = checkUserVoted(current);
   
   if(hasVoted){
@@ -320,7 +318,6 @@ db.ref('currentQuestion').on('value', function(snap){
         voted = true;
         if(timerInterval) clearInterval(timerInterval);
         
-        /* записываем голос в Firebase */
         db.ref('votes/'+current+'/'+optIndex)
           .transaction(function(v){ return (v||0)+1; });
         
@@ -337,7 +334,6 @@ db.ref('currentQuestion').on('value', function(snap){
     })(i);
   }
   
-  /* запускаем синхронизированный таймер */
   if(data.startTime){
     startSyncedTimer(current, data.startTime);
   }
