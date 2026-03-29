@@ -56,12 +56,6 @@ h1 { font-size:5vw; margin:10px; }
   transition: width 0.05s linear, background-color 0.05s linear;
 }
 
-#timerText {
-  font-size:24px;
-  margin-top:-20px;
-  font-weight:bold;
-}
-
 ul {
   flex:1;
   display:flex;
@@ -126,7 +120,6 @@ li.disabled-option {
   <div id="timerBarWrap">
     <div id="timerBar"></div>
   </div>
-  <div id="timerText">⏳ 6 сек</div>
 
   <div id="votedMessage" style="display:none;">✓ Ваш голос учтён!</div>
   <ul id="options"></ul>
@@ -153,7 +146,6 @@ var questions = [];
 var timerInterval = null;
 var votedInCurrentQuestion = false;
 var currentQuestionIndex = -1;
-var lastStartTime = 0;  /* для отслеживания повторного запуска того же вопроса */
 
 var startScreen = document.getElementById("start");
 var waiting = document.getElementById("waiting");
@@ -163,7 +155,6 @@ var alreadyVoted = document.getElementById("alreadyVoted");
 var title = document.getElementById("title");
 var options = document.getElementById("options");
 var timerBar = document.getElementById("timerBar");
-var timerText = document.getElementById("timerText");
 var votedMessage = document.getElementById("votedMessage");
 
 /* загрузка CSV */
@@ -235,7 +226,7 @@ function markUserVotedForQuestion(questionIndex){
   localStorage.setItem(votedKey, 'true');
 }
 
-/* запуск синхронизированного таймера — 6 секунд */
+/* запуск синхронизированного таймера — 6 секунд, только полоска */
 function startSyncedTimer(startTime){
   if(timerInterval) clearInterval(timerInterval);
   
@@ -246,6 +237,7 @@ function startSyncedTimer(startTime){
     
     timerBar.style.width = percent + "%";
     
+    /* плавное изменение цвета: зелёный → жёлтый → красный */
     if(remaining > 4){
       timerBar.style.backgroundColor = "#00e676";
     } else if(remaining > 2){
@@ -254,13 +246,9 @@ function startSyncedTimer(startTime){
       timerBar.style.backgroundColor = "#ff5722";
     }
     
-    var secondsLeft = Math.ceil(remaining);
-    timerText.innerText = "⏳ " + secondsLeft + " сек";
-    
     if(remaining <= 0){
       if(timerInterval) clearInterval(timerInterval);
       timerInterval = null;
-      timerText.innerText = "⏳ 0 сек";
       timerBar.style.width = "0%";
       timerBar.style.backgroundColor = "#ff5722";
       
@@ -274,7 +262,7 @@ function startSyncedTimer(startTime){
   timerInterval = setInterval(updateTimer, 100);
 }
 
-/* Firebase — ПРИНУДИТЕЛЬНОЕ ОБНОВЛЕНИЕ даже для того же вопроса */
+/* Firebase */
 db.ref('currentQuestion').on('value', function(snap){
   var data = snap.val();
   
@@ -283,7 +271,6 @@ db.ref('currentQuestion').on('value', function(snap){
   }
   
   var current = data.index;
-  var newStartTime = data.startTime;
   
   if(current === -1){
     showStart();
@@ -305,10 +292,13 @@ db.ref('currentQuestion').on('value', function(snap){
     return;
   }
   
-  /* если не голосовал — показываем вопрос (даже если тот же индекс) */
+  /* если не голосовал — показываем вопрос */
+  if(current !== currentQuestionIndex){
+    votedInCurrentQuestion = false;
+    votedMessage.style.display = "none";
+  }
+  
   currentQuestionIndex = current;
-  votedInCurrentQuestion = false;
-  votedMessage.style.display = "none";
   
   showGame();
   
@@ -344,8 +334,8 @@ db.ref('currentQuestion').on('value', function(snap){
     })(i);
   }
   
-  if(newStartTime){
-    startSyncedTimer(newStartTime);
+  if(data.startTime){
+    startSyncedTimer(data.startTime);
   }
 });
 
