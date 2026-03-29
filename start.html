@@ -119,7 +119,9 @@ btn.onclick=function(){
       return;
     }
 
+    /* очищаем голоса и сбрасываем localStorage зрителей */
     db.ref('votes').remove();
+    db.ref('resetFlag').set(Date.now());
 
     db.ref('currentQuestion').set({
       index:-999,
