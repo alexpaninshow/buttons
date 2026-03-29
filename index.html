@@ -237,7 +237,10 @@ db.ref('.info/connected').on('value', snap => {
 
 db.ref('showInstagram').on('value', snap => {
   if(snap.val()){
+    isFinalActive = true;
     showFinal();
+  } else {
+    isFinalActive = false;
   }
 });
 
