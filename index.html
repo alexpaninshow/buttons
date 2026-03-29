@@ -23,27 +23,21 @@ li{display:flex;align-items:center;justify-content:center;font-size:clamp(18px,6
 li.selected{border-color:#00e676;background:#2e7d32}
 #votedMessage{font-size:clamp(18px,5vw,32px);margin:20px auto;color:#00e676;background:rgba(0,230,118,0.15);padding:12px 20px;border-radius:50px;display:inline-block}
 
-/* Ненавязчивое сообщение о нежелательности обновления */
+/* Постоянная плашка внизу экрана */
 #refreshWarning {
   position: fixed;
   bottom: 10px;
-  left: 10px;
-  right: 10px;
-  background: rgba(0,0,0,0.7);
-  color: #ffaa00;
-  font-size: clamp(11px, 3vw, 14px);
-  padding: 6px 12px;
-  border-radius: 20px;
+  left: 0;
+  right: 0;
   text-align: center;
-  z-index: 9999;
-  backdrop-filter: blur(5px);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.5s ease;
+  font-size: 12px;
   font-family: Arial, sans-serif;
-}
-#refreshWarning.show {
-  opacity: 1;
+  color: rgba(255, 255, 255, 0.4);
+  background: transparent;
+  padding: 4px 10px;
+  z-index: 9999;
+  pointer-events: none;
+  letter-spacing: 0.3px;
 }
 </style>
 </head>
@@ -53,7 +47,8 @@ li.selected{border-color:#00e676;background:#2e7d32}
 <div id="alreadyVoted" class="screen">✓ Вы уже проголосовали</div>
 <div id="game"><h1 id="title"></h1><div id="timerBarWrap"><div id="timerBar"></div></div><div id="votedMessage" style="display:none;">✓ Ваш голос учтён!</div><ul id="options"></ul></div>
 
-<div id="refreshWarning">⚡ Не обновляйте страницу во время спектакля — это может сбить таймер</div>
+<!-- Постоянная плашка -->
+<div id="refreshWarning">Не рекомендуем обновлять страницу</div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -62,7 +57,6 @@ const CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-
 firebase.initializeApp({ databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com" });
 const db = firebase.database();
 
-// ИДЕЯ 1: localStorage для сохранения голосов (уже есть)
 let userId = localStorage.getItem('voterId');
 if(!userId){
   userId = 'voter_' + Date.now() + '_' + Math.random().toString(36).substr(2,9);
@@ -81,13 +75,6 @@ const titleEl = document.getElementById('title');
 const optionsEl = document.getElementById('options');
 const timerBar = document.getElementById('timerBar');
 const votedMsg = document.getElementById('votedMessage');
-const refreshWarning = document.getElementById('refreshWarning');
-
-// Показываем предупреждение на 4 секунды при загрузке
-refreshWarning.classList.add('show');
-setTimeout(() => {
-  refreshWarning.classList.remove('show');
-}, 4000);
 
 function showStart(){ startScreen.style.display='flex'; waitingScreen.style.display='none'; gameScreen.style.display='none'; alreadyScreen.style.display='none'; }
 function showWaiting(){ startScreen.style.display='none'; waitingScreen.style.display='flex'; gameScreen.style.display='none'; alreadyScreen.style.display='none'; }
