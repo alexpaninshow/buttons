@@ -128,6 +128,7 @@ var timerInterval = null;
 var currentQuestionIndex = -1;
 var currentStartTime = null;
 var globalTimerCheck = null;
+var isInitialLoad = true;
 
 var startScreen = document.getElementById("start");
 var waiting = document.getElementById("waiting");
@@ -243,18 +244,8 @@ function startTimer(startTime, questionIndex){
   timerInterval = setInterval(update, 100);
 }
 
-/* ОСНОВНАЯ ЛОГИКА */
-db.ref('currentQuestion').on('value', snap=>{
-  var data = snap.val();
-  if(!data || data.index===undefined) return;
-  var current = data.index;
-  var startTime = data.startTime;
-  
-  console.log("Получен вопрос:", current, "startTime:", startTime, "текущий вопрос:", currentQuestionIndex);
-  
-  /* Останавливаем всё при любом обновлении */
-  stopAllTimers();
-  
+/* ОСНОВНАЯ ЛОГИКА С ПОДДЕРЖКОЙ СИНХРОНИЗАЦИИ ПРИ ПЕРЕЗАГРУЗКЕ */
+function processQuestion(current, startTime){
   if(current === -1){ 
     showStart(); 
     currentQuestionIndex = -1;
@@ -272,15 +263,18 @@ db.ref('currentQuestion').on('value', snap=>{
   currentQuestionIndex = current;
   currentStartTime = startTime;
   
-  /* Если таймер уже истёк */
-  if(startTime && (Date.now()-startTime)/1000 >= 6){
+  /* ВЫЧИСЛЯЕМ ОСТАВШЕЕСЯ ВРЕМЯ */
+  var elapsed = (Date.now() - startTime) / 1000;
+  var remaining = 6 - elapsed;
+  
+  /* если таймер уже истёк */
+  if(remaining <= 0){
     showWaiting();
     return;
   }
   
-  /* КЛЮЧЕВОЕ: проверяем, голосовал ли пользователь за ЭТОТ КОНКРЕТНЫЙ вопрос */
+  /* проверяем голосование */
   var hasVoted = checkUserVoted(current);
-  console.log("Вопрос", current, "голосовал?", hasVoted);
   
   if(hasVoted){
     showAlreadyVoted();
@@ -288,7 +282,7 @@ db.ref('currentQuestion').on('value', snap=>{
     return;
   }
   
-  /* НЕ ГОЛОСОВАЛ — показываем вопрос с таймером */
+  /* НЕ ГОЛОСОВАЛ — показываем вопрос с синхронизированным таймером */
   votedMessage.style.display = "none";
   showGame();
   
@@ -301,7 +295,6 @@ db.ref('currentQuestion').on('value', snap=>{
       var li = document.createElement('li');
       li.innerText = q.options[idx];
       li.onclick = function(){
-        console.log("Клик на вариант", idx, "для вопроса", current);
         if(currentQuestionIndex !== current) return;
         
         stopAllTimers();
@@ -319,9 +312,30 @@ db.ref('currentQuestion').on('value', snap=>{
   
   startTimer(startTime, current);
   startGlobalTimerCheck(current, startTime);
+}
+
+/* ПЕРВИЧНАЯ ЗАГРУЗКА — получаем текущее состояние один раз */
+db.ref('currentQuestion').once('value', function(snap){
+  var data = snap.val();
+  if(data && data.index !== undefined){
+    processQuestion(data.index, data.startTime);
+  }
+  isInitialLoad = false;
 });
 
-db.ref('resetFlag').on('value', snap=>{
+/* СЛУШАЕМ ИЗМЕНЕНИЯ (для синхронизации во время работы) */
+db.ref('currentQuestion').on('value', function(snap){
+  var data = snap.val();
+  if(!data || data.index===undefined) return;
+  
+  /* при первом запуске уже обработали, чтобы избежать двойного вызова */
+  if(isInitialLoad) return;
+  
+  stopAllTimers();
+  processQuestion(data.index, data.startTime);
+});
+
+db.ref('resetFlag').on('value', function(snap){
   if(snap.val()){
     var keysToRemove = [];
     for(var i=0;i<localStorage.length;i++){
@@ -336,6 +350,14 @@ db.ref('resetFlag').on('value', snap=>{
     stopAllTimers();
     currentQuestionIndex = -1;
     currentStartTime = null;
+    
+    /* после сброса перезагружаем текущее состояние */
+    db.ref('currentQuestion').once('value', function(snap){
+      var data = snap.val();
+      if(data && data.index !== undefined){
+        processQuestion(data.index, data.startTime);
+      }
+    });
   }
 });
 </script>
