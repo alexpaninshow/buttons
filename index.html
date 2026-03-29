@@ -3,6 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+<!-- Режим веб-приложения (полный экран, без адресной строки) -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#000000">
+<meta name="full-screen" content="yes">
 <title>Шоу</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
@@ -185,6 +190,7 @@ var currentQuestionIndex = -1;
 var currentStartTime = null;
 var globalTimerCheck = null;
 var isSubscribed = false;
+var reconnectAttempts = 0;
 
 var startScreen = document.getElementById("start");
 var waiting = document.getElementById("waiting");
@@ -194,6 +200,24 @@ var title = document.getElementById("title");
 var options = document.getElementById("options");
 var timerBar = document.getElementById("timerBar");
 var votedMessage = document.getElementById("votedMessage");
+
+/* Обработка reconnect — не сбрасывает состояние */
+db.ref('.info/connected').on('value', function(snap) {
+  if (snap.val() === true) {
+    console.log("Подключено к Firebase");
+    reconnectAttempts = 0;
+    // При переподключении просто перечитываем текущее состояние
+    db.ref('currentQuestion').once('value', function(snap){
+      var data = snap.val();
+      if(data && data.index !== undefined){
+        stopAllTimers();
+        applyState(data.index, data.startTime);
+      }
+    });
+  } else {
+    console.log("Потеря соединения, ожидание reconnect...");
+  }
+});
 
 /* загрузка CSV */
 fetch(CSV_URL).then(r=>r.text()).then(text=>{
@@ -208,7 +232,6 @@ fetch(CSV_URL).then(r=>r.text()).then(text=>{
     }
     if(q.text && q.options.length>0) questions.push(q);
   }
-  // подписываемся на состояние Firebase
   if(!isSubscribed){
     subscribeToState();
     isSubscribed = true;
@@ -253,7 +276,6 @@ function markUserVoted(questionIndex){
   if(questionIndex === undefined || questionIndex < 0) return;
   var votedKey = 'voted_' + questionIndex;
   localStorage.setItem(votedKey, 'true');
-  console.log("Голос сохранён: " + votedKey);
 }
 
 function stopAllTimers(){
@@ -318,8 +340,6 @@ function startTimer(startTime, questionIndex){
 }
 
 function applyState(current, startTime){
-  console.log("applyState: current=" + current + ", startTime=" + startTime);
-  
   if(current === -1){ 
     showStart(); 
     currentQuestionIndex = -1;
@@ -334,10 +354,7 @@ function applyState(current, startTime){
     stopAllTimers();
     return; 
   }
-  if(!questions[current]) {
-    console.log("Вопрос не найден!");
-    return;
-  }
+  if(!questions[current]) return;
   
   currentQuestionIndex = current;
   currentStartTime = startTime;
@@ -345,26 +362,20 @@ function applyState(current, startTime){
   var elapsed = (Date.now() - startTime) / 1000;
   var remaining = 6 - elapsed;
   
-  console.log("Осталось времени: " + remaining + " сек");
-  
   if(remaining <= 0){
-    console.log("Таймер истёк -> ОЖИДАНИЕ");
     showWaiting();
     stopAllTimers();
     return;
   }
   
   var hasVoted = checkUserVoted(current);
-  console.log("hasVoted=" + hasVoted);
   
   if(hasVoted){
-    console.log("Уже голосовал -> ВЫ УЖЕ ПРОГОЛОСОВАЛИ");
     showAlreadyVoted();
     startGlobalTimerCheck(current, startTime);
     return;
   }
   
-  console.log("Не голосовал -> показываем ВОПРОС");
   votedMessage.style.display = "none";
   showGame();
   
@@ -377,7 +388,6 @@ function applyState(current, startTime){
       var li = document.createElement('li');
       li.innerText = q.options[idx];
       li.onclick = function(){
-        console.log("Клик на вариант " + idx);
         if(currentQuestionIndex !== current) return;
         if(timerInterval === null) return;
         
@@ -399,20 +409,16 @@ function applyState(current, startTime){
 }
 
 function subscribeToState(){
-  // Сначала получаем текущее состояние
   db.ref('currentQuestion').once('value', function(snap){
     var data = snap.val();
-    console.log("Первичная загрузка: index=" + (data ? data.index : "null"));
     if(data && data.index !== undefined){
       applyState(data.index, data.startTime);
     }
   });
   
-  // Затем слушаем изменения
   db.ref('currentQuestion').on('value', function(snap){
     var data = snap.val();
     if(!data || data.index===undefined) return;
-    console.log("Изменение вопроса: index=" + data.index);
     stopAllTimers();
     applyState(data.index, data.startTime);
   });
@@ -420,7 +426,6 @@ function subscribeToState(){
 
 db.ref('resetFlag').on('value', function(snap){
   if(snap.val()){
-    console.log("СБРОС ИГРЫ");
     var keysToRemove = [];
     for(var i=0;i<localStorage.length;i++){
       var key = localStorage.key(i);
