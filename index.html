@@ -182,14 +182,18 @@ function showAlreadyVoted(){
   alreadyVoted.style.display="flex";
 }
 
+/* ГАРАНТИРОВАННАЯ ПРОВЕРКА ГОЛОСОВАНИЯ */
 function checkUserVoted(questionIndex){
   var votedKey = 'voted_' + questionIndex;
-  return localStorage.getItem(votedKey) === 'true';
+  var result = localStorage.getItem(votedKey) === 'true';
+  console.log("checkUserVoted(" + questionIndex + ") = " + result + " (ключ: " + votedKey + ")");
+  return result;
 }
 
 function markUserVoted(questionIndex){
   var votedKey = 'voted_' + questionIndex;
   localStorage.setItem(votedKey, 'true');
+  console.log("markUserVoted(" + questionIndex + ") сохранён ключ " + votedKey);
 }
 
 function stopAllTimers(){
@@ -244,8 +248,10 @@ function startTimer(startTime, questionIndex){
   timerInterval = setInterval(update, 100);
 }
 
-/* ОСНОВНАЯ ЛОГИКА С ПОДДЕРЖКОЙ СИНХРОНИЗАЦИИ ПРИ ПЕРЕЗАГРУЗКЕ */
+/* ОСНОВНАЯ ЛОГИКА */
 function processQuestion(current, startTime){
+  console.log("processQuestion: current=" + current + ", startTime=" + startTime);
+  
   if(current === -1){ 
     showStart(); 
     currentQuestionIndex = -1;
@@ -263,26 +269,30 @@ function processQuestion(current, startTime){
   currentQuestionIndex = current;
   currentStartTime = startTime;
   
-  /* ВЫЧИСЛЯЕМ ОСТАВШЕЕСЯ ВРЕМЯ */
   var elapsed = (Date.now() - startTime) / 1000;
   var remaining = 6 - elapsed;
   
+  console.log("Осталось времени: " + remaining + " сек");
+  
   /* если таймер уже истёк */
   if(remaining <= 0){
+    console.log("Таймер истёк -> показываем ОЖИДАНИЕ");
     showWaiting();
     return;
   }
   
-  /* проверяем голосование */
+  /* проверяем голосование — КЛЮЧЕВОЙ МОМЕНТ */
   var hasVoted = checkUserVoted(current);
   
   if(hasVoted){
+    console.log("Зритель УЖЕ ГОЛОСОВАЛ за вопрос " + current + " -> показываем ВЫ УЖЕ ПРОГОЛОСОВАЛИ");
     showAlreadyVoted();
     startGlobalTimerCheck(current, startTime);
     return;
   }
   
-  /* НЕ ГОЛОСОВАЛ — показываем вопрос с синхронизированным таймером */
+  /* НЕ ГОЛОСОВАЛ — показываем вопрос */
+  console.log("Зритель НЕ ГОЛОСОВАЛ за вопрос " + current + " -> показываем ВОПРОС");
   votedMessage.style.display = "none";
   showGame();
   
@@ -295,6 +305,7 @@ function processQuestion(current, startTime){
       var li = document.createElement('li');
       li.innerText = q.options[idx];
       li.onclick = function(){
+        console.log("КЛИК на вариант " + idx + " вопроса " + current);
         if(currentQuestionIndex !== current) return;
         
         stopAllTimers();
@@ -314,29 +325,41 @@ function processQuestion(current, startTime){
   startGlobalTimerCheck(current, startTime);
 }
 
-/* ПЕРВИЧНАЯ ЗАГРУЗКА — получаем текущее состояние один раз */
+/* ПЕРВИЧНАЯ ЗАГРУЗКА — получаем текущее состояние */
 db.ref('currentQuestion').once('value', function(snap){
   var data = snap.val();
+  console.log("ПЕРВИЧНАЯ ЗАГРУЗКА: index=" + (data ? data.index : "null"));
   if(data && data.index !== undefined){
     processQuestion(data.index, data.startTime);
   }
   isInitialLoad = false;
 });
 
-/* СЛУШАЕМ ИЗМЕНЕНИЯ (для синхронизации во время работы) */
+/* СЛУШАЕМ ИЗМЕНЕНИЯ */
 db.ref('currentQuestion').on('value', function(snap){
   var data = snap.val();
   if(!data || data.index===undefined) return;
   
-  /* при первом запуске уже обработали, чтобы избежать двойного вызова */
   if(isInitialLoad) return;
   
+  console.log("ИЗМЕНЕНИЕ ВОПРОСА: index=" + data.index);
   stopAllTimers();
   processQuestion(data.index, data.startTime);
 });
 
+/* ОТЛАДКА localStorage — выводим все ключи при загрузке */
+console.log("=== ТЕКУЩИЕ КЛЮЧИ В LOCALSTORAGE ===");
+for(var i=0;i<localStorage.length;i++){
+  var key = localStorage.key(i);
+  if(key && key.startsWith('voted_')){
+    console.log(key + " = " + localStorage.getItem(key));
+  }
+}
+console.log("=====================================");
+
 db.ref('resetFlag').on('value', function(snap){
   if(snap.val()){
+    console.log("СБРОС ИГРЫ");
     var keysToRemove = [];
     for(var i=0;i<localStorage.length;i++){
       var key = localStorage.key(i);
@@ -346,12 +369,12 @@ db.ref('resetFlag').on('value', function(snap){
     }
     for(var j=0;j<keysToRemove.length;j++){
       localStorage.removeItem(keysToRemove[j]);
+      console.log("Удалён ключ: " + keysToRemove[j]);
     }
     stopAllTimers();
     currentQuestionIndex = -1;
     currentStartTime = null;
     
-    /* после сброса перезагружаем текущее состояние */
     db.ref('currentQuestion').once('value', function(snap){
       var data = snap.val();
       if(data && data.index !== undefined){
