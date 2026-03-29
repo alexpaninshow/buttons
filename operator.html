@@ -360,11 +360,17 @@ db.ref('currentQuestion').on('value', snap=>{
 nextBtn.onclick = ()=>{
   if(!loaded || !questions.length){ alert('Загрузка...'); return; }
   clearPendingTimeouts();
+
+  // ЕСЛИ это финальная кнопка — показываем Instagram
+  if(current === questions.length - 1 && !isTimerActive){
+    db.ref('showInstagram').set(Date.now());
+    return;
+  }
+
   if(current === -1 || current === -999){ setQuestion(0); return; }
   if(current < questions.length-1) setQuestion(current+1);
- else if(current === questions.length-1){
-  db.ref('showInstagram').set(Date.now());
-}
+  else if(current === questions.length-1) statusEl.innerText = '🏁 Последний вопрос';
+};
 
 backBtn.onclick = ()=>{
   if(!loaded || !questions.length) return;
