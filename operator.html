@@ -362,8 +362,9 @@ nextBtn.onclick = ()=>{
   clearPendingTimeouts();
   if(current === -1 || current === -999){ setQuestion(0); return; }
   if(current < questions.length-1) setQuestion(current+1);
-  else if(current === questions.length-1) statusEl.innerText = '🏁 Последний вопрос';
-};
+  else if(current === questions.length-1){
+  db.ref('showInstagram').set(Date.now());
+}
 
 backBtn.onclick = ()=>{
   if(!loaded || !questions.length) return;
