@@ -139,6 +139,18 @@ var options = document.getElementById("options");
 var timerBar = document.getElementById("timerBar");
 var votedMessage = document.getElementById("votedMessage");
 
+/* ОТЛАДКА LOCALSTORAGE */
+function debugLocalStorage(){
+  console.log("=== ТЕКУЩИЕ ГОЛОСА В LOCALSTORAGE ===");
+  for(var i=0;i<localStorage.length;i++){
+    var key = localStorage.key(i);
+    if(key && key.startsWith('voted_')){
+      console.log(key + " = " + localStorage.getItem(key));
+    }
+  }
+  console.log("=====================================");
+}
+
 /* загрузка CSV */
 fetch(CSV_URL).then(r=>r.text()).then(text=>{
   var rows = text.trim().split('\n');
@@ -152,7 +164,7 @@ fetch(CSV_URL).then(r=>r.text()).then(text=>{
     }
     if(q.text && q.options.length>0) questions.push(q);
   }
-  // после загрузки вопросов применяем текущее состояние
+  debugLocalStorage();
   applyCurrentState();
 });
 
@@ -185,13 +197,19 @@ function showAlreadyVoted(){
 }
 
 function checkUserVoted(questionIndex){
+  if(questionIndex === undefined || questionIndex < 0) return false;
   var votedKey = 'voted_' + questionIndex;
-  return localStorage.getItem(votedKey) === 'true';
+  var result = localStorage.getItem(votedKey) === 'true';
+  console.log("checkUserVoted(" + questionIndex + ") = " + result);
+  return result;
 }
 
 function markUserVoted(questionIndex){
+  if(questionIndex === undefined || questionIndex < 0) return;
   var votedKey = 'voted_' + questionIndex;
   localStorage.setItem(votedKey, 'true');
+  console.log("markUserVoted(" + questionIndex + ") сохранён ключ " + votedKey);
+  debugLocalStorage();
 }
 
 function stopAllTimers(){
@@ -244,6 +262,8 @@ function startTimer(startTime, questionIndex){
 
 /* ОСНОВНАЯ ЛОГИКА ПРИМЕНЕНИЯ СОСТОЯНИЯ */
 function applyState(current, startTime){
+  console.log("applyState: current=" + current + ", startTime=" + startTime);
+  
   if(current === -1){ 
     showStart(); 
     currentQuestionIndex = -1;
@@ -258,7 +278,10 @@ function applyState(current, startTime){
     stopAllTimers();
     return; 
   }
-  if(!questions[current]) return;
+  if(!questions[current]) {
+    console.log("Вопрос не найден!");
+    return;
+  }
   
   currentQuestionIndex = current;
   currentStartTime = startTime;
@@ -266,8 +289,11 @@ function applyState(current, startTime){
   var elapsed = (Date.now() - startTime) / 1000;
   var remaining = 6 - elapsed;
   
+  console.log("Осталось времени: " + remaining + " сек");
+  
   /* если таймер уже истёк */
   if(remaining <= 0){
+    console.log("Таймер истёк -> показываем ОЖИДАНИЕ");
     showWaiting();
     stopAllTimers();
     return;
@@ -277,12 +303,14 @@ function applyState(current, startTime){
   var hasVoted = checkUserVoted(current);
   
   if(hasVoted){
+    console.log("Зритель УЖЕ ГОЛОСОВАЛ за вопрос " + current + " -> показываем ВЫ УЖЕ ПРОГОЛОСОВАЛИ");
     showAlreadyVoted();
     startGlobalTimerCheck(current, startTime);
     return;
   }
   
   /* НЕ ГОЛОСОВАЛ — показываем вопрос */
+  console.log("Зритель НЕ ГОЛОСОВАЛ за вопрос " + current + " -> показываем ВОПРОС");
   votedMessage.style.display = "none";
   showGame();
   
@@ -295,6 +323,7 @@ function applyState(current, startTime){
       var li = document.createElement('li');
       li.innerText = q.options[idx];
       li.onclick = function(){
+        console.log("КЛИК на вариант " + idx + " вопроса " + current);
         if(currentQuestionIndex !== current) return;
         
         stopAllTimers();
@@ -322,6 +351,7 @@ function applyCurrentState(){
   
   db.ref('currentQuestion').once('value', function(snap){
     var data = snap.val();
+    console.log("ПЕРВИЧНАЯ ЗАГРУЗКА: index=" + (data ? data.index : "null"));
     if(data && data.index !== undefined){
       applyState(data.index, data.startTime);
     }
@@ -331,11 +361,12 @@ function applyCurrentState(){
 
 /* СЛУШАЕМ ИЗМЕНЕНИЯ ПОСЛЕ ПЕРВОЙ ЗАГРУЗКИ */
 db.ref('currentQuestion').on('value', function(snap){
-  if(isFirstLoad) return;  // пропускаем, уже обработали в once
+  if(isFirstLoad) return;
   
   var data = snap.val();
   if(!data || data.index===undefined) return;
   
+  console.log("ИЗМЕНЕНИЕ ВОПРОСА: index=" + data.index);
   stopAllTimers();
   applyState(data.index, data.startTime);
 });
@@ -343,6 +374,7 @@ db.ref('currentQuestion').on('value', function(snap){
 /* СБРОС */
 db.ref('resetFlag').on('value', function(snap){
   if(snap.val()){
+    console.log("СБРОС ИГРЫ");
     var keysToRemove = [];
     for(var i=0;i<localStorage.length;i++){
       var key = localStorage.key(i);
@@ -352,6 +384,7 @@ db.ref('resetFlag').on('value', function(snap){
     }
     for(var j=0;j<keysToRemove.length;j++){
       localStorage.removeItem(keysToRemove[j]);
+      console.log("Удалён ключ: " + keysToRemove[j]);
     }
     stopAllTimers();
     currentQuestionIndex = -1;
