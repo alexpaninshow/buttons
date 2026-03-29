@@ -52,8 +52,8 @@ h1 { font-size:5vw; margin:10px; }
 #timerBar {
   height:100%;
   width:100%;
-  background: linear-gradient(90deg, #00e676, #ffeb3b, #ff5722);
-  transition: width 0.05s linear;
+  background-color: #00e676;
+  transition: width 0.05s linear, background-color 0.05s linear;
 }
 
 #timerText {
@@ -126,7 +126,7 @@ li.disabled-option {
   <div id="timerBarWrap">
     <div id="timerBar"></div>
   </div>
-  <div id="timerText">⏳ 5 сек</div>
+  <div id="timerText">⏳ 6 сек</div>
 
   <div id="votedMessage" style="display:none;">✓ Ваш голос учтён!</div>
   <ul id="options"></ul>
@@ -234,16 +234,25 @@ function markUserVotedForQuestion(questionIndex){
   localStorage.setItem(votedKey, 'true');
 }
 
-/* запуск синхронизированного таймера */
+/* запуск синхронизированного таймера — 6 секунд */
 function startSyncedTimer(startTime){
   if(timerInterval) clearInterval(timerInterval);
   
   function updateTimer(){
     var elapsed = (Date.now() - startTime) / 1000;
-    var remaining = Math.max(0, 5 - elapsed);
-    var percent = (remaining / 5) * 100;
+    var remaining = Math.max(0, 6 - elapsed);
+    var percent = (remaining / 6) * 100;
     
     timerBar.style.width = percent + "%";
+    
+    /* плавное изменение цвета: зелёный → жёлтый → красный */
+    if(remaining > 4){
+      timerBar.style.backgroundColor = "#00e676";
+    } else if(remaining > 2){
+      timerBar.style.backgroundColor = "#ffeb3b";
+    } else {
+      timerBar.style.backgroundColor = "#ff5722";
+    }
     
     var secondsLeft = Math.ceil(remaining);
     timerText.innerText = "⏳ " + secondsLeft + " сек";
@@ -253,6 +262,7 @@ function startSyncedTimer(startTime){
       timerInterval = null;
       timerText.innerText = "⏳ 0 сек";
       timerBar.style.width = "0%";
+      timerBar.style.backgroundColor = "#ff5722";
       
       if(!votedInCurrentQuestion && !checkUserVotedForQuestion(currentQuestionIndex)){
         setTimeout(showWaiting, 300);
@@ -286,6 +296,7 @@ db.ref('currentQuestion').on('value', function(snap){
   
   if(!questions[current]) return;
   
+  /* проверяем, голосовал ли пользователь за ЭТОТ вопрос */
   var hasVoted = checkUserVotedForQuestion(current);
   
   if(hasVoted){
@@ -293,6 +304,7 @@ db.ref('currentQuestion').on('value', function(snap){
     return;
   }
   
+  /* если не голосовал — показываем вопрос */
   if(current !== currentQuestionIndex){
     votedInCurrentQuestion = false;
     votedMessage.style.display = "none";
