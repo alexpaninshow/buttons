@@ -104,8 +104,8 @@ var questions = [];
 var current = -1;
 var questionsLoaded = false;
 var currentVotesListener = null;
-var timerEndTimeout = null;  /* для отсрочки показа победителя */
-var timerStarted = false;     /* флаг, что таймер активен */
+var timerEndTimeout = null;
+var timerStarted = false;
 
 var statusEl = document.getElementById("status");
 var timerEl = document.getElementById("timer");
@@ -115,7 +115,6 @@ var questionsStatusEl = document.getElementById("questionsStatus");
 var nextBtn = document.getElementById("nextBtn");
 var backBtn = document.getElementById("backBtn");
 
-/* скрыть/показать победителя */
 function hideWinner(){
   winnerEl.classList.add("hidden");
   winnerDetailsEl.classList.add("hidden");
@@ -168,7 +167,6 @@ fetch(CSV_URL)
   updateButtons();
 });
 
-/* установка вопроса */
 function setQuestion(i){
   db.ref('currentQuestion').set({
     index:i,
@@ -176,7 +174,6 @@ function setQuestion(i){
   });
 }
 
-/* обновление победителя (без автоматического показа) */
 function updateWinnerData(questionIndex, forceShow){
   if(questionIndex < 0 || !questions[questionIndex]) {
     winnerEl.innerText = "🏆 Победитель: ???";
@@ -203,14 +200,12 @@ function updateWinnerData(questionIndex, forceShow){
     winnerEl.innerText = "🏆 ПОБЕДИТЕЛЬ: " + winnerText;
     winnerDetailsEl.innerText = "Голосов: " + maxVotes + "  |  " + allResults.join("  |  ");
     
-    /* если forceShow = true — показываем победителя немедленно */
     if(forceShow){
       showWinner();
     }
   });
 }
 
-/* подписка на голоса — данные собираем, но не показываем до окончания таймера */
 function subscribeToVotes(questionIndex){
   if(currentVotesListener){
     currentVotesListener.off();
@@ -238,17 +233,13 @@ function subscribeToVotes(questionIndex){
     var winnerText = winnerIndex !== -1 ? questions[questionIndex].options[winnerIndex] : "—";
     winnerEl.innerText = "🏆 ПОБЕДИТЕЛЬ: " + winnerText;
     winnerDetailsEl.innerText = "Голосов: " + maxVotes + "  |  " + allResults.join("  |  ");
-    
-    /* не показываем автоматически — ждём окончания таймера */
   });
 }
 
-/* запуск таймера и отсрочка показа победителя */
 function startTimerWithDelay(startTime){
   clearInterval(window.timerInt);
   if(timerEndTimeout) clearTimeout(timerEndTimeout);
   
-  /* скрываем победителя в начале вопроса */
   hideWinner();
   timerStarted = true;
   
@@ -257,26 +248,25 @@ function startTimerWithDelay(startTime){
     var remaining = Math.max(0, 5 - elapsed);
     timerEl.innerText="⏳ " + Math.ceil(remaining) + " сек";
     
-    /* когда таймер закончился */
     if(remaining <= 0){
       if(window.timerInt) clearInterval(window.timerInt);
       if(timerEndTimeout) clearTimeout(timerEndTimeout);
       timerStarted = false;
       timerEl.innerText="⏳ 0 сек";
       
-      /* ПОКАЗЫВАЕМ ПОБЕДИТЕЛЯ после окончания таймера */
       showWinner();
-      /* обновляем данные победителя (принудительно показываем) */
       if(current >= 0 && questions[current]){
         updateWinnerData(current, true);
       }
+      
+      /* ОБНОВЛЯЕМ КНОПКУ "НАЗАД" ПОСЛЕ ТАЙМЕРА */
+      updateButtons();
     }
   }
   
   tick();
   window.timerInt = setInterval(tick, 100);
   
-  /* дополнительная защита: через 5.5 секунд точно покажем */
   timerEndTimeout = setTimeout(function(){
     if(timerStarted){
       timerStarted = false;
@@ -284,6 +274,7 @@ function startTimerWithDelay(startTime){
       if(current >= 0 && questions[current]){
         updateWinnerData(current, true);
       }
+      updateButtons();
     }
   }, 5500);
 }
@@ -310,6 +301,7 @@ db.ref('currentQuestion').on('value', function(snap){
     }
     if(timerEndTimeout) clearTimeout(timerEndTimeout);
     timerStarted = false;
+    updateButtons();
   }
   else if(current === -999){
     statusEl.innerText = "⏸️ Ожидание... (зрители смотрят на сцену)";
@@ -323,17 +315,19 @@ db.ref('currentQuestion').on('value', function(snap){
     }
     if(timerEndTimeout) clearTimeout(timerEndTimeout);
     timerStarted = false;
+    updateButtons();
   }
   else if(questions[current]){
     statusEl.innerText = "❓ Вопрос " + (current+1) + " из " + questions.length + ": " + questions[current].text;
     startTimerWithDelay(data.startTime);
     subscribeToVotes(current);
-    /* предварительно заполняем данные (скрыто) */
     updateWinnerData(current, false);
+    updateButtons();
   }
   else if(questions.length > 0 && current >= questions.length){
     statusEl.innerText = "🏁 Спектакль завершён! Все вопросы заданы.";
     timerEl.innerText="⏳ -";
+    updateButtons();
   }
 
   updateButtons();
@@ -361,17 +355,22 @@ nextBtn.onclick=function(){
 backBtn.onclick=function(){
   if(!questionsLoaded || questions.length === 0) return;
   
+  /* Если мы на первом вопросе — возвращаемся на старт */
   if(current === 0){
     setQuestion(-1);
     return;
   }
 
+  /* Если текущий вопрос валидный — возвращаемся к предыдущему */
   if(current > 0){
     setQuestion(current-1);
+    return;
   }
+  
+  /* Если current === -1 или -999 — ничего не делаем */
 };
 
-/* подписи кнопок */
+/* подписи кнопок — теперь "Назад" всегда показывает ТЕКУЩИЙ вопрос после таймера */
 function updateButtons(){
   if(!questionsLoaded || questions.length === 0){
     nextBtn.innerText = "Загрузка...";
@@ -379,14 +378,16 @@ function updateButtons(){
     return;
   }
 
-  if(current <= 0){
+  /* КНОПКА НАЗАД — показывает текущий вопрос (если он есть) */
+  if(current >= 0 && questions[current]){
+    backBtn.innerText = "◀ Назад к вопросу " + (current+1) + ": " + questions[current].text.substring(0, 30);
+  } else if(current === 0){
     backBtn.innerText = "◀ Назад: Старт";
-  } else if(current > 0 && questions[current-1]){
-    backBtn.innerText = "◀ Назад: " + (current) + ". " + questions[current-1].text.substring(0, 30);
   } else {
     backBtn.innerText = "◀ Назад";
   }
 
+  /* КНОПКА ДАЛЕЕ */
   if(current === -1 || current === -999){
     nextBtn.innerText = "Далее: 1. " + questions[0].text.substring(0, 30);
   }
