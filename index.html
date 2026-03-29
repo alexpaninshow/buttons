@@ -90,12 +90,6 @@ li.selected {
   background:#2e7d32;
 }
 
-li.voted-before {
-  opacity:0.6;
-  cursor:not-allowed;
-  border:6px solid #ff9800;
-}
-
 li.disabled-option {
   cursor:not-allowed;
   opacity:0.5;
@@ -152,7 +146,7 @@ if(!userId){
 
 var questions = [];
 var timerInterval = null;
-var voted = false;
+var votedInCurrentQuestion = false;  /* флаг для текущего вопроса */
 var currentQuestionIndex = -1;
 
 var startScreen = document.getElementById("start");
@@ -189,7 +183,9 @@ fetch(CSV_URL)
       if(val) q.options.push(val);
     }
 
-    questions.push(q);
+    if(q.text && q.options.length > 0){
+      questions.push(q);
+    }
   }
 });
 
@@ -222,19 +218,19 @@ function showAlreadyVoted(){
   alreadyVoted.style.display="flex";
 }
 
-/* проверка, голосовал ли пользователь за этот вопрос */
-function checkUserVoted(questionIndex){
+/* проверка, голосовал ли пользователь за этот конкретный вопрос */
+function checkUserVotedForQuestion(questionIndex){
   var votedKey = 'voted_' + questionIndex;
   return localStorage.getItem(votedKey) === 'true';
 }
 
-function markUserVoted(questionIndex){
+function markUserVotedForQuestion(questionIndex){
   var votedKey = 'voted_' + questionIndex;
   localStorage.setItem(votedKey, 'true');
 }
 
 /* запуск синхронизированного таймера */
-function startSyncedTimer(questionIndex, startTime){
+function startSyncedTimer(startTime){
   if(timerInterval) clearInterval(timerInterval);
   
   function updateTimer(){
@@ -257,7 +253,8 @@ function startSyncedTimer(questionIndex, startTime){
       timerBar.style.width = "0%";
       timerBar.style.background = "hsl(0,100%,50%)";
       
-      if(!voted && !checkUserVoted(questionIndex)){
+      /* таймер закончился — уходим в ожидание, если ещё не голосовали */
+      if(!votedInCurrentQuestion && !checkUserVotedForQuestion(currentQuestionIndex)){
         setTimeout(showWaiting, 300);
       }
     }
@@ -276,7 +273,6 @@ db.ref('currentQuestion').on('value', function(snap){
   }
   
   var current = data.index;
-  currentQuestionIndex = current;
   
   if(current === -1){
     showStart();
@@ -290,7 +286,16 @@ db.ref('currentQuestion').on('value', function(snap){
   
   if(!questions[current]) return;
   
-  var hasVoted = checkUserVoted(current);
+  /* если это другой вопрос — сбрасываем флаг голосования для текущего вопроса */
+  if(current !== currentQuestionIndex){
+    votedInCurrentQuestion = false;
+    votedMessage.style.display = "none";
+  }
+  
+  currentQuestionIndex = current;
+  
+  /* проверяем, голосовал ли пользователь за ЭТОТ вопрос */
+  var hasVoted = checkUserVotedForQuestion(current);
   
   if(hasVoted){
     showAlreadyVoted();
@@ -298,8 +303,6 @@ db.ref('currentQuestion').on('value', function(snap){
   }
   
   showGame();
-  voted = false;
-  votedMessage.style.display = "none";
   
   if(timerInterval) clearInterval(timerInterval);
   
@@ -313,16 +316,17 @@ db.ref('currentQuestion').on('value', function(snap){
       li.innerText = q.options[optIndex];
       
       li.onclick = function(){
-        if(voted) return;
+        if(votedInCurrentQuestion) return;
         
-        voted = true;
+        votedInCurrentQuestion = true;
         if(timerInterval) clearInterval(timerInterval);
         
+        /* записываем голос в Firebase */
         db.ref('votes/'+current+'/'+optIndex)
           .transaction(function(v){ return (v||0)+1; });
         
         li.classList.add('selected');
-        markUserVoted(current);
+        markUserVotedForQuestion(current);
         
         votedMessage.style.display = "block";
         votedMessage.innerText = "✓ Ваш голос учтён!";
@@ -335,7 +339,23 @@ db.ref('currentQuestion').on('value', function(snap){
   }
   
   if(data.startTime){
-    startSyncedTimer(current, data.startTime);
+    startSyncedTimer(data.startTime);
+  }
+});
+
+/* слушаем сброс игры — очищаем localStorage зрителя */
+db.ref('resetFlag').on('value', function(snap){
+  if(snap.val()){
+    /* очищаем все сохранённые голоса в localStorage */
+    for(var i = 0; i < localStorage.length; i++){
+      var key = localStorage.key(i);
+      if(key && key.startsWith('voted_')){
+        localStorage.removeItem(key);
+      }
+    }
+    /* сбрасываем флаг текущего голосования */
+    votedInCurrentQuestion = false;
+    currentQuestionIndex = -1;
   }
 });
 </script>
