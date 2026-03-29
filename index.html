@@ -181,9 +181,11 @@ function showAlreadyVoted(){
   alreadyVoted.style.display="flex";
 }
 
+/* проверка, голосовал ли пользователь за этот конкретный вопрос */
 function checkUserVoted(questionIndex){
   var votedKey = 'voted_' + questionIndex;
-  return localStorage.getItem(votedKey) === 'true';
+  var result = localStorage.getItem(votedKey) === 'true';
+  return result;
 }
 
 function markUserVoted(questionIndex){
@@ -191,15 +193,13 @@ function markUserVoted(questionIndex){
   localStorage.setItem(votedKey, 'true');
 }
 
-/* ГЛОБАЛЬНАЯ ПРОВЕРКА ТАЙМЕРА — только для активного вопроса */
+/* ГЛОБАЛЬНАЯ ПРОВЕРКА ТАЙМЕРА */
 function startGlobalTimerCheck(questionIndex, startTime){
   if(globalTimerCheck) clearInterval(globalTimerCheck);
   
   globalTimerCheck = setInterval(function(){
-    /* проверяем, что активный вопрос не изменился */
     if(currentQuestionIndex === questionIndex && currentStartTime === startTime){
       var elapsed = (Date.now() - startTime) / 1000;
-      
       if(elapsed >= 6){
         if(globalTimerCheck){
           clearInterval(globalTimerCheck);
@@ -216,12 +216,10 @@ function stopTimerAndCheck(){
   timerInterval = null;
 }
 
-/* локальный таймер для полоски */
 function startTimer(startTime, questionIndex){
   if(timerInterval) stopTimerAndCheck();
   
   function update(){
-    /* проверяем, что всё ещё актуально */
     if(currentQuestionIndex !== questionIndex) return;
     
     var remaining = Math.max(0, 6 - (Date.now()-startTime)/1000);
@@ -266,25 +264,25 @@ db.ref('currentQuestion').on('value', snap=>{
   }
   if(!questions[current]) return;
   
-  /* сохраняем текущий вопрос и время */
   currentQuestionIndex = current;
   currentStartTime = startTime;
   
-  /* ПРОВЕРКА: если таймер уже истёк — сразу "Смотрите на сцену!" */
+  /* ПРОВЕРКА: если таймер уже истёк */
   if(startTime && (Date.now()-startTime)/1000 >= 6){
     showWaiting();
     return;
   }
   
-  /* Если голосовал за ЭТОТ вопрос — "Вы уже проголосовали" */
-  if(checkUserVoted(current)){
+  /* ГЛАВНОЕ: проверяем, голосовал ли пользователь за ЭТОТ КОНКРЕТНЫЙ вопрос */
+  var hasVoted = checkUserVoted(current);
+  
+  if(hasVoted){
     showAlreadyVoted();
-    /* даже на экране "Вы уже проголосовали" запускаем чекер для этого вопроса */
     startGlobalTimerCheck(current, startTime);
     return;
   }
   
-  /* Показываем вопрос */
+  /* НЕ ГОЛОСОВАЛ — показываем вопрос с таймером */
   votedMessage.style.display = "none";
   showGame();
   
@@ -297,16 +295,14 @@ db.ref('currentQuestion').on('value', snap=>{
       var li = document.createElement('li');
       li.innerText = q.options[idx];
       li.onclick = function(){
-        /* проверяем, что вопрос не изменился */
         if(currentQuestionIndex !== current) return;
-        
         if(timerInterval) stopTimerAndCheck();
+        
         db.ref('votes/'+current+'/'+idx).transaction(v=>(v||0)+1);
         li.classList.add('selected');
         markUserVoted(current);
         votedMessage.style.display = "block";
         
-        /* отключаем глобальный чекер */
         if(globalTimerCheck){
           clearInterval(globalTimerCheck);
           globalTimerCheck = null;
@@ -324,9 +320,15 @@ db.ref('currentQuestion').on('value', snap=>{
 
 db.ref('resetFlag').on('value', snap=>{
   if(snap.val()){
+    var keysToRemove = [];
     for(var i=0;i<localStorage.length;i++){
       var key = localStorage.key(i);
-      if(key && key.startsWith('voted_')) localStorage.removeItem(key);
+      if(key && key.startsWith('voted_')){
+        keysToRemove.push(key);
+      }
+    }
+    for(var j=0;j<keysToRemove.length;j++){
+      localStorage.removeItem(keysToRemove[j]);
     }
     currentQuestionIndex = -1;
     currentStartTime = null;
