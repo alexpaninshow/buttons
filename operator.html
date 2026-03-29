@@ -21,6 +21,7 @@ h1{margin:0}
 #status{font-size:22px;margin-top:10px}
 #timer{font-size:28px;margin-top:10px}
 #winner{font-size:24px;margin-top:15px;padding:10px;background:#222;border-radius:20px;color:#ffd700}
+#winnerDetails{font-size:18px;margin-top:5px;color:#aaa}
 #questionsStatus{font-size:16px;margin-top:10px;color:#aaa}
 
 #buttons{
@@ -56,6 +57,7 @@ button:active{transform:scale(0.98)}
 <div id="status">⏳ Загрузка вопросов...</div>
 <div id="timer">⏳ -</div>
 <div id="winner">🏆 Победитель: --</div>
+<div id="winnerDetails"></div>
 <div id="questionsStatus">📋 Загружено вопросов: --</div>
 </div>
 
@@ -80,10 +82,12 @@ var db = firebase.database();
 var questions = [];
 var current = -1;
 var questionsLoaded = false;
+var currentVotesListener = null;  /* для отслеживания голосов */
 
 var statusEl = document.getElementById("status");
 var timerEl = document.getElementById("timer");
 var winnerEl = document.getElementById("winner");
+var winnerDetailsEl = document.getElementById("winnerDetails");
 var questionsStatusEl = document.getElementById("questionsStatus");
 var nextBtn = document.getElementById("nextBtn");
 var backBtn = document.getElementById("backBtn");
@@ -138,10 +142,11 @@ function setQuestion(i){
   });
 }
 
-/* определение победителя по голосам */
+/* определение победителя по голосам с детализацией */
 function updateWinner(questionIndex){
   if(questionIndex < 0 || !questions[questionIndex]) {
     winnerEl.innerText = "🏆 Победитель: --";
+    winnerDetailsEl.innerText = "";
     return;
   }
   
@@ -149,9 +154,54 @@ function updateWinner(questionIndex){
     var votes = snap.val() || {};
     var maxVotes = -1;
     var winnerIndex = -1;
+    var allResults = [];
+    
+    /* собираем все результаты */
+    for(var i=0; i<questions[questionIndex].options.length; i++){
+      var count = votes[i] || 0;
+      allResults.push(questions[questionIndex].options[i] + ": " + count);
+      if(count > maxVotes){
+        maxVotes = count;
+        winnerIndex = i;
+      }
+    }
+    
+    /* отображаем победителя */
+    if(winnerIndex !== -1 && maxVotes > 0){
+      var winnerText = questions[questionIndex].options[winnerIndex];
+      winnerEl.innerText = "🏆 ПОБЕДИТЕЛЬ: " + winnerText;
+      winnerDetailsEl.innerText = "Голосов: " + maxVotes;
+    } else if(winnerIndex !== -1 && maxVotes === 0){
+      winnerEl.innerText = "🏆 Победитель: пока нет голосов";
+      winnerDetailsEl.innerText = "Ожидаем голосования...";
+    } else {
+      winnerEl.innerText = "🏆 Победитель: --";
+      winnerDetailsEl.innerText = "";
+    }
+  });
+}
+
+/* ПОДПИСКА НА ИЗМЕНЕНИЯ ГОЛОСОВ — обновляем победителя в реальном времени */
+function subscribeToVotes(questionIndex){
+  /* отписываемся от старого слушателя */
+  if(currentVotesListener){
+    currentVotesListener.off();
+    currentVotesListener = null;
+  }
+  
+  if(questionIndex < 0 || !questions[questionIndex]) return;
+  
+  /* подписываемся на изменения в votes/текущий вопрос */
+  currentVotesListener = db.ref('votes/'+questionIndex);
+  currentVotesListener.on('value', function(snap){
+    var votes = snap.val() || {};
+    var maxVotes = -1;
+    var winnerIndex = -1;
+    var allResults = [];
     
     for(var i=0; i<questions[questionIndex].options.length; i++){
       var count = votes[i] || 0;
+      allResults.push(questions[questionIndex].options[i] + ": " + count);
       if(count > maxVotes){
         maxVotes = count;
         winnerIndex = i;
@@ -160,11 +210,14 @@ function updateWinner(questionIndex){
     
     if(winnerIndex !== -1 && maxVotes > 0){
       var winnerText = questions[questionIndex].options[winnerIndex];
-      winnerEl.innerText = "🏆 Победитель: " + winnerText + " (" + maxVotes + " голосов)";
-    } else if(winnerIndex !== -1 && maxVotes === 0){
+      winnerEl.innerText = "🏆 ПОБЕДИТЕЛЬ: " + winnerText;
+      winnerDetailsEl.innerText = "Голосов: " + maxVotes + "  |  " + allResults.join("  |  ");
+    } else if(maxVotes === 0){
       winnerEl.innerText = "🏆 Победитель: пока нет голосов";
+      winnerDetailsEl.innerText = "Ожидаем голосования...";
     } else {
       winnerEl.innerText = "🏆 Победитель: --";
+      winnerDetailsEl.innerText = "";
     }
   });
 }
@@ -184,16 +237,28 @@ db.ref('currentQuestion').on('value', function(snap){
     statusEl.innerText = "🎭 Старт. Нажмите 'Далее' для первого вопроса";
     timerEl.innerText="⏳ -";
     winnerEl.innerText = "🏆 Победитель: --";
+    winnerDetailsEl.innerText = "";
+    /* отписываемся от голосов */
+    if(currentVotesListener){
+      currentVotesListener.off();
+      currentVotesListener = null;
+    }
   }
   else if(current === -999){
     statusEl.innerText = "⏸️ Ожидание... (зрители смотрят на сцену)";
     timerEl.innerText="⏳ -";
     winnerEl.innerText = "🏆 Победитель: --";
+    winnerDetailsEl.innerText = "";
+    if(currentVotesListener){
+      currentVotesListener.off();
+      currentVotesListener = null;
+    }
   }
   else if(questions[current]){
     statusEl.innerText = "❓ Вопрос " + (current+1) + " из " + questions.length + ": " + questions[current].text;
     startTimer(data.startTime);
-    updateWinner(current);
+    /* подписываемся на обновления голосов в реальном времени */
+    subscribeToVotes(current);
   }
   else if(questions.length > 0 && current >= questions.length){
     statusEl.innerText = "🏁 Спектакль завершён! Все вопросы заданы.";
@@ -287,13 +352,6 @@ document.getElementById("resetBtn").onclick=function(){
   db.ref('resetFlag').set(Date.now());
   setQuestion(-1);
 };
-
-/* слушаем сброс */
-db.ref('resetFlag').on('value', function(snap){
-  if(snap.val()){
-    /* для зрителей */
-  }
-});
 </script>
 
 </body>
