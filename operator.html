@@ -21,6 +21,7 @@ h1{margin:0}
 #status{font-size:22px;margin-top:10px}
 #timer{font-size:28px;margin-top:10px}
 #winner{font-size:24px;margin-top:15px;padding:10px;background:#222;border-radius:20px;color:#ffd700}
+#questionsStatus{font-size:16px;margin-top:10px;color:#aaa}
 
 #buttons{
   flex:1;
@@ -52,14 +53,15 @@ button:active{transform:scale(0.98)}
 
 <div id="top">
 <h1>Оператор</h1>
-<div id="status">Загрузка...</div>
+<div id="status">⏳ Загрузка вопросов...</div>
 <div id="timer">⏳ -</div>
 <div id="winner">🏆 Победитель: --</div>
+<div id="questionsStatus">📋 Загружено вопросов: --</div>
 </div>
 
 <div id="buttons">
-<button id="nextBtn" class="next"></button>
-<button id="backBtn" class="back"></button>
+<button id="nextBtn" class="next">--</button>
+<button id="backBtn" class="back">--</button>
 <button id="resetBtn" class="reset">Полный сброс</button>
 </div>
 
@@ -77,30 +79,54 @@ var db = firebase.database();
 
 var questions = [];
 var current = -1;
+var questionsLoaded = false;
 
-var status = document.getElementById("status");
+var statusEl = document.getElementById("status");
 var timerEl = document.getElementById("timer");
 var winnerEl = document.getElementById("winner");
+var questionsStatusEl = document.getElementById("questionsStatus");
 var nextBtn = document.getElementById("nextBtn");
 var backBtn = document.getElementById("backBtn");
 
-/* CSV */
+/* CSV загрузка */
 fetch(CSV_URL)
-.then(r=>r.text())
-.then(text=>{
+.then(function(r){ return r.text(); })
+.then(function(text){
   var rows = text.trim().split('\n');
-
+  
+  if(rows.length === 0){
+    statusEl.innerText = "❌ Ошибка: таблица пуста";
+    return;
+  }
+  
   for(var i=1;i<rows.length;i++){
     var cols = rows[i].split(',');
-    var q={text:cols[0],options:[]};
+    if(!cols[0] || cols[0].trim() === "") continue;
+    
+    var q = {
+      text:(cols[0] || "").trim(),
+      options:[]
+    };
 
     for(var j=1;j<cols.length;j++){
-      if(cols[j]) q.options.push(cols[j]);
+      var val = (cols[j] || "").trim();
+      if(val) q.options.push(val);
     }
-
-    questions.push(q);
+    
+    if(q.text && q.options.length > 0){
+      questions.push(q);
+    }
   }
-
+  
+  questionsLoaded = true;
+  questionsStatusEl.innerText = "📋 Загружено вопросов: " + questions.length;
+  
+  if(questions.length === 0){
+    statusEl.innerText = "❌ Нет вопросов в таблице";
+  } else {
+    statusEl.innerText = "✅ Вопросы загружены. Ожидание команды...";
+  }
+  
   updateButtons();
 });
 
@@ -144,26 +170,34 @@ function updateWinner(questionIndex){
 }
 
 /* sync */
-db.ref('currentQuestion').on('value', snap=>{
+db.ref('currentQuestion').on('value', function(snap){
   var data = snap.val();
   if(!data) return;
 
   current = data.index;
-
-  if(current === -1){
-    status.innerText = "Сейчас: Старт";
+  
+  /* обновляем статус в зависимости от режима */
+  if(!questionsLoaded){
+    statusEl.innerText = "⏳ Загрузка вопросов...";
+  }
+  else if(current === -1){
+    statusEl.innerText = "🎭 Старт. Нажмите 'Далее' для первого вопроса";
     timerEl.innerText="⏳ -";
     winnerEl.innerText = "🏆 Победитель: --";
   }
   else if(current === -999){
-    status.innerText = "Сейчас: Ожидание...";
+    statusEl.innerText = "⏸️ Ожидание... (зрители смотрят на сцену)";
     timerEl.innerText="⏳ -";
     winnerEl.innerText = "🏆 Победитель: --";
   }
   else if(questions[current]){
-    status.innerText = "Сейчас: " + (current+1) + ". " + questions[current].text;
+    statusEl.innerText = "❓ Вопрос " + (current+1) + " из " + questions.length + ": " + questions[current].text;
     startTimer(data.startTime);
     updateWinner(current);
+  }
+  else if(questions.length > 0 && current >= questions.length){
+    statusEl.innerText = "🏁 Спектакль завершён! Все вопросы заданы.";
+    timerEl.innerText="⏳ -";
   }
 
   updateButtons();
@@ -176,7 +210,7 @@ function startTimer(startTime){
   function tick(){
     var t = 5 - Math.floor((Date.now()-startTime)/1000);
     if(t<0)t=0;
-    timerEl.innerText="⏳ "+t;
+    timerEl.innerText="⏳ " + t + " сек";
   }
 
   tick();
@@ -185,6 +219,11 @@ function startTimer(startTime){
 
 /* кнопки */
 nextBtn.onclick=function(){
+  if(!questionsLoaded || questions.length === 0){
+    alert("Вопросы ещё не загружены. Подождите...");
+    return;
+  }
+  
   if(current === -1 || current === -999){
     setQuestion(0);
     return;
@@ -192,10 +231,14 @@ nextBtn.onclick=function(){
 
   if(current < questions.length-1){
     setQuestion(current+1);
+  } else if(current === questions.length-1){
+    statusEl.innerText = "🏁 Это был последний вопрос!";
   }
 };
 
 backBtn.onclick=function(){
+  if(!questionsLoaded || questions.length === 0) return;
+  
   if(current === 0){
     setQuestion(-1);
     return;
@@ -206,24 +249,33 @@ backBtn.onclick=function(){
   }
 };
 
-/* подписи */
+/* подписи кнопок */
 function updateButtons(){
-  if(!questions.length) return;
+  if(!questionsLoaded || questions.length === 0){
+    nextBtn.innerText = "Загрузка...";
+    backBtn.innerText = "Загрузка...";
+    return;
+  }
 
   if(current <= 0){
-    backBtn.innerText = "Назад: Старт";
+    backBtn.innerText = "◀ Назад: Старт";
+  } else if(current > 0 && questions[current-1]){
+    backBtn.innerText = "◀ Назад: " + (current) + ". " + questions[current-1].text.substring(0, 30);
   } else {
-    backBtn.innerText = "Назад: " + (current) + ". " + questions[current-1].text;
+    backBtn.innerText = "◀ Назад";
   }
 
   if(current === -1 || current === -999){
-    nextBtn.innerText = "Далее: 1. " + questions[0].text;
+    nextBtn.innerText = "Далее: 1. " + questions[0].text.substring(0, 30);
   }
   else if(current < questions.length-1){
-    nextBtn.innerText = "Далее: " + (current+2) + ". " + questions[current+1].text;
+    nextBtn.innerText = "Далее: " + (current+2) + ". " + questions[current+1].text.substring(0, 30);
+  }
+  else if(current === questions.length-1){
+    nextBtn.innerText = "🏁 ФИНАЛ";
   }
   else{
-    nextBtn.innerText = "Конец";
+    nextBtn.innerText = "Далее";
   }
 }
 
@@ -232,15 +284,14 @@ document.getElementById("resetBtn").onclick=function(){
   if(!confirm("Вы уверены, что хотите полностью сбросить игру?")) return;
 
   db.ref('votes').remove();
-  /* сбрасываем также localStorage у всех зрителей — через обновление версии */
   db.ref('resetFlag').set(Date.now());
   setQuestion(-1);
 };
 
-/* слушаем сброс для очистки localStorage у зрителей */
+/* слушаем сброс */
 db.ref('resetFlag').on('value', function(snap){
   if(snap.val()){
-    /* зрители сами очистят localStorage при следующем обновлении */
+    /* для зрителей */
   }
 });
 </script>
