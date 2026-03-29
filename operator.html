@@ -15,9 +15,9 @@ h1{margin:0;font-size:clamp(24px,6vw,36px)}
 #winner.hidden{opacity:0.3;filter:blur(4px)}
 #winnerDetails{font-size:clamp(14px,4vw,18px);margin-top:5px;color:#aaa}
 #winnerDetails.hidden{opacity:0.3;filter:blur(4px)}
-#questionsStatus{font-size:clamp(14px,4vw,16px);margin-top:10px;color:#aaa;display:flex;align-items:center;justify-content:center;gap:6px}
-#questionsStatus .ok{color:#00e676;font-size:18px}
-#questionsStatus .error{color:#f44336;font-size:18px}
+#questionsStatus{font-size:13px;margin-top:20px;color:#00e676;font-style:italic;text-align:left;padding-left:20px;display:flex;align-items:center;gap:6px}
+#questionsStatus .ok{color:#00e676;font-size:14px}
+#questionsStatus .error{color:#f44336;font-size:14px;font-style:normal}
 #buttons{flex:1;display:flex;flex-direction:column;padding:10px;gap:10px;justify-content:center}
 button{margin:0;font-size:clamp(16px,5vw,18px);font-weight:bold;border-radius:30px;border:none;color:#fff;cursor:pointer;padding:18px;transition:transform .1s}
 button:active{transform:scale(.97)}
@@ -27,7 +27,7 @@ button:active{transform:scale(.97)}
 </style>
 </head>
 <body>
-<div id="top"><h1>Оператор</h1><div id="status">⏳ Загрузка...</div><div id="timer">⏳ -</div><div id="winner" class="hidden">🏆 Победитель: ???</div><div id="winnerDetails" class="hidden"></div><div id="questionsStatus">📋 Загружено вопросов: --</div></div>
+<div id="top"><h1>Оператор</h1><div id="status">⏳ Загрузка...</div><div id="timer">⏳ -</div><div id="winner" class="hidden">🏆 Победитель: ???</div><div id="winnerDetails" class="hidden"></div><div id="questionsStatus"></div></div>
 <div id="buttons"><button id="nextBtn" class="next">--</button><button id="backBtn" class="back">--</button><button id="resetBtn" class="reset">Полный сброс</button></div>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -67,7 +67,6 @@ fetch(CSV_URL).then(r=>r.text()).then(text=>{
   }
   loaded = true;
   
-  // Декоративное отображение статуса загрузки вопросов
   if(questions.length > 0){
     qStatusEl.innerHTML = '<span class="ok">✅</span> Все вопросы загружены ('+questions.length+')';
   } else {
@@ -77,7 +76,6 @@ fetch(CSV_URL).then(r=>r.text()).then(text=>{
   statusEl.innerText = questions.length ? '✅ Готов. Ожидание команды...' : '❌ Нет вопросов';
   updateButtons();
 }).catch(()=>{
-  // Ошибка загрузки CSV
   qStatusEl.innerHTML = '<span class="error">❌</span> Ошибка загрузки вопросов';
   statusEl.innerText = '❌ Ошибка подключения к таблице';
   loaded = false;
@@ -173,7 +171,6 @@ db.ref('currentQuestion').on('value', snap=>{
     clearTimeout(timerOut); clearInterval(timerInt);
     updateButtons();
   } else if(questions[current]){
-    // Убираем "из M" — оставляем только "Вопрос N"
     statusEl.innerText = '❓ Вопрос '+(current+1)+': '+questions[current].text;
     startTimerDelay(data.startTime);
     subscribeVotes(current);
