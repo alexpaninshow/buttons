@@ -2,559 +2,186 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#000000">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 <title>Шоу</title>
-
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
-
 <style>
-* {
-  box-sizing: border-box;
-}
-
-html, body { 
-  height: 100%; 
-  margin: 0; 
-  padding: 0;
-  overflow: hidden;
-  position: fixed;
-  width: 100%;
-}
-
-body {
-  font-family: 'Montserrat', sans-serif;
-  background: #111;
-  color: white;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.screen {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  text-align: center;
-  padding: 20px;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-#start { background: #000; z-index: 10; }
-
-#start img {
-  max-width: 90%;
-  height: auto;
-  border-radius: 20px;
-  margin-bottom: 30px;
-}
-
-#waiting { 
-  display: none; 
-  font-size: clamp(24px, 8vw, 48px); 
-  font-weight: 900;
-  padding: 20px;
-}
-
-#game { 
-  display: none; 
-  height: 100%; 
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 20px 20px 40px;
-}
-
-#alreadyVoted { 
-  display: none; 
-  font-size: clamp(24px, 7vw, 44px); 
-  font-weight: 900; 
-  color: #ff9800;
-  padding: 20px;
-}
-
-h1 { 
-  font-size: clamp(20px, 6vw, 40px); 
-  margin: 10px 0;
-  line-height: 1.3;
-  word-break: break-word;
-}
-
-#timerBarWrap {
-  width: 100%;
-  max-width: 600px;
-  height: 70px;
-  background: #222;
-  border-radius: 40px;
-  overflow: hidden;
-  margin: 20px auto;
-}
-
-#timerBar {
-  height: 100%;
-  width: 100%;
-  transition: width 0.05s linear;
-  background: linear-gradient(90deg, #00e676, #ff9800, #d32f2f);
-}
-
-ul {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  margin: 10px 0;
-  padding: 0;
-  gap: 12px;
-  justify-content: center;
-}
-
-li {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: clamp(18px, 6vw, 36px);
-  font-weight: 900;
-  padding: 20px 15px;
-  background: #333;
-  border-radius: 20px;
-  border: 4px solid #888;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-align: center;
-  word-break: break-word;
-  min-height: 80px;
-}
-
-li.selected {
-  border: 4px solid #00e676;
-  background: #2e7d32;
-}
-
-#votedMessage {
-  font-size: clamp(18px, 5vw, 32px);
-  margin: 20px auto;
-  color: #00e676;
-  font-weight: bold;
-  background: rgba(0, 230, 118, 0.15);
-  padding: 12px 20px;
-  border-radius: 50px;
-  display: inline-block;
-  text-align: center;
-}
-
-/* Кнопка полноэкранного режима */
-#fullscreenBtn {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background: rgba(255,255,255,0.2);
-  border: none;
-  border-radius: 40px;
-  padding: 10px 16px;
-  color: white;
-  font-size: 14px;
-  cursor: pointer;
-  z-index: 9999;
-  backdrop-filter: blur(10px);
-  transition: 0.2s;
-}
-
-#fullscreenBtn:hover {
-  background: rgba(255,255,255,0.4);
-}
-
-/* Подсказка */
-#hint {
-  position: fixed;
-  bottom: 80px;
-  right: 20px;
-  background: rgba(0,0,0,0.8);
-  border-radius: 12px;
-  padding: 8px 12px;
-  font-size: 12px;
-  color: #aaa;
-  z-index: 9998;
-  max-width: 200px;
-  text-align: right;
-  pointer-events: none;
-  transition: 0.3s;
-}
-#hint.hide {
-  opacity: 0;
-  visibility: hidden;
-}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;overflow:hidden;position:fixed;width:100%}
+body{font-family:'Montserrat',sans-serif;background:#111;color:#fff}
+.screen{position:fixed;top:0;left:0;width:100%;height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:20px;overflow-y:auto}
+#start{background:#000;z-index:10}
+#start img{max-width:90%;border-radius:20px;margin-bottom:30px}
+#waiting{display:none;font-size:clamp(24px,8vw,48px);font-weight:900}
+#game{display:none;height:100%;flex-direction:column;justify-content:space-between;padding:20px}
+#alreadyVoted{display:none;font-size:clamp(24px,7vw,44px);font-weight:900;color:#ff9800}
+h1{font-size:clamp(20px,6vw,40px);margin:10px 0}
+#timerBarWrap{width:100%;max-width:600px;height:70px;background:#222;border-radius:40px;overflow:hidden;margin:20px auto}
+#timerBar{height:100%;width:100%;transition:width 0.05s linear;background:linear-gradient(90deg,#00e676,#ff9800,#d32f2f)}
+ul{flex:1;display:flex;flex-direction:column;gap:12px;margin:0;padding:0}
+li{display:flex;align-items:center;justify-content:center;font-size:clamp(18px,6vw,36px);font-weight:900;padding:20px;background:#333;border-radius:20px;border:4px solid #888;cursor:pointer}
+li.selected{border-color:#00e676;background:#2e7d32}
+#votedMessage{font-size:clamp(18px,5vw,32px);margin:20px auto;color:#00e676;background:rgba(0,230,118,0.15);padding:12px 20px;border-radius:50px;display:inline-block}
 </style>
 </head>
-
 <body>
-
-<div id="start" class="screen">
-  <img src="start.jpg" alt="start">
-  <div style="font-size:clamp(20px,6vw,40px);font-weight:900;">Скоро начнём!</div>
-</div>
-
+<div id="start" class="screen"><img src="start.jpg"><div>Скоро начнём!</div></div>
 <div id="waiting" class="screen">Смотрите на сцену!</div>
 <div id="alreadyVoted" class="screen">✓ Вы уже проголосовали</div>
-<div id="game">
-  <h1 id="title"></h1>
-  <div id="timerBarWrap"><div id="timerBar"></div></div>
-  <div id="votedMessage" style="display:none;">✓ Ваш голос учтён!</div>
-  <ul id="options"></ul>
-</div>
-
-<button id="fullscreenBtn">⛶ На весь экран</button>
-<div id="hint" class="hide">📱 Добавьте на главный экран для полного погружения</div>
+<div id="game"><h1 id="title"></h1><div id="timerBarWrap"><div id="timerBar"></div></div><div id="votedMessage" style="display:none;">✓ Ваш голос учтён!</div><ul id="options"></ul></div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
 <script>
-// ПОЛНОЭКРАННЫЙ РЕЖИМ ДЛЯ ТЕЛЕФОНОВ И КОМПЬЮТЕРОВ
-var fullscreenBtn = document.getElementById('fullscreenBtn');
-var hint = document.getElementById('hint');
+const CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv&gid=0";
+firebase.initializeApp({ databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com" });
+const db = firebase.database();
 
-function toggleFullscreen() {
-  var docEl = document.documentElement;
-  
-  // Проверяем, находимся ли в полноэкранном режиме
-  var isFullscreen = document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement;
-  
-  if (!isFullscreen) {
-    // Вход в полноэкранный режим
-    if (docEl.requestFullscreen) {
-      docEl.requestFullscreen();
-    } else if (docEl.webkitRequestFullscreen) {
-      // Для Safari и старых Chrome
-      docEl.webkitRequestFullscreen();
-    } else if (docEl.mozRequestFullScreen) {
-      docEl.mozRequestFullScreen();
-    } else if (docEl.msRequestFullscreen) {
-      docEl.msRequestFullscreen();
-    }
-    fullscreenBtn.textContent = '✕ Выйти';
-  } else {
-    // Выход из полноэкранного режима
-    if (document.exitFullscreen) {
-      document.exitFullscreen();
-    } else if (document.webkitExitFullscreen) {
-      document.webkitExitFullscreen();
-    } else if (document.mozCancelFullScreen) {
-      document.mozCancelFullScreen();
-    } else if (document.msExitFullscreen) {
-      document.msExitFullscreen();
-    }
-    fullscreenBtn.textContent = '⛶ На весь экран';
-  }
-}
-
-// Обновляем текст кнопки при изменении полноэкранного режима
-document.addEventListener('fullscreenchange', function() {
-  if (document.fullscreenElement || document.webkitFullscreenElement) {
-    fullscreenBtn.textContent = '✕ Выйти';
-  } else {
-    fullscreenBtn.textContent = '⛶ На весь экран';
-  }
-});
-
-document.addEventListener('webkitfullscreenchange', function() {
-  if (document.webkitFullscreenElement) {
-    fullscreenBtn.textContent = '✕ Выйти';
-  } else {
-    fullscreenBtn.textContent = '⛶ На весь экран';
-  }
-});
-
-fullscreenBtn.addEventListener('click', toggleFullscreen);
-
-// Скрываем подсказку через 5 секунд
-setTimeout(function() {
-  hint.classList.add('hide');
-}, 5000);
-
-// Показываем подсказку, если не в полноэкранном режиме и не добавлено в Web App
-if (!window.matchMedia('(display-mode: standalone)').matches && !window.navigator.standalone) {
-  hint.classList.remove('hide');
-}
-
-// ОСТАЛЬНАЯ ЛОГИКА СИСТЕМЫ
-var CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv&gid=0";
-
-firebase.initializeApp({
-  databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com"
-});
-
-var db = firebase.database();
-var userId = localStorage.getItem('voterId');
+let userId = localStorage.getItem('voterId');
 if(!userId){
-  userId = 'voter_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  userId = 'voter_' + Date.now() + '_' + Math.random().toString(36).substr(2,9);
   localStorage.setItem('voterId', userId);
 }
 
-var questions = [];
-var timerInterval = null;
-var currentQuestionIndex = -1;
-var currentStartTime = null;
-var globalTimerCheck = null;
-var isSubscribed = false;
+let questions = [];
+let timerInterval = null, globalCheck = null;
+let currentIdx = -1, currentStart = null;
 
-var startScreen = document.getElementById("start");
-var waiting = document.getElementById("waiting");
-var game = document.getElementById("game");
-var alreadyVoted = document.getElementById("alreadyVoted");
-var title = document.getElementById("title");
-var options = document.getElementById("options");
-var timerBar = document.getElementById("timerBar");
-var votedMessage = document.getElementById("votedMessage");
+const startScreen = document.getElementById('start');
+const waitingScreen = document.getElementById('waiting');
+const gameScreen = document.getElementById('game');
+const alreadyScreen = document.getElementById('alreadyVoted');
+const titleEl = document.getElementById('title');
+const optionsEl = document.getElementById('options');
+const timerBar = document.getElementById('timerBar');
+const votedMsg = document.getElementById('votedMessage');
 
-// Обработка reconnect
-db.ref('.info/connected').on('value', function(snap) {
-  if (snap.val() === true) {
-    console.log("Подключено к Firebase");
-    db.ref('currentQuestion').once('value', function(snap){
-      var data = snap.val();
-      if(data && data.index !== undefined){
-        stopAllTimers();
-        applyState(data.index, data.startTime);
-      }
-    });
-  }
-});
+function showStart(){ startScreen.style.display='flex'; waitingScreen.style.display='none'; gameScreen.style.display='none'; alreadyScreen.style.display='none'; }
+function showWaiting(){ startScreen.style.display='none'; waitingScreen.style.display='flex'; gameScreen.style.display='none'; alreadyScreen.style.display='none'; }
+function showGame(){ startScreen.style.display='none'; waitingScreen.style.display='none'; gameScreen.style.display='flex'; alreadyScreen.style.display='none'; }
+function showAlready(){ startScreen.style.display='none'; waitingScreen.style.display='none'; gameScreen.style.display='none'; alreadyScreen.style.display='flex'; }
 
-/* загрузка CSV */
-fetch(CSV_URL).then(r=>r.text()).then(text=>{
-  var rows = text.trim().split('\n');
-  for(var i=1;i<rows.length;i++){
-    var cols = rows[i].split(',');
-    if(!cols[0] || cols[0].trim()==="") continue;
-    var q = { text:cols[0].trim(), options:[] };
-    for(var j=1;j<cols.length;j++){
-      var val = cols[j].trim();
-      if(val) q.options.push(val);
+function hasVoted(idx){ return localStorage.getItem('voted_'+idx) === 'true'; }
+function markVoted(idx){ localStorage.setItem('voted_'+idx, 'true'); }
+
+function stopTimers(){
+  if(timerInterval) clearInterval(timerInterval);
+  if(globalCheck) clearInterval(globalCheck);
+  timerInterval = globalCheck = null;
+}
+
+function startTimer(startTime, qIdx){
+  if(timerInterval) clearInterval(timerInterval);
+  const update = () => {
+    if(currentIdx !== qIdx) return;
+    const elapsed = (Date.now() - startTime)/1000;
+    const remain = Math.max(0, 6 - elapsed);
+    const percent = (remain/6)*100;
+    timerBar.style.width = percent+'%';
+    if(remain <= 0){
+      clearInterval(timerInterval);
+      timerInterval = null;
+      timerBar.style.width = '0%';
+      showWaiting();
     }
-    if(q.text && q.options.length>0) questions.push(q);
-  }
-  if(!isSubscribed){
-    subscribeToState();
-    isSubscribed = true;
-  }
-});
-
-function showStart(){
-  startScreen.style.display="flex";
-  waiting.style.display="none";
-  game.style.display="none";
-  alreadyVoted.style.display="none";
+  };
+  update();
+  timerInterval = setInterval(update, 50);
 }
 
-function showWaiting(){
-  startScreen.style.display="none";
-  waiting.style.display="flex";
-  game.style.display="none";
-  alreadyVoted.style.display="none";
-}
-
-function showGame(){
-  startScreen.style.display="none";
-  waiting.style.display="none";
-  game.style.display="flex";
-  alreadyVoted.style.display="none";
-}
-
-function showAlreadyVoted(){
-  startScreen.style.display="none";
-  waiting.style.display="none";
-  game.style.display="none";
-  alreadyVoted.style.display="flex";
-}
-
-function checkUserVoted(questionIndex){
-  if(questionIndex === undefined || questionIndex < 0) return false;
-  var votedKey = 'voted_' + questionIndex;
-  return localStorage.getItem(votedKey) === 'true';
-}
-
-function markUserVoted(questionIndex){
-  if(questionIndex === undefined || questionIndex < 0) return;
-  var votedKey = 'voted_' + questionIndex;
-  localStorage.setItem(votedKey, 'true');
-}
-
-function stopAllTimers(){
-  if(timerInterval){
-    clearInterval(timerInterval);
-    timerInterval = null;
-  }
-  if(globalTimerCheck){
-    clearInterval(globalTimerCheck);
-    globalTimerCheck = null;
-  }
-}
-
-function startGlobalTimerCheck(questionIndex, startTime){
-  if(globalTimerCheck) clearInterval(globalTimerCheck);
-  
-  globalTimerCheck = setInterval(function(){
-    if(currentQuestionIndex === questionIndex && currentStartTime === startTime){
-      var elapsed = (Date.now() - startTime) / 1000;
-      if(elapsed >= 6){
-        stopAllTimers();
+function startGlobalTimer(startTime, qIdx){
+  if(globalCheck) clearInterval(globalCheck);
+  globalCheck = setInterval(() => {
+    if(currentIdx === qIdx && currentStart === startTime){
+      if((Date.now() - startTime)/1000 >= 6){
+        stopTimers();
         showWaiting();
       }
     }
   }, 500);
 }
 
-function updateTimerGradient(percent){
-  if(percent > 66){
-    timerBar.style.background = "linear-gradient(90deg, #00e676, #8bc34a, #ff9800)";
-  } else if(percent > 33){
-    timerBar.style.background = "linear-gradient(90deg, #ff9800, #ff9800, #d32f2f)";
-  } else {
-    timerBar.style.background = "linear-gradient(90deg, #d32f2f, #d32f2f, #d32f2f)";
-  }
-}
-
-function startTimer(startTime, questionIndex){
-  if(timerInterval) clearInterval(timerInterval);
-  
-  function update(){
-    if(currentQuestionIndex !== questionIndex) return;
-    
-    var elapsed = (Date.now() - startTime) / 1000;
-    var remaining = Math.max(0, 6 - elapsed);
-    var percent = (remaining / 6) * 100;
-    timerBar.style.width = percent + "%";
-    updateTimerGradient(percent);
-    
-    if(remaining <= 0){
-      if(timerInterval){
-        clearInterval(timerInterval);
-        timerInterval = null;
-      }
-      timerBar.style.width = "0%";
-      showWaiting();
-    }
-  }
-  
-  update();
-  timerInterval = setInterval(update, 50);
-}
-
-function applyState(current, startTime){
-  if(current === -1){ 
-    showStart(); 
-    currentQuestionIndex = -1;
-    currentStartTime = null;
-    stopAllTimers();
-    return; 
-  }
-  if(current === -999){ 
-    showWaiting(); 
-    currentQuestionIndex = -1;
-    currentStartTime = null;
-    stopAllTimers();
-    return; 
-  }
-  if(!questions[current]) return;
-  
-  currentQuestionIndex = current;
-  currentStartTime = startTime;
-  
-  var elapsed = (Date.now() - startTime) / 1000;
-  var remaining = 6 - elapsed;
-  
-  if(remaining <= 0){
-    showWaiting();
-    stopAllTimers();
-    return;
-  }
-  
-  var hasVoted = checkUserVoted(current);
-  
-  if(hasVoted){
-    showAlreadyVoted();
-    startGlobalTimerCheck(current, startTime);
-    return;
-  }
-  
-  votedMessage.style.display = "none";
+function applyState(index, startTime){
+  if(index === -1){ showStart(); currentIdx = -1; currentStart = null; stopTimers(); return; }
+  if(index === -999){ showWaiting(); currentIdx = -1; currentStart = null; stopTimers(); return; }
+  if(!questions[index]) return;
+  currentIdx = index;
+  currentStart = startTime;
+  const elapsed = (Date.now() - startTime)/1000;
+  if(elapsed >= 6){ showWaiting(); stopTimers(); return; }
+  if(hasVoted(index)){ showAlready(); startGlobalTimer(startTime, index); return; }
   showGame();
-  
-  var q = questions[current];
-  title.innerText = q.text;
-  options.innerHTML = "";
-  
-  for(var i=0;i<q.options.length;i++){
-    (function(idx){
-      var li = document.createElement('li');
-      li.innerText = q.options[idx];
-      li.onclick = function(){
-        if(currentQuestionIndex !== current) return;
-        if(timerInterval === null) return;
-        
-        stopAllTimers();
-        
-        db.ref('votes/'+current+'/'+idx).transaction(v=>(v||0)+1);
-        li.classList.add('selected');
-        markUserVoted(current);
-        votedMessage.style.display = "block";
-        
-        setTimeout(showWaiting, 800);
-      };
-      options.appendChild(li);
-    })(i);
+  votedMsg.style.display = 'none';
+  const q = questions[index];
+  titleEl.innerText = q.text;
+  optionsEl.innerHTML = '';
+  for(let i=0; i<q.options.length; i++){
+    const li = document.createElement('li');
+    li.innerText = q.options[i];
+    li.onclick = () => {
+      if(currentIdx !== index) return;
+      stopTimers();
+      db.ref('votes/'+index+'/'+i).transaction(v=>(v||0)+1);
+      li.classList.add('selected');
+      markVoted(index);
+      votedMsg.style.display = 'block';
+      setTimeout(showWaiting, 800);
+    };
+    optionsEl.appendChild(li);
   }
-  
-  startTimer(startTime, current);
-  startGlobalTimerCheck(current, startTime);
+  startTimer(startTime, index);
+  startGlobalTimer(startTime, index);
 }
 
-function subscribeToState(){
-  db.ref('currentQuestion').once('value', function(snap){
-    var data = snap.val();
-    if(data && data.index !== undefined){
-      applyState(data.index, data.startTime);
+function subscribe(){
+  db.ref('currentQuestion').once('value', snap => {
+    const d = snap.val();
+    if(d && d.index!==undefined) applyState(d.index, d.startTime);
+  });
+  db.ref('currentQuestion').on('value', snap => {
+    const d = snap.val();
+    if(d && d.index!==undefined){ stopTimers(); applyState(d.index, d.startTime); }
+  });
+}
+
+fetch(CSV_URL).then(r=>r.text()).then(text=>{
+  const rows = text.trim().split('\n');
+  for(let i=1;i<rows.length;i++){
+    const cols = rows[i].split(',');
+    if(!cols[0]||cols[0].trim()==='') continue;
+    const q = { text:cols[0].trim(), options:[] };
+    for(let j=1;j<cols.length;j++){
+      const val = cols[j].trim();
+      if(val) q.options.push(val);
     }
-  });
-  
-  db.ref('currentQuestion').on('value', function(snap){
-    var data = snap.val();
-    if(!data || data.index===undefined) return;
-    stopAllTimers();
-    applyState(data.index, data.startTime);
-  });
-}
+    if(q.text && q.options.length) questions.push(q);
+  }
+  subscribe();
+});
 
-db.ref('resetFlag').on('value', function(snap){
+db.ref('.info/connected').on('value', snap => {
+  if(snap.val() === true){
+    db.ref('currentQuestion').once('value', s => {
+      const d = s.val();
+      if(d && d.index!==undefined){ stopTimers(); applyState(d.index, d.startTime); }
+    });
+  }
+});
+
+db.ref('resetFlag').on('value', snap => {
   if(snap.val()){
-    var keysToRemove = [];
-    for(var i=0;i<localStorage.length;i++){
-      var key = localStorage.key(i);
-      if(key && key.startsWith('voted_')){
-        keysToRemove.push(key);
-      }
+    for(let i=0;i<localStorage.length;i++){
+      const key = localStorage.key(i);
+      if(key && key.startsWith('voted_')) localStorage.removeItem(key);
     }
-    for(var j=0;j<keysToRemove.length;j++){
-      localStorage.removeItem(keysToRemove[j]);
-    }
-    stopAllTimers();
-    currentQuestionIndex = -1;
-    currentStartTime = null;
-    
-    db.ref('currentQuestion').once('value', function(snap){
-      var data = snap.val();
-      if(data && data.index !== undefined){
-        applyState(data.index, data.startTime);
-      }
+    stopTimers();
+    currentIdx = -1; currentStart = null;
+    db.ref('currentQuestion').once('value', s => {
+      const d = s.val();
+      if(d && d.index!==undefined) applyState(d.index, d.startTime);
     });
   }
 });
 </script>
-
 </body>
 </html>
