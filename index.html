@@ -181,11 +181,9 @@ function showAlreadyVoted(){
   alreadyVoted.style.display="flex";
 }
 
-/* проверка, голосовал ли пользователь за этот конкретный вопрос */
 function checkUserVoted(questionIndex){
   var votedKey = 'voted_' + questionIndex;
-  var result = localStorage.getItem(votedKey) === 'true';
-  return result;
+  return localStorage.getItem(votedKey) === 'true';
 }
 
 function markUserVoted(questionIndex){
@@ -193,7 +191,19 @@ function markUserVoted(questionIndex){
   localStorage.setItem(votedKey, 'true');
 }
 
-/* ГЛОБАЛЬНАЯ ПРОВЕРКА ТАЙМЕРА */
+/* ПОЛНАЯ ОСТАНОВКА ВСЕХ ТАЙМЕРОВ */
+function stopAllTimers(){
+  if(timerInterval){
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+  if(globalTimerCheck){
+    clearInterval(globalTimerCheck);
+    globalTimerCheck = null;
+  }
+}
+
+/* ЗАПУСК ГЛОБАЛЬНОГО ЧЕКЕРА */
 function startGlobalTimerCheck(questionIndex, startTime){
   if(globalTimerCheck) clearInterval(globalTimerCheck);
   
@@ -201,23 +211,16 @@ function startGlobalTimerCheck(questionIndex, startTime){
     if(currentQuestionIndex === questionIndex && currentStartTime === startTime){
       var elapsed = (Date.now() - startTime) / 1000;
       if(elapsed >= 6){
-        if(globalTimerCheck){
-          clearInterval(globalTimerCheck);
-          globalTimerCheck = null;
-        }
+        stopAllTimers();
         showWaiting();
       }
     }
   }, 500);
 }
 
-function stopTimerAndCheck(){
-  if(timerInterval) clearInterval(timerInterval);
-  timerInterval = null;
-}
-
+/* ЛОКАЛЬНЫЙ ТАЙМЕР ДЛЯ ПОЛОСКИ */
 function startTimer(startTime, questionIndex){
-  if(timerInterval) stopTimerAndCheck();
+  if(timerInterval) clearInterval(timerInterval);
   
   function update(){
     if(currentQuestionIndex !== questionIndex) return;
@@ -231,7 +234,10 @@ function startTimer(startTime, questionIndex){
     else timerBar.style.backgroundColor="#ff5722";
     
     if(remaining <= 0){
-      stopTimerAndCheck();
+      if(timerInterval){
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
       timerBar.style.width = "0%";
     }
   }
@@ -240,26 +246,26 @@ function startTimer(startTime, questionIndex){
   timerInterval = setInterval(update, 100);
 }
 
+/* ОСНОВНАЯ ЛОГИКА */
 db.ref('currentQuestion').on('value', snap=>{
   var data = snap.val();
   if(!data || data.index===undefined) return;
   var current = data.index;
   var startTime = data.startTime;
   
+  /* ОСТАНАВЛИВАЕМ ВСЕ ТАЙМЕРЫ ПРИ ЛЮБОМ ПЕРЕКЛЮЧЕНИИ */
+  stopAllTimers();
+  
   if(current === -1){ 
     showStart(); 
     currentQuestionIndex = -1;
     currentStartTime = null;
-    if(globalTimerCheck) clearInterval(globalTimerCheck);
-    globalTimerCheck = null;
     return; 
   }
   if(current === -999){ 
     showWaiting(); 
     currentQuestionIndex = -1;
     currentStartTime = null;
-    if(globalTimerCheck) clearInterval(globalTimerCheck);
-    globalTimerCheck = null;
     return; 
   }
   if(!questions[current]) return;
@@ -267,13 +273,13 @@ db.ref('currentQuestion').on('value', snap=>{
   currentQuestionIndex = current;
   currentStartTime = startTime;
   
-  /* ПРОВЕРКА: если таймер уже истёк */
+  /* если таймер уже истёк */
   if(startTime && (Date.now()-startTime)/1000 >= 6){
     showWaiting();
     return;
   }
   
-  /* ГЛАВНОЕ: проверяем, голосовал ли пользователь за ЭТОТ КОНКРЕТНЫЙ вопрос */
+  /* проверяем голосование */
   var hasVoted = checkUserVoted(current);
   
   if(hasVoted){
@@ -282,7 +288,7 @@ db.ref('currentQuestion').on('value', snap=>{
     return;
   }
   
-  /* НЕ ГОЛОСОВАЛ — показываем вопрос с таймером */
+  /* не голосовал — показываем вопрос */
   votedMessage.style.display = "none";
   showGame();
   
@@ -296,17 +302,13 @@ db.ref('currentQuestion').on('value', snap=>{
       li.innerText = q.options[idx];
       li.onclick = function(){
         if(currentQuestionIndex !== current) return;
-        if(timerInterval) stopTimerAndCheck();
+        
+        stopAllTimers();
         
         db.ref('votes/'+current+'/'+idx).transaction(v=>(v||0)+1);
         li.classList.add('selected');
         markUserVoted(current);
         votedMessage.style.display = "block";
-        
-        if(globalTimerCheck){
-          clearInterval(globalTimerCheck);
-          globalTimerCheck = null;
-        }
         
         setTimeout(showWaiting, 800);
       };
@@ -330,12 +332,9 @@ db.ref('resetFlag').on('value', snap=>{
     for(var j=0;j<keysToRemove.length;j++){
       localStorage.removeItem(keysToRemove[j]);
     }
+    stopAllTimers();
     currentQuestionIndex = -1;
     currentStartTime = null;
-    if(globalTimerCheck){
-      clearInterval(globalTimerCheck);
-      globalTimerCheck = null;
-    }
   }
 });
 </script>
