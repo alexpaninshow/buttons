@@ -333,7 +333,7 @@ db.ref('currentQuestion').on('value', function(snap){
   updateButtons();
 });
 
-/* кнопки */
+/* КНОПКИ — ИСПРАВЛЕНА ЛОГИКА ВОЗВРАТА НА ПЕРВЫЙ ВОПРОС */
 nextBtn.onclick=function(){
   if(!questionsLoaded || questions.length === 0){
     alert("Вопросы ещё не загружены. Подождите...");
@@ -355,15 +355,19 @@ nextBtn.onclick=function(){
 backBtn.onclick=function(){
   if(!questionsLoaded || questions.length === 0) return;
   
+  /* Если мы на первом вопросе (current === 0) — возвращаемся на ТОТ ЖЕ ПЕРВЫЙ ВОПРОС */
   if(current === 0){
-    setQuestion(-1);
+    setQuestion(0);  /* ← повторный запуск первого вопроса */
     return;
   }
 
+  /* Если текущий вопрос больше 0 — возвращаемся к предыдущему */
   if(current > 0){
     setQuestion(current-1);
     return;
   }
+  
+  /* Если current === -1 или -999 — ничего не делаем */
 };
 
 /* подписи кнопок */
@@ -377,7 +381,7 @@ function updateButtons(){
   if(current >= 0 && questions[current]){
     backBtn.innerText = "◀ Назад к вопросу " + (current+1) + ": " + questions[current].text.substring(0, 30);
   } else if(current === 0){
-    backBtn.innerText = "◀ Назад: Старт";
+    backBtn.innerText = "◀ Назад к вопросу 1";
   } else {
     backBtn.innerText = "◀ Назад";
   }
