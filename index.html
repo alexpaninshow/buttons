@@ -24,38 +24,27 @@ li.selected{border-color:#00e676;background:#2e7d32}
 #votedMessage{font-size:clamp(18px,5vw,32px);margin:20px auto;color:#00e676;background:rgba(0,230,118,0.15);padding:12px 20px;border-radius:50px;display:inline-block}
 #refreshWarning{position:fixed;bottom:10px;left:0;right:0;text-align:center;font-size:12px;font-family:Arial,sans-serif;color:rgba(255,255,255,0.4);background:transparent;padding:4px 10px;z-index:9999;pointer-events:none}
 
-#finalScreen {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: #111;
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  z-index: 10000;
-  text-align: center;
-  padding: 20px;
+#finalScreen{
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:#111;
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  z-index:10000;
 }
-#finalScreen a {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 30px;
-  text-decoration: none;
+#finalScreen img{
+  width:140px;
+  margin-bottom:20px;
+  filter:invert(1);
 }
-#finalScreen img {
-  width: 140px;
-  height: 140px;
-  filter: invert(1);
-}
-#finalScreen div {
-  color: #fff;
-  font-size: clamp(20px, 6vw, 36px);
-  font-style: italic;
+#finalScreen div{
+  font-style:italic;
+  font-size:clamp(20px,6vw,36px);
 }
 </style>
 </head>
@@ -74,7 +63,7 @@ li.selected{border-color:#00e676;background:#2e7d32}
 
 <div id="refreshWarning">Не рекомендуем обновлять страницу</div>
 
-<!-- ✅ ОБНОВЛЁННЫЙ ФИНАЛ -->
+<!-- ✅ ДОБАВЛЕН ТОЛЬКО ЭТОТ БЛОК -->
 <div id="finalScreen">
   <a href="https://www.instagram.com/rusteatr.kg/" target="_blank">
     <img src="https://upload.wikimedia.org/wikipedia/commons/9/95/Instagram_logo_2022.svg">
@@ -112,13 +101,12 @@ function showGame(){ startScreen.style.display='none'; waitingScreen.style.displ
 function showAlready(){ startScreen.style.display='none'; waitingScreen.style.display='none'; gameScreen.style.display='none'; alreadyScreen.style.display='flex'; finalScreen.style.display='none'; }
 function showFinal(){ startScreen.style.display='none'; waitingScreen.style.display='none'; gameScreen.style.display='none'; alreadyScreen.style.display='none'; finalScreen.style.display='flex'; }
 
-db.ref('showInstagram').on('value', snap => {
+db.ref('showInstagram').on('value', snap=>{
   if(snap.val()){
     showFinal();
-  } else {
-    finalScreen.style.display = 'none';
   }
 });
 </script>
+
 </body>
 </html>
