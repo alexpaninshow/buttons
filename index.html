@@ -36,6 +36,7 @@ body {
 
 #waiting { display:none; font-size:6vw; font-weight:900; }
 #game { display:none; height:100%; flex-direction:column; }
+#alreadyVoted { display:none; font-size:6vw; font-weight:900; color:#ff9800; }
 
 h1 { font-size:5vw; margin:10px; }
 
@@ -52,6 +53,13 @@ h1 { font-size:5vw; margin:10px; }
   height:100%;
   width:100%;
   background:hsl(120,100%,50%);
+  transition: none;
+}
+
+#timerText {
+  font-size:24px;
+  margin-top:-20px;
+  font-weight:bold;
 }
 
 ul {
@@ -74,11 +82,30 @@ li {
   border-radius:20px;
   border:6px solid #888;
   cursor:pointer;
+  transition: all 0.2s;
 }
 
 li.selected {
   border:8px solid #00e676;
   background:#2e7d32;
+}
+
+li.voted-before {
+  opacity:0.6;
+  cursor:not-allowed;
+  border:6px solid #ff9800;
+}
+
+li.disabled-option {
+  cursor:not-allowed;
+  opacity:0.5;
+}
+
+#votedMessage {
+  font-size:4vw;
+  margin-top:20px;
+  color:#ff9800;
+  font-weight:bold;
 }
 </style>
 </head>
@@ -93,15 +120,17 @@ li.selected {
 </div>
 
 <div id="waiting" class="screen">Смотрите на сцену!</div>
-
+<div id="alreadyVoted" class="screen">✓ Вы уже проголосовали<br><span style="font-size:3vw;">Смотрите на сцену!</span></div>
 <div id="game">
   <h1 id="title"></h1>
 
   <div id="timerBarWrap">
     <div id="timerBar"></div>
   </div>
+  <div id="timerText">⏳ 5 сек</div>
 
   <ul id="options"></ul>
+  <div id="votedMessage" style="display:none;"></div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -115,24 +144,32 @@ firebase.initializeApp({
 });
 
 var db = firebase.database();
+var userId = localStorage.getItem('voterId');
+if(!userId){
+  userId = 'voter_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  localStorage.setItem('voterId', userId);
+}
 
 var questions = [];
 var timerInterval = null;
 var voted = false;
+var currentQuestionIndex = -1;
 
 var startScreen = document.getElementById("start");
 var waiting = document.getElementById("waiting");
 var game = document.getElementById("game");
+var alreadyVoted = document.getElementById("alreadyVoted");
 
 var title = document.getElementById("title");
 var options = document.getElementById("options");
 var timerBar = document.getElementById("timerBar");
+var timerText = document.getElementById("timerText");
+var votedMessage = document.getElementById("votedMessage");
 
 /* загрузка CSV */
 fetch(CSV_URL)
 .then(function(r){ return r.text(); })
 .then(function(text){
-
   var rows = text.trim().split('\n');
   var parsed = [];
 
@@ -142,7 +179,6 @@ fetch(CSV_URL)
 
   for(var i=1;i<parsed.length;i++){
     var cols = parsed[i];
-
     var q = {
       text:(cols[0] || "").trim(),
       options:[]
@@ -162,89 +198,149 @@ function showStart(){
   startScreen.style.display="flex";
   waiting.style.display="none";
   game.style.display="none";
+  alreadyVoted.style.display="none";
 }
 
 function showWaiting(){
   startScreen.style.display="none";
   waiting.style.display="flex";
   game.style.display="none";
+  alreadyVoted.style.display="none";
 }
 
 function showGame(){
   startScreen.style.display="none";
   waiting.style.display="none";
   game.style.display="flex";
+  alreadyVoted.style.display="none";
+}
+
+function showAlreadyVoted(){
+  startScreen.style.display="none";
+  waiting.style.display="none";
+  game.style.display="none";
+  alreadyVoted.style.display="flex";
+}
+
+/* проверка, голосовал ли пользователь за этот вопрос */
+function checkUserVoted(questionIndex){
+  var votedKey = 'voted_' + questionIndex;
+  return localStorage.getItem(votedKey) === 'true';
+}
+
+function markUserVoted(questionIndex){
+  var votedKey = 'voted_' + questionIndex;
+  localStorage.setItem(votedKey, 'true');
+}
+
+/* запуск синхронизированного таймера */
+function startSyncedTimer(questionIndex, startTime){
+  if(timerInterval) clearInterval(timerInterval);
+  
+  function updateTimer(){
+    var elapsed = (Date.now() - startTime) / 1000;
+    var remaining = Math.max(0, 5 - elapsed);
+    var percent = (remaining / 5) * 100;
+    
+    timerBar.style.width = percent + "%";
+    
+    var secondsLeft = Math.ceil(remaining);
+    timerText.innerText = "⏳ " + secondsLeft + " сек";
+    
+    var hue = 120 * (remaining / 5);
+    timerBar.style.background = "hsl(" + Math.max(0, hue) + ",100%,50%)";
+    
+    if(remaining <= 0){
+      if(timerInterval) clearInterval(timerInterval);
+      timerInterval = null;
+      timerText.innerText = "⏳ 0 сек";
+      timerBar.style.width = "0%";
+      timerBar.style.background = "hsl(0,100%,50%)";
+      
+      /* таймер закончился — если не голосовали, показываем ожидание */
+      if(!voted && !checkUserVoted(questionIndex)){
+        setTimeout(showWaiting, 300);
+      }
+    }
+  }
+  
+  updateTimer();
+  timerInterval = setInterval(updateTimer, 100);
 }
 
 /* Firebase */
 db.ref('currentQuestion').on('value', function(snap){
-
-  var current = snap.val();
-
+  var data = snap.val();
+  
+  if(!data || data.index === undefined){
+    return;
+  }
+  
+  var current = data.index;
+  currentQuestionIndex = current;
+  
   if(current === -1){
     showStart();
     return;
   }
-
+  
   if(current === -999){
     showWaiting();
     return;
   }
-
+  
   if(!questions[current]) return;
-
+  
+  /* проверяем, голосовал ли пользователь за этот вопрос */
+  var hasVoted = checkUserVoted(current);
+  
+  if(hasVoted){
+    showAlreadyVoted();
+    return;
+  }
+  
   showGame();
-
   voted = false;
-  clearInterval(timerInterval);
-
+  votedMessage.style.display = "none";
+  
+  if(timerInterval) clearInterval(timerInterval);
+  
   var q = questions[current];
-
   title.innerText = q.text;
   options.innerHTML = "";
-
+  
   for(var i=0;i<q.options.length;i++){
-
-    (function(i){
-
+    (function(optIndex){
       var li = document.createElement('li');
-      li.innerText = q.options[i];
-
+      li.innerText = q.options[optIndex];
+      
       li.onclick = function(){
-
         if(voted) return;
-
+        
         voted = true;
-        clearInterval(timerInterval);
-
-        db.ref('votes/'+current+'/'+i)
+        if(timerInterval) clearInterval(timerInterval);
+        
+        /* записываем голос в Firebase */
+        db.ref('votes/'+current+'/'+optIndex)
           .transaction(function(v){ return (v||0)+1; });
-
+        
         li.classList.add('selected');
-
+        markUserVoted(current);
+        
+        votedMessage.style.display = "block";
+        votedMessage.innerText = "✓ Ваш голос учтён!";
+        
         setTimeout(showWaiting, 800);
       };
-
+      
       options.appendChild(li);
-
     })(i);
   }
-
-  /* ПЛАВНЫЙ ТАЙМЕР */
-
-  timerBar.style.transition = "none";
-  timerBar.style.width = "100%";
-  timerBar.style.background = "hsl(120,100%,50%)";
-
-  timerBar.offsetHeight;
-
-  timerBar.style.transition = "width 5s linear, background 5s linear";
-
-  setTimeout(function(){
-    timerBar.style.width = "0%";
-    timerBar.style.background = "hsl(0,100%,50%)";
-  },50);
-
+  
+  /* запускаем синхронизированный таймер */
+  if(data.startTime){
+    startSyncedTimer(current, data.startTime);
+  }
 });
 </script>
 
