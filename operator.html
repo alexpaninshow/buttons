@@ -333,7 +333,7 @@ db.ref('currentQuestion').on('value', function(snap){
   updateButtons();
 });
 
-/* КНОПКИ */
+/* ИСПРАВЛЕННЫЕ КНОПКИ */
 nextBtn.onclick=function(){
   if(!questionsLoaded || questions.length === 0){
     alert("Вопросы ещё не загружены. Подождите...");
@@ -355,18 +355,20 @@ nextBtn.onclick=function(){
 backBtn.onclick=function(){
   if(!questionsLoaded || questions.length === 0) return;
   
+  /* Если мы на первом вопросе (current === 0) — повторяем первый вопрос */
   if(current === 0){
     setQuestion(0);
     return;
   }
 
+  /* Если текущий вопрос больше 0 — повторяем ТЕКУЩИЙ вопрос (не предыдущий!) */
   if(current > 0){
-    setQuestion(current-1);
+    setQuestion(current);  // ← повторяем текущий вопрос, а не current-1
     return;
   }
 };
 
-/* ИСПРАВЛЕННЫЕ НАДПИСИ НА КНОПКАХ */
+/* подписи кнопок */
 function updateButtons(){
   if(!questionsLoaded || questions.length === 0){
     nextBtn.innerText = "Загрузка...";
@@ -378,11 +380,8 @@ function updateButtons(){
   if(current === -1 || current === -999){
     backBtn.innerText = "◀ Назад";
   }
-  else if(current === 0){
-    backBtn.innerText = "◀ Назад: " + questions[0].text.substring(0, 30);
-  }
-  else if(current > 0 && questions[current]){
-    backBtn.innerText = "◀ Назад: " + (current+1) + ". " + questions[current].text.substring(0, 30);
+  else if(current >= 0 && questions[current]){
+    backBtn.innerText = "◀ Повторить: " + (current+1) + ". " + questions[current].text.substring(0, 30);
   }
   else {
     backBtn.innerText = "◀ Назад";
