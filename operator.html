@@ -384,8 +384,8 @@ function updateButtons(){
     return;
   }
 
-  // скрываем кнопку ФИНАЛ на последнем вопросе
-  if(current === questions.length - 1){
+  // скрываем кнопку во время последнего вопроса (пока идёт таймер)
+  if(current === questions.length - 1 && isTimerActive){
     nextBtn.style.display = 'none';
   } else {
     nextBtn.style.display = 'block';
@@ -393,12 +393,19 @@ function updateButtons(){
 
   if(current === -1 || current === -999){
     nextBtn.innerText = 'Далее: 1. '+questions[0].text.substring(0,30);
+    nextBtn.style.background = '#4caf50';
   } else if(current === questions.length - 1){
-    nextBtn.innerText = '🏁 ФИНАЛ';
+    // ПОСЛЕ таймера — показываем розовую кнопку завершения
+    if(!isTimerActive){
+      nextBtn.innerHTML = '📸 Завершить игру';
+      nextBtn.style.background = '#e91e63';
+    }
   } else if(current >= 0 && current < questions.length - 1){
     nextBtn.innerText = 'Далее: '+(current+2)+'. '+questions[current+1].text.substring(0,30);
+    nextBtn.style.background = '#4caf50';
   } else {
     nextBtn.innerText = 'Далее';
+    nextBtn.style.background = '#4caf50';
   }
   
   if(current >= 0 && questions[current]){
