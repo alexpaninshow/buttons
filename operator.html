@@ -106,6 +106,7 @@ var questionsLoaded = false;
 var currentVotesListener = null;
 var timerEndTimeout = null;
 var timerStarted = false;
+var isTimerRunning = false;  // флаг: активен ли таймер (вопрос ещё не закончился)
 
 var statusEl = document.getElementById("status");
 var timerEl = document.getElementById("timer");
@@ -236,13 +237,14 @@ function subscribeToVotes(questionIndex){
   });
 }
 
-/* таймер 6 секунд */
+/* таймер 6 секунд с отслеживанием состояния */
 function startTimerWithDelay(startTime){
   clearInterval(window.timerInt);
   if(timerEndTimeout) clearTimeout(timerEndTimeout);
   
   hideWinner();
   timerStarted = true;
+  isTimerRunning = true;
   
   function tick(){
     var elapsed = (Date.now() - startTime) / 1000;
@@ -253,6 +255,7 @@ function startTimerWithDelay(startTime){
       if(window.timerInt) clearInterval(window.timerInt);
       if(timerEndTimeout) clearTimeout(timerEndTimeout);
       timerStarted = false;
+      isTimerRunning = false;
       timerEl.innerText="⏳ 0 сек";
       
       showWinner();
@@ -260,7 +263,7 @@ function startTimerWithDelay(startTime){
         updateWinnerData(current, true);
       }
       
-      updateButtons();
+      updateButtons();  // обновляем кнопку "Назад" после окончания таймера
     }
   }
   
@@ -270,6 +273,7 @@ function startTimerWithDelay(startTime){
   timerEndTimeout = setTimeout(function(){
     if(timerStarted){
       timerStarted = false;
+      isTimerRunning = false;
       showWinner();
       if(current >= 0 && questions[current]){
         updateWinnerData(current, true);
@@ -301,6 +305,7 @@ db.ref('currentQuestion').on('value', function(snap){
     }
     if(timerEndTimeout) clearTimeout(timerEndTimeout);
     timerStarted = false;
+    isTimerRunning = false;
     updateButtons();
   }
   else if(current === -999){
@@ -315,6 +320,7 @@ db.ref('currentQuestion').on('value', function(snap){
     }
     if(timerEndTimeout) clearTimeout(timerEndTimeout);
     timerStarted = false;
+    isTimerRunning = false;
     updateButtons();
   }
   else if(questions[current]){
@@ -333,7 +339,7 @@ db.ref('currentQuestion').on('value', function(snap){
   updateButtons();
 });
 
-/* ИСПРАВЛЕННЫЕ КНОПКИ */
+/* КНОПКИ С ПРАВИЛЬНОЙ ЛОГИКОЙ "НАЗАД" */
 nextBtn.onclick=function(){
   if(!questionsLoaded || questions.length === 0){
     alert("Вопросы ещё не загружены. Подождите...");
@@ -355,20 +361,31 @@ nextBtn.onclick=function(){
 backBtn.onclick=function(){
   if(!questionsLoaded || questions.length === 0) return;
   
-  /* Если мы на первом вопросе (current === 0) — повторяем первый вопрос */
+  /* ЛОГИКА КНОПКИ "НАЗАД":
+     - Если таймер активен (isTimerRunning = true) → возвращаемся на ПРЕДЫДУЩИЙ вопрос
+     - Если таймер НЕ активен (вопрос закончился) → ПОВТОРЯЕМ текущий вопрос
+     - Если мы на первом вопросе → повторяем первый вопрос (независимо от таймера)
+  */
+  
   if(current === 0){
+    // Первый вопрос → повторяем первый вопрос
     setQuestion(0);
     return;
   }
-
-  /* Если текущий вопрос больше 0 — повторяем ТЕКУЩИЙ вопрос (не предыдущий!) */
+  
   if(current > 0){
-    setQuestion(current);  // ← повторяем текущий вопрос, а не current-1
+    if(isTimerRunning){
+      // Таймер активен → возврат на предыдущий вопрос
+      setQuestion(current - 1);
+    } else {
+      // Таймер закончился → повтор текущего вопроса
+      setQuestion(current);
+    }
     return;
   }
 };
 
-/* подписи кнопок */
+/* ПОДПИСИ КНОПОК */
 function updateButtons(){
   if(!questionsLoaded || questions.length === 0){
     nextBtn.innerText = "Загрузка...";
@@ -380,8 +397,17 @@ function updateButtons(){
   if(current === -1 || current === -999){
     backBtn.innerText = "◀ Назад";
   }
-  else if(current >= 0 && questions[current]){
-    backBtn.innerText = "◀ Повторить: " + (current+1) + ". " + questions[current].text.substring(0, 30);
+  else if(current === 0){
+    backBtn.innerText = "◀ Повторить: 1. " + questions[0].text.substring(0, 30);
+  }
+  else if(current > 0){
+    if(isTimerRunning){
+      // Таймер активен → показываем предыдущий вопрос
+      backBtn.innerText = "◀ Назад: " + (current) + ". " + questions[current-1].text.substring(0, 30);
+    } else {
+      // Таймер закончился → показываем текущий вопрос для повтора
+      backBtn.innerText = "◀ Повторить: " + (current+1) + ". " + questions[current].text.substring(0, 30);
+    }
   }
   else {
     backBtn.innerText = "◀ Назад";
