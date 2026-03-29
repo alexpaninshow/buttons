@@ -285,21 +285,23 @@ db.ref('currentQuestion').on('value', function(snap){
   
   if(!questions[current]) return;
   
-  /* если это другой вопрос — сбрасываем флаг голосования для текущего вопроса */
+  /* ПРОВЕРКА: голосовал ли пользователь за ЭТОТ вопрос */
+  var hasVoted = checkUserVotedForQuestion(current);
+  
+  /* Если голосовал — показываем экран "Вы уже проголосовали" */
+  if(hasVoted){
+    showAlreadyVoted();
+    return;
+  }
+  
+  /* Если НЕ голосовал — показываем вопрос как обычно */
+  /* Сбрасываем флаг текущего голосования, если это новый вопрос */
   if(current !== currentQuestionIndex){
     votedInCurrentQuestion = false;
     votedMessage.style.display = "none";
   }
   
   currentQuestionIndex = current;
-  
-  /* проверяем, голосовал ли пользователь за ЭТОТ вопрос */
-  var hasVoted = checkUserVotedForQuestion(current);
-  
-  if(hasVoted){
-    showAlreadyVoted();
-    return;
-  }
   
   showGame();
   
