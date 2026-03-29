@@ -153,6 +153,7 @@ var questions = [];
 var timerInterval = null;
 var votedInCurrentQuestion = false;
 var currentQuestionIndex = -1;
+var lastStartTime = 0;  /* для отслеживания повторного запуска того же вопроса */
 
 var startScreen = document.getElementById("start");
 var waiting = document.getElementById("waiting");
@@ -245,7 +246,6 @@ function startSyncedTimer(startTime){
     
     timerBar.style.width = percent + "%";
     
-    /* плавное изменение цвета: зелёный → жёлтый → красный */
     if(remaining > 4){
       timerBar.style.backgroundColor = "#00e676";
     } else if(remaining > 2){
@@ -274,7 +274,7 @@ function startSyncedTimer(startTime){
   timerInterval = setInterval(updateTimer, 100);
 }
 
-/* Firebase */
+/* Firebase — ПРИНУДИТЕЛЬНОЕ ОБНОВЛЕНИЕ даже для того же вопроса */
 db.ref('currentQuestion').on('value', function(snap){
   var data = snap.val();
   
@@ -283,6 +283,7 @@ db.ref('currentQuestion').on('value', function(snap){
   }
   
   var current = data.index;
+  var newStartTime = data.startTime;
   
   if(current === -1){
     showStart();
@@ -304,13 +305,10 @@ db.ref('currentQuestion').on('value', function(snap){
     return;
   }
   
-  /* если не голосовал — показываем вопрос */
-  if(current !== currentQuestionIndex){
-    votedInCurrentQuestion = false;
-    votedMessage.style.display = "none";
-  }
-  
+  /* если не голосовал — показываем вопрос (даже если тот же индекс) */
   currentQuestionIndex = current;
+  votedInCurrentQuestion = false;
+  votedMessage.style.display = "none";
   
   showGame();
   
@@ -346,8 +344,8 @@ db.ref('currentQuestion').on('value', function(snap){
     })(i);
   }
   
-  if(data.startTime){
-    startSyncedTimer(data.startTime);
+  if(newStartTime){
+    startSyncedTimer(newStartTime);
   }
 });
 
