@@ -35,7 +35,7 @@ li.selected{border-color:#00e676;background:#2e7d32}
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  z-index: 99999;
+  z-index: 10000;
   text-align: center;
   padding: 20px;
 }
@@ -48,8 +48,8 @@ li.selected{border-color:#00e676;background:#2e7d32}
   text-decoration: none;
 }
 #finalScreen img {
-  width: 160px;
-  height: 160px;
+  width: 140px;
+  height: 140px;
   filter: invert(1);
 }
 #finalScreen div {
@@ -74,7 +74,7 @@ li.selected{border-color:#00e676;background:#2e7d32}
 
 <div id="refreshWarning">Не рекомендуем обновлять страницу</div>
 
-<!-- ✅ ОБНОВЛЁННЫЙ ФИНАЛЬНЫЙ ЭКРАН -->
+<!-- ✅ ОБНОВЛЁННЫЙ ФИНАЛ -->
 <div id="finalScreen">
   <a href="https://www.instagram.com/rusteatr.kg/" target="_blank">
     <img src="https://upload.wikimedia.org/wikipedia/commons/9/95/Instagram_logo_2022.svg">
@@ -92,15 +92,31 @@ const CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-
 firebase.initializeApp({ databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com" });
 const db = firebase.database();
 
+let questions = [];
+let timerInterval = null, globalCheck = null;
+let currentIdx = -1, currentStart = null;
+
+const startScreen = document.getElementById('start');
+const waitingScreen = document.getElementById('waiting');
+const gameScreen = document.getElementById('game');
+const alreadyScreen = document.getElementById('alreadyVoted');
+const titleEl = document.getElementById('title');
+const optionsEl = document.getElementById('options');
+const timerBar = document.getElementById('timerBar');
+const votedMsg = document.getElementById('votedMessage');
 const finalScreen = document.getElementById('finalScreen');
 
-function showFinal(){
-  finalScreen.style.display='flex';
-}
+function showStart(){ startScreen.style.display='flex'; waitingScreen.style.display='none'; gameScreen.style.display='none'; alreadyScreen.style.display='none'; finalScreen.style.display='none'; }
+function showWaiting(){ startScreen.style.display='none'; waitingScreen.style.display='flex'; gameScreen.style.display='none'; alreadyScreen.style.display='none'; finalScreen.style.display='none'; }
+function showGame(){ startScreen.style.display='none'; waitingScreen.style.display='none'; gameScreen.style.display='flex'; alreadyScreen.style.display='none'; finalScreen.style.display='none'; }
+function showAlready(){ startScreen.style.display='none'; waitingScreen.style.display='none'; gameScreen.style.display='none'; alreadyScreen.style.display='flex'; finalScreen.style.display='none'; }
+function showFinal(){ startScreen.style.display='none'; waitingScreen.style.display='none'; gameScreen.style.display='none'; alreadyScreen.style.display='none'; finalScreen.style.display='flex'; }
 
 db.ref('showInstagram').on('value', snap => {
   if(snap.val()){
     showFinal();
+  } else {
+    finalScreen.style.display = 'none';
   }
 });
 </script>
