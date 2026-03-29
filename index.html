@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Шоу</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
@@ -10,6 +10,8 @@
 <style>
 * {
   box-sizing: border-box;
+  user-select: none; /* запрет выделения текста, но не блокирует клики */
+  -webkit-touch-callout: none; /* запрет меню на ссылках */
 }
 
 html, body { 
@@ -125,6 +127,8 @@ li {
   text-align: center;
   word-break: break-word;
   min-height: 80px;
+  /* кнопки работают */
+  pointer-events: auto;
 }
 
 li.selected {
@@ -162,10 +166,42 @@ li.selected {
   <ul id="options"></ul>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-
 <script>
+// БЛОКИРОВКА ОБНОВЛЕНИЯ СТРАНИЦЫ
+window.addEventListener('beforeunload', function(e) {
+  // Стандартный способ заблокировать обновление
+  e.preventDefault();
+  e.returnValue = '';
+  return '';
+});
+
+// БЛОКИРОВКА ЖЕСТА PULL-TO-REFRESH НА МОБИЛЬНЫХ
+document.body.addEventListener('touchmove', function(e) {
+  // если скролл в самом верху и тянем вниз
+  if (document.documentElement.scrollTop === 0 && e.touches[0].clientY > 0 && e.touches[0].clientY < 50) {
+    e.preventDefault();
+  }
+}, { passive: false });
+
+// БЛОКИРОВКА КОМБИНАЦИЙ КЛАВИШ (F5, Ctrl+R, Cmd+R)
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'F5' || 
+      (e.ctrlKey && e.key === 'r') || 
+      (e.metaKey && e.key === 'r') ||
+      (e.ctrlKey && e.key === 'R') ||
+      (e.metaKey && e.key === 'R')) {
+    e.preventDefault();
+    return false;
+  }
+});
+
+// БЛОКИРОВКА КОНТЕКСТНОГО МЕНЮ (долгое нажатие)
+document.addEventListener('contextmenu', function(e) {
+  e.preventDefault();
+  return false;
+});
+
+// ОСТАЛЬНАЯ ЛОГИКА СИСТЕМЫ
 var CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv&gid=0";
 
 firebase.initializeApp({
@@ -207,7 +243,6 @@ fetch(CSV_URL).then(r=>r.text()).then(text=>{
     }
     if(q.text && q.options.length>0) questions.push(q);
   }
-  // после загрузки вопросов подписываемся на состояние
   subscribeToState();
 });
 
@@ -249,7 +284,6 @@ function markUserVoted(questionIndex){
   if(questionIndex === undefined || questionIndex < 0) return;
   var votedKey = 'voted_' + questionIndex;
   localStorage.setItem(votedKey, 'true');
-  console.log("Голос сохранён: " + votedKey);
 }
 
 function stopAllTimers(){
@@ -277,7 +311,6 @@ function startGlobalTimerCheck(questionIndex, startTime){
   }, 500);
 }
 
-/* Плавное обновление цвета */
 function updateTimerGradient(percent){
   if(percent > 66){
     timerBar.style.background = "linear-gradient(90deg, #00e676, #8bc34a, #ff9800)";
@@ -311,12 +344,10 @@ function startTimer(startTime, questionIndex){
   }
   
   update();
-  timerInterval = setInterval(update, 50); // более плавно
+  timerInterval = setInterval(update, 50);
 }
 
 function applyState(current, startTime){
-  console.log("applyState: current=" + current);
-  
   if(current === -1){ 
     showStart(); 
     currentQuestionIndex = -1;
@@ -339,25 +370,20 @@ function applyState(current, startTime){
   var elapsed = (Date.now() - startTime) / 1000;
   var remaining = 6 - elapsed;
   
-  // если таймер истёк
   if(remaining <= 0){
     showWaiting();
     stopAllTimers();
     return;
   }
   
-  // проверяем, голосовал ли пользователь за этот вопрос
   var hasVoted = checkUserVoted(current);
   
   if(hasVoted){
-    console.log("Пользователь уже голосовал за вопрос " + current);
     showAlreadyVoted();
     startGlobalTimerCheck(current, startTime);
     return;
   }
   
-  // не голосовал — показываем вопрос
-  console.log("Пользователь НЕ голосовал за вопрос " + current);
   votedMessage.style.display = "none";
   showGame();
   
@@ -371,7 +397,7 @@ function applyState(current, startTime){
       li.innerText = q.options[idx];
       li.onclick = function(){
         if(currentQuestionIndex !== current) return;
-        if(timerInterval === null) return; // таймер уже закончился
+        if(timerInterval === null) return;
         
         stopAllTimers();
         
@@ -390,9 +416,7 @@ function applyState(current, startTime){
   startGlobalTimerCheck(current, startTime);
 }
 
-/* ПОДПИСКА НА ИЗМЕНЕНИЯ СОСТОЯНИЯ */
 function subscribeToState(){
-  // получаем текущее состояние один раз при загрузке
   db.ref('currentQuestion').once('value', function(snap){
     var data = snap.val();
     if(data && data.index !== undefined){
@@ -400,7 +424,6 @@ function subscribeToState(){
     }
   });
   
-  // затем слушаем изменения
   db.ref('currentQuestion').on('value', function(snap){
     var data = snap.val();
     if(!data || data.index===undefined) return;
@@ -409,10 +432,8 @@ function subscribeToState(){
   });
 }
 
-/* СБРОС */
 db.ref('resetFlag').on('value', function(snap){
   if(snap.val()){
-    console.log("СБРОС ИГРЫ — очищаем localStorage");
     var keysToRemove = [];
     for(var i=0;i<localStorage.length;i++){
       var key = localStorage.key(i);
@@ -427,7 +448,6 @@ db.ref('resetFlag').on('value', function(snap){
     currentQuestionIndex = -1;
     currentStartTime = null;
     
-    // перезагружаем состояние
     db.ref('currentQuestion').once('value', function(snap){
       var data = snap.val();
       if(data && data.index !== undefined){
