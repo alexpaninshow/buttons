@@ -382,13 +382,15 @@ function updateButtons(){
     nextBtn.innerText = 'Загрузка...';
     backBtn.innerText = 'Загрузка...';
     return;
+  }
+
   // скрываем кнопку ФИНАЛ на последнем вопросе
-if(current === questions.length - 1){
-  nextBtn.style.display = 'none';
-} else {
-  nextBtn.style.display = 'block';
-}}
-  
+  if(current === questions.length - 1){
+    nextBtn.style.display = 'none';
+  } else {
+    nextBtn.style.display = 'block';
+  }
+
   if(current === -1 || current === -999){
     nextBtn.innerText = 'Далее: 1. '+questions[0].text.substring(0,30);
   } else if(current === questions.length - 1){
