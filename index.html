@@ -35,7 +35,7 @@ li.selected{border-color:#00e676;background:#2e7d32}
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  z-index: 10000;
+  z-index: 99999;
   text-align: center;
   padding: 20px;
 }
@@ -48,27 +48,37 @@ li.selected{border-color:#00e676;background:#2e7d32}
   text-decoration: none;
 }
 #finalScreen img {
-  width: 120px;
-  height: 120px;
+  width: 160px;
+  height: 160px;
   filter: invert(1);
 }
 #finalScreen div {
   color: #fff;
   font-size: clamp(20px, 6vw, 36px);
-  font-weight: bold;
+  font-style: italic;
 }
 </style>
 </head>
 <body>
+
 <div id="start" class="screen"><img src="start.jpg"><div>Скоро начнём!</div></div>
 <div id="waiting" class="screen">Смотрите на сцену!</div>
 <div id="alreadyVoted" class="screen">✓ Вы уже проголосовали</div>
-<div id="game"><h1 id="title"></h1><div id="timerBarWrap"><div id="timerBar"></div></div><div id="votedMessage" style="display:none;">✓ Ваш голос учтён!</div><ul id="options"></ul></div>
+
+<div id="game">
+  <h1 id="title"></h1>
+  <div id="timerBarWrap"><div id="timerBar"></div></div>
+  <div id="votedMessage" style="display:none;">✓ Ваш голос учтён!</div>
+  <ul id="options"></ul>
+</div>
+
 <div id="refreshWarning">Не рекомендуем обновлять страницу</div>
+
+<!-- ✅ ОБНОВЛЁННЫЙ ФИНАЛЬНЫЙ ЭКРАН -->
 <div id="finalScreen">
-  <a href="https://www.instagram.com/rusteatr.kg/" target="_blank" id="instagramLink">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/9/95/Instagram_logo_2022.svg" alt="Instagram">
-    <div style="font-style: italic;">
+  <a href="https://www.instagram.com/rusteatr.kg/" target="_blank">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/9/95/Instagram_logo_2022.svg">
+    <div>
       Спасибо за игру!<br>
       Будем очень благодарны, если оставите отзыв.
     </div>
@@ -82,169 +92,15 @@ const CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-
 firebase.initializeApp({ databaseURL:"https://buttons-panin-default-rtdb.firebaseio.com" });
 const db = firebase.database();
 
-let userId = localStorage.getItem('voterId');
-if(!userId){
-  userId = 'voter_' + Date.now() + '_' + Math.random().toString(36).substr(2,9);
-  localStorage.setItem('voterId', userId);
-}
-
-let questions = [];
-let timerInterval = null, globalCheck = null;
-let currentIdx = -1, currentStart = null;
-
-const startScreen = document.getElementById('start');
-const waitingScreen = document.getElementById('waiting');
-const gameScreen = document.getElementById('game');
-const alreadyScreen = document.getElementById('alreadyVoted');
-const titleEl = document.getElementById('title');
-const optionsEl = document.getElementById('options');
-const timerBar = document.getElementById('timerBar');
-const votedMsg = document.getElementById('votedMessage');
 const finalScreen = document.getElementById('finalScreen');
 
-function showStart(){ startScreen.style.display='flex'; waitingScreen.style.display='none'; gameScreen.style.display='none'; alreadyScreen.style.display='none'; finalScreen.style.display='none'; }
-function showWaiting(){ startScreen.style.display='none'; waitingScreen.style.display='flex'; gameScreen.style.display='none'; alreadyScreen.style.display='none'; finalScreen.style.display='none'; }
-function showGame(){ startScreen.style.display='none'; waitingScreen.style.display='none'; gameScreen.style.display='flex'; alreadyScreen.style.display='none'; finalScreen.style.display='none'; }
-function showAlready(){ startScreen.style.display='none'; waitingScreen.style.display='none'; gameScreen.style.display='none'; alreadyScreen.style.display='flex'; finalScreen.style.display='none'; }
-function showFinal(){ startScreen.style.display='none'; waitingScreen.style.display='none'; gameScreen.style.display='none'; alreadyScreen.style.display='none'; finalScreen.style.display='flex'; }
-
-function hasVoted(idx){ return localStorage.getItem('voted_'+idx) === 'true'; }
-function markVoted(idx){ localStorage.setItem('voted_'+idx, 'true'); }
-
-function stopTimers(){
-  if(timerInterval) clearInterval(timerInterval);
-  if(globalCheck) clearInterval(globalCheck);
-  timerInterval = globalCheck = null;
+function showFinal(){
+  finalScreen.style.display='flex';
 }
-
-function updateTimerColor(percent){
-  let hue;
-  if(percent > 50){
-    hue = 120 - (120 - 60) * ((100 - percent) / 50);
-  } else {
-    hue = 60 - 60 * ((50 - percent) / 50);
-  }
-  timerBar.style.backgroundColor = 'hsl(' + hue + ', 100%, 50%)';
-}
-
-function startTimer(startTime, qIdx){
-  if(timerInterval) clearInterval(timerInterval);
-  const update = () => {
-    if(currentIdx !== qIdx) return;
-    const elapsed = (Date.now() - startTime)/1000;
-    const remain = Math.max(0, 6 - elapsed);
-    const percent = (remain/6)*100;
-    timerBar.style.width = percent+'%';
-    updateTimerColor(percent);
-    if(remain <= 0){
-      clearInterval(timerInterval);
-      timerInterval = null;
-      timerBar.style.width = '0%';
-      updateTimerColor(0);
-      showWaiting();
-    }
-  };
-  update();
-  timerInterval = setInterval(update, 50);
-}
-
-function startGlobalTimer(startTime, qIdx){
-  if(globalCheck) clearInterval(globalCheck);
-  globalCheck = setInterval(() => {
-    if(currentIdx === qIdx && currentStart === startTime){
-      if((Date.now() - startTime)/1000 >= 6){
-        stopTimers();
-        showWaiting();
-      }
-    }
-  }, 500);
-}
-
-function applyState(index, startTime){
-  if(index === -1){ showStart(); currentIdx = -1; currentStart = null; stopTimers(); return; }
-  if(index === -999){ showWaiting(); currentIdx = -1; currentStart = null; stopTimers(); return; }
-  if(!questions[index]) return;
-  currentIdx = index;
-  currentStart = startTime;
-  const elapsed = (Date.now() - startTime)/1000;
-  if(elapsed >= 6){ showWaiting(); stopTimers(); return; }
-  if(hasVoted(index)){ showAlready(); startGlobalTimer(startTime, index); return; }
-  showGame();
-  votedMsg.style.display = 'none';
-  const q = questions[index];
-  titleEl.innerText = q.text;
-  optionsEl.innerHTML = '';
-  for(let i=0; i<q.options.length; i++){
-    const li = document.createElement('li');
-    li.innerText = q.options[i];
-    li.onclick = () => {
-      if(currentIdx !== index) return;
-      stopTimers();
-      db.ref('votes/'+index+'/'+i).transaction(v=>(v||0)+1);
-      li.classList.add('selected');
-      markVoted(index);
-      votedMsg.style.display = 'block';
-      setTimeout(showWaiting, 800);
-    };
-    optionsEl.appendChild(li);
-  }
-  startTimer(startTime, index);
-  startGlobalTimer(startTime, index);
-}
-
-function subscribe(){
-  db.ref('currentQuestion').once('value', snap => {
-    const d = snap.val();
-    if(d && d.index!==undefined) applyState(d.index, d.startTime);
-  });
-  db.ref('currentQuestion').on('value', snap => {
-    const d = snap.val();
-    if(d && d.index!==undefined){ stopTimers(); applyState(d.index, d.startTime); }
-  });
-}
-
-fetch(CSV_URL).then(r=>r.text()).then(text=>{
-  const rows = text.trim().split('\n');
-  for(let i=1;i<rows.length;i++){
-    const cols = rows[i].split(',');
-    if(!cols[0]||cols[0].trim()==='') continue;
-    const q = { text:cols[0].trim(), options:[] };
-    for(let j=1;j<cols.length;j++){
-      const val = cols[j].trim();
-      if(val) q.options.push(val);
-    }
-    if(q.text && q.options.length) questions.push(q);
-  }
-  subscribe();
-});
-
-db.ref('.info/connected').on('value', snap => {
-  if(snap.val() === true){
-    db.ref('currentQuestion').once('value', s => {
-      const d = s.val();
-      if(d && d.index!==undefined){ stopTimers(); applyState(d.index, d.startTime); }
-    });
-  }
-});
 
 db.ref('showInstagram').on('value', snap => {
   if(snap.val()){
     showFinal();
-  }
-});
-
-db.ref('resetFlag').on('value', snap => {
-  if(snap.val()){
-    for(let i=0;i<localStorage.length;i++){
-      const key = localStorage.key(i);
-      if(key && key.startsWith('voted_')) localStorage.removeItem(key);
-    }
-    stopTimers();
-    currentIdx = -1; currentStart = null;
-    db.ref('currentQuestion').once('value', s => {
-      const d = s.val();
-      if(d && d.index!==undefined) applyState(d.index, d.startTime);
-    });
   }
 });
 </script>
