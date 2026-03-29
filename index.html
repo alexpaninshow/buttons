@@ -252,8 +252,12 @@ function startSyncedTimer(startTime){
       timerBar.style.width = "0%";
       timerBar.style.backgroundColor = "#ff5722";
       
+      /* ТАЙМЕР ЗАКОНЧИЛСЯ — ПОКАЗЫВАЕМ "СМОТРИТЕ НА СЦЕНУ!" */
       if(!votedInCurrentQuestion && !checkUserVotedForQuestion(currentQuestionIndex)){
-        setTimeout(showWaiting, 300);
+        showWaiting();
+      } else if(votedInCurrentQuestion || checkUserVotedForQuestion(currentQuestionIndex)){
+        /* если уже голосовал, тоже показываем ожидание */
+        showWaiting();
       }
     }
   }
