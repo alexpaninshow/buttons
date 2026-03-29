@@ -3,13 +3,33 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-<title>Оператор</title>
+<title>Управление игрой</title>
 <style>
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial;background:#111;color:#fff;display:flex;flex-direction:column;min-height:100vh}
 #top{padding:20px;flex-shrink:0}
-h1{margin:0;font-size:clamp(24px,6vw,36px)}
-#status{font-size:clamp(16px,4.5vw,22px);margin-top:10px}
+
+/* Заголовок по центру, меньше шрифт */
+h1{
+  margin:0;
+  font-size:clamp(18px,5vw,28px);
+  text-align:center;
+  font-weight:bold;
+}
+
+#status{
+  font-size:clamp(16px,4.5vw,22px);
+  margin-top:10px;
+  font-weight:900;
+  animation:blinkGreen 1.5s ease-in-out infinite;
+}
+
+@keyframes blinkGreen{
+  0%{color:#ffffff}
+  50%{color:#00e676}
+  100%{color:#ffffff}
+}
+
 #timer{font-size:clamp(24px,7vw,28px);margin-top:10px;font-weight:bold}
 #winner{font-size:clamp(18px,5vw,24px);margin-top:15px;padding:10px;background:#222;border-radius:20px;color:#ffd700;transition:.3s}
 #winner.hidden{opacity:0.3;filter:blur(4px)}
@@ -27,7 +47,7 @@ button:active{transform:scale(.97)}
 </style>
 </head>
 <body>
-<div id="top"><h1>Оператор</h1><div id="status">⏳ Загрузка...</div><div id="timer">⏳ -</div><div id="winner" class="hidden">🏆 Победитель: ???</div><div id="winnerDetails" class="hidden"></div><div id="questionsStatus"></div></div>
+<div id="top"><h1>Управление игрой</h1><div id="status">⏳ Загрузка...</div><div id="timer">⏳ -</div><div id="winner" class="hidden">🏆 Победитель: ???</div><div id="winnerDetails" class="hidden"></div><div id="questionsStatus"></div></div>
 <div id="buttons"><button id="nextBtn" class="next">--</button><button id="backBtn" class="back">--</button><button id="resetBtn" class="reset">Полный сброс</button></div>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -199,11 +219,6 @@ nextBtn.onclick = ()=>{
 backBtn.onclick = ()=>{
   if(!loaded || !questions.length) return;
   
-  // Логика кнопки "Назад":
-  // - На первом вопросе (current === 0) → повторяем первый вопрос
-  // - На любом другом вопросе:
-  //   * Если таймер активен (вопрос ещё идёт) → возврат на предыдущий вопрос
-  //   * Если таймер НЕ активен (вопрос завершён) → повтор текущего вопроса
   if(current === 0){
     setQuestion(0);
   } else if(isTimerActive){
