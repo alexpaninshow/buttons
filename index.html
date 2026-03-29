@@ -114,7 +114,7 @@ li.disabled-option {
 </div>
 
 <div id="waiting" class="screen">Смотрите на сцену!</div>
-<div id="alreadyVoted" class="screen">✓ Вы уже проголосовали<br><span style="font-size:3vw;">Смотрите на сцену!</span></div>
+<div id="alreadyVoted" class="screen">✓ Вы уже проголосовали</div>
 <div id="game">
   <h1 id="title"></h1>
 
@@ -146,7 +146,7 @@ if(!userId){
 
 var questions = [];
 var timerInterval = null;
-var votedInCurrentQuestion = false;  /* флаг для текущего вопроса */
+var votedInCurrentQuestion = false;
 var currentQuestionIndex = -1;
 
 var startScreen = document.getElementById("start");
@@ -253,7 +253,6 @@ function startSyncedTimer(startTime){
       timerBar.style.width = "0%";
       timerBar.style.background = "hsl(0,100%,50%)";
       
-      /* таймер закончился — уходим в ожидание, если ещё не голосовали */
       if(!votedInCurrentQuestion && !checkUserVotedForQuestion(currentQuestionIndex)){
         setTimeout(showWaiting, 300);
       }
@@ -321,7 +320,6 @@ db.ref('currentQuestion').on('value', function(snap){
         votedInCurrentQuestion = true;
         if(timerInterval) clearInterval(timerInterval);
         
-        /* записываем голос в Firebase */
         db.ref('votes/'+current+'/'+optIndex)
           .transaction(function(v){ return (v||0)+1; });
         
@@ -346,14 +344,12 @@ db.ref('currentQuestion').on('value', function(snap){
 /* слушаем сброс игры — очищаем localStorage зрителя */
 db.ref('resetFlag').on('value', function(snap){
   if(snap.val()){
-    /* очищаем все сохранённые голоса в localStorage */
     for(var i = 0; i < localStorage.length; i++){
       var key = localStorage.key(i);
       if(key && key.startsWith('voted_')){
         localStorage.removeItem(key);
       }
     }
-    /* сбрасываем флаг текущего голосования */
     votedInCurrentQuestion = false;
     currentQuestionIndex = -1;
   }
