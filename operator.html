@@ -331,7 +331,7 @@ function startTimerWithDelay(startTime){
   }, 6500);
 }
 
-/* sync — при загрузке страницы оператор тоже получает актуальное состояние */
+/* sync — ПРИ ОБНОВЛЕНИИ СТРАНИЦЫ НЕ ПЕРЕЗАПИСЫВАЕМ СОСТОЯНИЕ */
 db.ref('currentQuestion').on('value', function(snap){
   var data = snap.val();
   if(!data) return;
@@ -465,11 +465,8 @@ document.getElementById("resetBtn").onclick=function(){
   setQuestion(-1);
 };
 
-/* ЗАЩИТА ОТ СЛУЧАЙНОГО ОБНОВЛЕНИЯ СТРАНИЦЫ */
-window.addEventListener('beforeunload', function() {
-  // ничего не делаем, просто предупреждение при обновлении
-  // но обновление не сломает логику, так как состояние подтянется из Firebase
-});
+/* ПРИ ОБНОВЛЕНИИ СТРАНИЦЫ НИЧЕГО НЕ ПЕРЕЗАПИСЫВАЕМ */
+console.log("Оператор загружен, слушаем состояние Firebase...");
 </script>
 
 </body>
