@@ -52,8 +52,8 @@ h1 { font-size:5vw; margin:10px; }
 #timerBar {
   height:100%;
   width:100%;
-  background:hsl(120,100%,50%);
-  transition: none;
+  background: linear-gradient(90deg, #00e676, #ffeb3b, #ff5722);
+  transition: width 0.05s linear;
 }
 
 #timerText {
@@ -96,10 +96,15 @@ li.disabled-option {
 }
 
 #votedMessage {
-  font-size:4vw;
-  margin-top:20px;
-  color:#ff9800;
+  font-size:5vw;
+  margin:20px auto 10px auto;
+  color:#00e676;
   font-weight:bold;
+  background: rgba(0,230,118,0.15);
+  padding: 15px 25px;
+  border-radius: 50px;
+  display: inline-block;
+  text-align: center;
 }
 </style>
 </head>
@@ -123,8 +128,8 @@ li.disabled-option {
   </div>
   <div id="timerText">⏳ 5 сек</div>
 
+  <div id="votedMessage" style="display:none;">✓ Ваш голос учтён!</div>
   <ul id="options"></ul>
-  <div id="votedMessage" style="display:none;"></div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
@@ -243,15 +248,11 @@ function startSyncedTimer(startTime){
     var secondsLeft = Math.ceil(remaining);
     timerText.innerText = "⏳ " + secondsLeft + " сек";
     
-    var hue = 120 * (remaining / 5);
-    timerBar.style.background = "hsl(" + Math.max(0, hue) + ",100%,50%)";
-    
     if(remaining <= 0){
       if(timerInterval) clearInterval(timerInterval);
       timerInterval = null;
       timerText.innerText = "⏳ 0 сек";
       timerBar.style.width = "0%";
-      timerBar.style.background = "hsl(0,100%,50%)";
       
       if(!votedInCurrentQuestion && !checkUserVotedForQuestion(currentQuestionIndex)){
         setTimeout(showWaiting, 300);
@@ -285,17 +286,13 @@ db.ref('currentQuestion').on('value', function(snap){
   
   if(!questions[current]) return;
   
-  /* ПРОВЕРКА: голосовал ли пользователь за ЭТОТ вопрос */
   var hasVoted = checkUserVotedForQuestion(current);
   
-  /* Если голосовал — показываем экран "Вы уже проголосовали" */
   if(hasVoted){
     showAlreadyVoted();
     return;
   }
   
-  /* Если НЕ голосовал — показываем вопрос как обычно */
-  /* Сбрасываем флаг текущего голосования, если это новый вопрос */
   if(current !== currentQuestionIndex){
     votedInCurrentQuestion = false;
     votedMessage.style.display = "none";
@@ -329,7 +326,6 @@ db.ref('currentQuestion').on('value', function(snap){
         markUserVotedForQuestion(current);
         
         votedMessage.style.display = "block";
-        votedMessage.innerText = "✓ Ваш голос учтён!";
         
         setTimeout(showWaiting, 800);
       };
