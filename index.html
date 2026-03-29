@@ -111,7 +111,15 @@ const votedMsg = document.getElementById('votedMessage');
 const finalScreen = document.getElementById('finalScreen');
 
 function showStart(){ startScreen.style.display='flex'; waitingScreen.style.display='none'; gameScreen.style.display='none'; alreadyScreen.style.display='none'; finalScreen.style.display='none'; }
-function showWaiting(){ startScreen.style.display='none'; waitingScreen.style.display='flex'; gameScreen.style.display='none'; alreadyScreen.style.display='none'; finalScreen.style.display='none'; }
+function showWaiting(){
+  if(isFinalActive) return;
+
+  startScreen.style.display='none';
+  waitingScreen.style.display='flex';
+  gameScreen.style.display='none';
+  alreadyScreen.style.display='none';
+  finalScreen.style.display='none';
+}
 function showGame(){ startScreen.style.display='none'; waitingScreen.style.display='none'; gameScreen.style.display='flex'; alreadyScreen.style.display='none'; finalScreen.style.display='none'; }
 function showAlready(){ startScreen.style.display='none'; waitingScreen.style.display='none'; gameScreen.style.display='none'; alreadyScreen.style.display='flex'; finalScreen.style.display='none'; }
 function showFinal(){ startScreen.style.display='none'; waitingScreen.style.display='none'; gameScreen.style.display='none'; alreadyScreen.style.display='none'; finalScreen.style.display='flex'; }
