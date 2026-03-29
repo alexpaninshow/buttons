@@ -3,11 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
-<!-- Режим веб-приложения (полный экран, без адресной строки) -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
-<meta name="full-screen" content="yes">
 <title>Шоу</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
@@ -148,6 +146,48 @@ li.selected {
   display: inline-block;
   text-align: center;
 }
+
+/* Кнопка полноэкранного режима */
+#fullscreenBtn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(255,255,255,0.2);
+  border: none;
+  border-radius: 40px;
+  padding: 10px 16px;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  z-index: 9999;
+  backdrop-filter: blur(10px);
+  transition: 0.2s;
+}
+
+#fullscreenBtn:hover {
+  background: rgba(255,255,255,0.4);
+}
+
+/* Подсказка */
+#hint {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  background: rgba(0,0,0,0.8);
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #aaa;
+  z-index: 9998;
+  max-width: 200px;
+  text-align: right;
+  pointer-events: none;
+  transition: 0.3s;
+}
+#hint.hide {
+  opacity: 0;
+  visibility: hidden;
+}
 </style>
 </head>
 
@@ -167,10 +207,51 @@ li.selected {
   <ul id="options"></ul>
 </div>
 
+<button id="fullscreenBtn">⛶ На весь экран</button>
+<div id="hint" class="hide">📱 Добавьте на главный экран для полного погружения</div>
+
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
+// ПОЛНОЭКРАННЫЙ РЕЖИМ
+var fullscreenBtn = document.getElementById('fullscreenBtn');
+var hint = document.getElementById('hint');
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+    // Вход в полноэкранный режим
+    var docEl = document.documentElement;
+    if (docEl.requestFullscreen) {
+      docEl.requestFullscreen();
+    } else if (docEl.webkitRequestFullscreen) {
+      docEl.webkitRequestFullscreen();
+    }
+    fullscreenBtn.textContent = '✕ Выйти';
+  } else {
+    // Выход из полноэкранного режима
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    }
+    fullscreenBtn.textContent = '⛶ На весь экран';
+  }
+}
+
+fullscreenBtn.addEventListener('click', toggleFullscreen);
+
+// Скрываем подсказку через 5 секунд
+setTimeout(function() {
+  hint.classList.add('hide');
+}, 5000);
+
+// Показываем подсказку, если не в полноэкранном режиме и не добавлено в Web App
+if (!window.matchMedia('(display-mode: standalone)').matches && !window.navigator.standalone) {
+  hint.classList.remove('hide');
+}
+
+// ОСТАЛЬНАЯ ЛОГИКА СИСТЕМЫ
 var CSV_URL = "https://docs.google.com/spreadsheets/d/1N4CHyu57OCThSfxxcYytqu-AKBkUi6OOx5iY59XC2B0/export?format=csv&gid=0";
 
 firebase.initializeApp({
@@ -190,7 +271,6 @@ var currentQuestionIndex = -1;
 var currentStartTime = null;
 var globalTimerCheck = null;
 var isSubscribed = false;
-var reconnectAttempts = 0;
 
 var startScreen = document.getElementById("start");
 var waiting = document.getElementById("waiting");
@@ -201,12 +281,10 @@ var options = document.getElementById("options");
 var timerBar = document.getElementById("timerBar");
 var votedMessage = document.getElementById("votedMessage");
 
-/* Обработка reconnect — не сбрасывает состояние */
+// Обработка reconnect
 db.ref('.info/connected').on('value', function(snap) {
   if (snap.val() === true) {
     console.log("Подключено к Firebase");
-    reconnectAttempts = 0;
-    // При переподключении просто перечитываем текущее состояние
     db.ref('currentQuestion').once('value', function(snap){
       var data = snap.val();
       if(data && data.index !== undefined){
@@ -214,8 +292,6 @@ db.ref('.info/connected').on('value', function(snap) {
         applyState(data.index, data.startTime);
       }
     });
-  } else {
-    console.log("Потеря соединения, ожидание reconnect...");
   }
 });
 
