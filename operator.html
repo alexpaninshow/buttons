@@ -19,9 +19,30 @@ body{
 h1{margin:0}
 
 #status{font-size:22px;margin-top:10px}
-#timer{font-size:28px;margin-top:10px}
-#winner{font-size:24px;margin-top:15px;padding:10px;background:#222;border-radius:20px;color:#ffd700}
-#winnerDetails{font-size:18px;margin-top:5px;color:#aaa}
+#timer{font-size:28px;margin-top:10px;font-weight:bold}
+#winner{
+  font-size:24px;
+  margin-top:15px;
+  padding:10px;
+  background:#222;
+  border-radius:20px;
+  color:#ffd700;
+  transition: all 0.3s ease;
+}
+#winner.hidden {
+  opacity: 0.3;
+  filter: blur(4px);
+}
+#winnerDetails{
+  font-size:18px;
+  margin-top:5px;
+  color:#aaa;
+  transition: all 0.3s ease;
+}
+#winnerDetails.hidden {
+  opacity: 0.3;
+  filter: blur(4px);
+}
 #questionsStatus{font-size:16px;margin-top:10px;color:#aaa}
 
 #buttons{
@@ -56,8 +77,8 @@ button:active{transform:scale(0.98)}
 <h1>Оператор</h1>
 <div id="status">⏳ Загрузка вопросов...</div>
 <div id="timer">⏳ -</div>
-<div id="winner">🏆 Победитель: --</div>
-<div id="winnerDetails"></div>
+<div id="winner" class="hidden">🏆 Победитель: ???</div>
+<div id="winnerDetails" class="hidden"></div>
 <div id="questionsStatus">📋 Загружено вопросов: --</div>
 </div>
 
@@ -82,7 +103,9 @@ var db = firebase.database();
 var questions = [];
 var current = -1;
 var questionsLoaded = false;
-var currentVotesListener = null;  /* для отслеживания голосов */
+var currentVotesListener = null;
+var timerEndTimeout = null;  /* для отсрочки показа победителя */
+var timerStarted = false;     /* флаг, что таймер активен */
 
 var statusEl = document.getElementById("status");
 var timerEl = document.getElementById("timer");
@@ -91,6 +114,17 @@ var winnerDetailsEl = document.getElementById("winnerDetails");
 var questionsStatusEl = document.getElementById("questionsStatus");
 var nextBtn = document.getElementById("nextBtn");
 var backBtn = document.getElementById("backBtn");
+
+/* скрыть/показать победителя */
+function hideWinner(){
+  winnerEl.classList.add("hidden");
+  winnerDetailsEl.classList.add("hidden");
+}
+
+function showWinner(){
+  winnerEl.classList.remove("hidden");
+  winnerDetailsEl.classList.remove("hidden");
+}
 
 /* CSV загрузка */
 fetch(CSV_URL)
@@ -142,10 +176,10 @@ function setQuestion(i){
   });
 }
 
-/* определение победителя по голосам с детализацией */
-function updateWinner(questionIndex){
+/* обновление победителя (без автоматического показа) */
+function updateWinnerData(questionIndex, forceShow){
   if(questionIndex < 0 || !questions[questionIndex]) {
-    winnerEl.innerText = "🏆 Победитель: --";
+    winnerEl.innerText = "🏆 Победитель: ???";
     winnerDetailsEl.innerText = "";
     return;
   }
@@ -156,7 +190,6 @@ function updateWinner(questionIndex){
     var winnerIndex = -1;
     var allResults = [];
     
-    /* собираем все результаты */
     for(var i=0; i<questions[questionIndex].options.length; i++){
       var count = votes[i] || 0;
       allResults.push(questions[questionIndex].options[i] + ": " + count);
@@ -166,24 +199,19 @@ function updateWinner(questionIndex){
       }
     }
     
-    /* отображаем победителя */
-    if(winnerIndex !== -1 && maxVotes > 0){
-      var winnerText = questions[questionIndex].options[winnerIndex];
-      winnerEl.innerText = "🏆 ПОБЕДИТЕЛЬ: " + winnerText;
-      winnerDetailsEl.innerText = "Голосов: " + maxVotes;
-    } else if(winnerIndex !== -1 && maxVotes === 0){
-      winnerEl.innerText = "🏆 Победитель: пока нет голосов";
-      winnerDetailsEl.innerText = "Ожидаем голосования...";
-    } else {
-      winnerEl.innerText = "🏆 Победитель: --";
-      winnerDetailsEl.innerText = "";
+    var winnerText = winnerIndex !== -1 ? questions[questionIndex].options[winnerIndex] : "—";
+    winnerEl.innerText = "🏆 ПОБЕДИТЕЛЬ: " + winnerText;
+    winnerDetailsEl.innerText = "Голосов: " + maxVotes + "  |  " + allResults.join("  |  ");
+    
+    /* если forceShow = true — показываем победителя немедленно */
+    if(forceShow){
+      showWinner();
     }
   });
 }
 
-/* ПОДПИСКА НА ИЗМЕНЕНИЯ ГОЛОСОВ — обновляем победителя в реальном времени */
+/* подписка на голоса — данные собираем, но не показываем до окончания таймера */
 function subscribeToVotes(questionIndex){
-  /* отписываемся от старого слушателя */
   if(currentVotesListener){
     currentVotesListener.off();
     currentVotesListener = null;
@@ -191,7 +219,6 @@ function subscribeToVotes(questionIndex){
   
   if(questionIndex < 0 || !questions[questionIndex]) return;
   
-  /* подписываемся на изменения в votes/текущий вопрос */
   currentVotesListener = db.ref('votes/'+questionIndex);
   currentVotesListener.on('value', function(snap){
     var votes = snap.val() || {};
@@ -208,18 +235,57 @@ function subscribeToVotes(questionIndex){
       }
     }
     
-    if(winnerIndex !== -1 && maxVotes > 0){
-      var winnerText = questions[questionIndex].options[winnerIndex];
-      winnerEl.innerText = "🏆 ПОБЕДИТЕЛЬ: " + winnerText;
-      winnerDetailsEl.innerText = "Голосов: " + maxVotes + "  |  " + allResults.join("  |  ");
-    } else if(maxVotes === 0){
-      winnerEl.innerText = "🏆 Победитель: пока нет голосов";
-      winnerDetailsEl.innerText = "Ожидаем голосования...";
-    } else {
-      winnerEl.innerText = "🏆 Победитель: --";
-      winnerDetailsEl.innerText = "";
-    }
+    var winnerText = winnerIndex !== -1 ? questions[questionIndex].options[winnerIndex] : "—";
+    winnerEl.innerText = "🏆 ПОБЕДИТЕЛЬ: " + winnerText;
+    winnerDetailsEl.innerText = "Голосов: " + maxVotes + "  |  " + allResults.join("  |  ");
+    
+    /* не показываем автоматически — ждём окончания таймера */
   });
+}
+
+/* запуск таймера и отсрочка показа победителя */
+function startTimerWithDelay(startTime){
+  clearInterval(window.timerInt);
+  if(timerEndTimeout) clearTimeout(timerEndTimeout);
+  
+  /* скрываем победителя в начале вопроса */
+  hideWinner();
+  timerStarted = true;
+  
+  function tick(){
+    var elapsed = (Date.now() - startTime) / 1000;
+    var remaining = Math.max(0, 5 - elapsed);
+    timerEl.innerText="⏳ " + Math.ceil(remaining) + " сек";
+    
+    /* когда таймер закончился */
+    if(remaining <= 0){
+      if(window.timerInt) clearInterval(window.timerInt);
+      if(timerEndTimeout) clearTimeout(timerEndTimeout);
+      timerStarted = false;
+      timerEl.innerText="⏳ 0 сек";
+      
+      /* ПОКАЗЫВАЕМ ПОБЕДИТЕЛЯ после окончания таймера */
+      showWinner();
+      /* обновляем данные победителя (принудительно показываем) */
+      if(current >= 0 && questions[current]){
+        updateWinnerData(current, true);
+      }
+    }
+  }
+  
+  tick();
+  window.timerInt = setInterval(tick, 100);
+  
+  /* дополнительная защита: через 5.5 секунд точно покажем */
+  timerEndTimeout = setTimeout(function(){
+    if(timerStarted){
+      timerStarted = false;
+      showWinner();
+      if(current >= 0 && questions[current]){
+        updateWinnerData(current, true);
+      }
+    }
+  }, 5500);
 }
 
 /* sync */
@@ -229,36 +295,41 @@ db.ref('currentQuestion').on('value', function(snap){
 
   current = data.index;
   
-  /* обновляем статус в зависимости от режима */
   if(!questionsLoaded){
     statusEl.innerText = "⏳ Загрузка вопросов...";
   }
   else if(current === -1){
     statusEl.innerText = "🎭 Старт. Нажмите 'Далее' для первого вопроса";
     timerEl.innerText="⏳ -";
-    winnerEl.innerText = "🏆 Победитель: --";
+    hideWinner();
+    winnerEl.innerText = "🏆 Победитель: ???";
     winnerDetailsEl.innerText = "";
-    /* отписываемся от голосов */
     if(currentVotesListener){
       currentVotesListener.off();
       currentVotesListener = null;
     }
+    if(timerEndTimeout) clearTimeout(timerEndTimeout);
+    timerStarted = false;
   }
   else if(current === -999){
     statusEl.innerText = "⏸️ Ожидание... (зрители смотрят на сцену)";
     timerEl.innerText="⏳ -";
-    winnerEl.innerText = "🏆 Победитель: --";
+    hideWinner();
+    winnerEl.innerText = "🏆 Победитель: ???";
     winnerDetailsEl.innerText = "";
     if(currentVotesListener){
       currentVotesListener.off();
       currentVotesListener = null;
     }
+    if(timerEndTimeout) clearTimeout(timerEndTimeout);
+    timerStarted = false;
   }
   else if(questions[current]){
     statusEl.innerText = "❓ Вопрос " + (current+1) + " из " + questions.length + ": " + questions[current].text;
-    startTimer(data.startTime);
-    /* подписываемся на обновления голосов в реальном времени */
+    startTimerWithDelay(data.startTime);
     subscribeToVotes(current);
+    /* предварительно заполняем данные (скрыто) */
+    updateWinnerData(current, false);
   }
   else if(questions.length > 0 && current >= questions.length){
     statusEl.innerText = "🏁 Спектакль завершён! Все вопросы заданы.";
@@ -267,20 +338,6 @@ db.ref('currentQuestion').on('value', function(snap){
 
   updateButtons();
 });
-
-/* таймер */
-function startTimer(startTime){
-  clearInterval(window.timerInt);
-
-  function tick(){
-    var t = 5 - Math.floor((Date.now()-startTime)/1000);
-    if(t<0)t=0;
-    timerEl.innerText="⏳ " + t + " сек";
-  }
-
-  tick();
-  window.timerInt=setInterval(tick,300);
-}
 
 /* кнопки */
 nextBtn.onclick=function(){
